@@ -8,7 +8,7 @@ namespace KspWebMap
     {
         public static string WriteTelemetry(TelemetrySnapshot snapshot)
         {
-            StringBuilder builder = new StringBuilder(8192);
+            StringBuilder builder = new StringBuilder(12288);
             WriteSnapshotMetadata(builder, snapshot);
             builder.Append(",\"activeVessel\":");
             WriteActiveVessel(builder, snapshot.ActiveVessel);
@@ -26,6 +26,10 @@ namespace KspWebMap
             WriteProperty(builder, "ephemerisValidationResidualMeters", snapshot.EphemerisValidationResidualMeters);
             builder.Append(",\"ephemerisSamples\":");
             WriteEphemerisSamples(builder, snapshot.EphemerisSamples);
+            builder.Append(",\"bodyOrbitCaptureStatus\":");
+            WriteStringOrNull(builder, snapshot.BodyOrbitCaptureStatus);
+            builder.Append(",\"bodyOrbitPaths\":");
+            WriteBodyOrbitPaths(builder, snapshot.BodyOrbitPaths);
             builder.Append('}');
             return builder.ToString();
         }
@@ -627,6 +631,47 @@ namespace KspWebMap
             }
 
             builder.Append('"');
+        }
+
+        private static void WriteBodyOrbitPaths(StringBuilder builder, BodyOrbitPathSnapshot[] paths)
+        {
+            builder.Append('[');
+
+            if (paths != null)
+            {
+                for (int i = 0; i < paths.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        builder.Append(',');
+                    }
+
+                    WriteBodyOrbitPath(builder, paths[i]);
+                }
+            }
+
+            builder.Append(']');
+        }
+
+        private static void WriteBodyOrbitPath(StringBuilder builder, BodyOrbitPathSnapshot path)
+        {
+            if (path == null)
+            {
+                builder.Append("null");
+                return;
+            }
+
+            builder.Append('{');
+            WriteProperty(builder, "bodyName", path.BodyName);
+            builder.Append(',');
+            WriteProperty(builder, "referenceBody", path.ReferenceBody);
+            builder.Append(',');
+            WriteProperty(builder, "classification", path.Classification);
+            builder.Append(',');
+            WriteProperty(builder, "captureWarning", path.CaptureWarning);
+            builder.Append(",\"samples\":");
+            WriteVesselRootPathSamples(builder, path.Samples);
+            builder.Append('}');
         }
 
         private static string FormatDate(DateTime dateTime)

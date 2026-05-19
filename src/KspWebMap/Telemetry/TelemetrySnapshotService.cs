@@ -45,6 +45,8 @@ namespace KspWebMap
             private const string LogPrefix = "[KspWebMap]";
             private const int MaxOrbitPatchCount = 8;
             private const int VesselRootPathSampleCount = 32;
+            private const int BodyOrbitPathSampleCount = 48;
+            private const int MaxBodyOrbitPathCount = 24;
             private const double EphemerisValidationToleranceSeconds = 1d;
             private const string RootFrameName = "solarSystemRootCenteredInertial";
             private TelemetryStore _store;
@@ -114,7 +116,9 @@ namespace KspWebMap
                         Bodies = bodies,
                         EphemerisSamples = new EphemerisSampleSnapshot[0],
                         EphemerisCaptureStatus = rootBody != null ? "partial" : "unsupported",
-                        EphemerisValidationResidualMeters = double.NaN
+                        EphemerisValidationResidualMeters = double.NaN,
+                        BodyOrbitPaths = CaptureBodyOrbitPaths(rootBody, universalTime),
+                        BodyOrbitCaptureStatus = rootBody != null ? "ok" : "unsupported"
                     };
                 }
 
@@ -146,7 +150,9 @@ namespace KspWebMap
                     Bodies = bodies,
                     EphemerisSamples = ephemerisSamples,
                     EphemerisCaptureStatus = ephemerisCaptureStatus,
-                    EphemerisValidationResidualMeters = ephemerisValidationResidual
+                    EphemerisValidationResidualMeters = ephemerisValidationResidual,
+                    BodyOrbitPaths = CaptureBodyOrbitPaths(rootBody, universalTime),
+                    BodyOrbitCaptureStatus = DetermineBodyOrbitCaptureStatus(rootBody)
                 };
             }
 
@@ -973,6 +979,104 @@ namespace KspWebMap
                 }
 
                 return samples.ToArray();
+            }
+
+            private static BodyOrbitPathSnapshot[] CaptureBodyOrbitPaths(CelestialBody rootBody, double universalTime)
+            {
+                List<BodyOrbitPathSnapshot> paths = new List<BodyOrbitPathSnapshot>();
+
+                if (rootBody == null)
+                {
+                    return paths.ToArray();
+                }
+
+                int captured = 0;
+
+                foreach (CelestialBody body in FlightGlobals.Bodies)
+                {
+                    if (body == null || body.orbit == null || body == rootBody)
+                    {
+                        continue;
+                    }
+
+                    if (captured >= MaxBodyOrbitPathCount)
+                    {
+                        break;
+                    }
+
+                    double period = body.orbit.period;
+
+                    if (double.IsNaN(period) || double.IsInfinity(period) || period <= 0d)
+                    {
+                        continue;
+                    }
+
+                    List<VesselRootPathSampleSnapshot> samples = new List<VesselRootPathSampleSnapshot>();
+                    double startUt = universalTime;
+                    double endUt = universalTime + period;
+                    string warning = null;
+
+                    for (int i = 0; i < BodyOrbitPathSampleCount; i++)
+                    {
+                        double fraction = BodyOrbitPathSampleCount == 1 ? 0d : i / (double)(BodyOrbitPathSampleCount - 1);
+                        double sampleUt = startUt + (endUt - startUt) * fraction;
+
+                        try
+                        {
+                            string sampleWarning;
+                            Vector3Snapshot position = CaptureBodyRootPositionAtUniversalTime(
+                                body,
+                                rootBody,
+                                sampleUt,
+                                universalTime,
+                                out sampleWarning);
+
+                            if (position == null)
+                            {
+                                warning = sampleWarning ?? "Body orbit sample unavailable.";
+                                continue;
+                            }
+
+                            samples.Add(new VesselRootPathSampleSnapshot
+                            {
+                                SampleUniversalTimeSeconds = sampleUt,
+                                PositionRootRelativeMeters = position
+                            });
+                        }
+                        catch
+                        {
+                            warning = "Body orbit propagation failed.";
+                        }
+                    }
+
+                    if (samples.Count < 2)
+                    {
+                        continue;
+                    }
+
+                    CelestialBody referenceBody = body.orbit.referenceBody;
+                    paths.Add(new BodyOrbitPathSnapshot
+                    {
+                        BodyName = body.bodyName,
+                        ReferenceBody = referenceBody != null ? referenceBody.bodyName : null,
+                        Classification = ClassifyPatchOrbit(body.orbit),
+                        CaptureWarning = warning,
+                        Samples = samples.ToArray()
+                    });
+                    captured++;
+                }
+
+                return paths.ToArray();
+            }
+
+            private static string DetermineBodyOrbitCaptureStatus(CelestialBody rootBody)
+            {
+                if (rootBody == null)
+                {
+                    return "unsupported";
+                }
+
+                return "ok";
             }
 
             private static double CaptureClosestApproachMeters(Orbit orbit, CelestialBody encounterBody)

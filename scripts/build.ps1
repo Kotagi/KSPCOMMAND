@@ -124,6 +124,62 @@ function Invoke-PackageStage {
     Copy-Item -Path $outputDll -Destination (Join-Path $packagePlugins "KspWebMap.dll") -Force
 }
 
+function Invoke-WebBuild {
+    $webRoot = Join-Path $repoRoot "web"
+    $webPackageJson = Join-Path $webRoot "package.json"
+
+    if (-not (Test-Path $webPackageJson)) {
+        Write-Host "No web/package.json found; skipping frontend build."
+        return
+    }
+
+    $npm = Get-Command npm -ErrorAction SilentlyContinue
+
+    if (-not $npm) {
+        Write-Error "npm is required to build the Phase 10 web UI. Install Node.js or run from web/: npm ci && npm run build"
+    }
+
+    Push-Location $webRoot
+    try {
+        Write-Host "Building web UI (Vite)..."
+        if (Test-Path (Join-Path $webRoot "package-lock.json")) {
+            & npm ci
+        }
+        else {
+            & npm install
+        }
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
+
+        & npm run build
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $distRoot = Join-Path $webRoot "dist"
+    $distAssets = Join-Path $distRoot "assets"
+    $bundleJs = Join-Path $distAssets "ksp-solar-map.js"
+
+    if (-not (Test-Path $bundleJs)) {
+        Write-Error "Web build did not produce expected bundle: $bundleJs"
+    }
+
+    $webDest = Join-Path $packageModRoot "Web"
+  $assetsDest = Join-Path $webDest "assets"
+    New-Item -ItemType Directory -Force -Path $assetsDest | Out-Null
+
+    if (Test-Path $distAssets) {
+        Copy-Item -Path (Join-Path $distAssets "*") -Destination $assetsDest -Recurse -Force
+    }
+
+    Write-Host "Copied web bundle to $assetsDest"
+}
+
 if (Test-DotNetSdkAvailable) {
     Invoke-DotNetBuild
 }
@@ -133,6 +189,7 @@ else {
 }
 
 Invoke-PackageStage
+Invoke-WebBuild
 
 Write-Host ""
 Write-Host "Build complete."

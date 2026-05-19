@@ -4,7 +4,7 @@ namespace KspWebMap
 {
     public sealed class TelemetrySnapshot
     {
-        public const int CurrentSchemaVersion = 6;
+        public const int CurrentSchemaVersion = 7;
 
         public int SchemaVersion;
         public long SnapshotId;
@@ -26,6 +26,8 @@ namespace KspWebMap
         public EphemerisSampleSnapshot[] EphemerisSamples;
         public string EphemerisCaptureStatus;
         public double EphemerisValidationResidualMeters;
+        public BodyOrbitPathSnapshot[] BodyOrbitPaths;
+        public string BodyOrbitCaptureStatus;
 
         public static TelemetrySnapshot CreateInvalid(long snapshotId, string status)
         {
@@ -50,7 +52,9 @@ namespace KspWebMap
                 Bodies = new CelestialBodySnapshot[0],
                 EphemerisSamples = new EphemerisSampleSnapshot[0],
                 EphemerisCaptureStatus = "unsupported",
-                EphemerisValidationResidualMeters = double.NaN
+                EphemerisValidationResidualMeters = double.NaN,
+                BodyOrbitPaths = new BodyOrbitPathSnapshot[0],
+                BodyOrbitCaptureStatus = "unsupported"
             };
         }
     }
