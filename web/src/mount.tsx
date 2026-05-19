@@ -17,6 +17,17 @@ function MountApp() {
   return <SolarMapPanel />;
 }
 
+function ensureMounted() {
+  if (root) {
+    return;
+  }
+  const container = document.getElementById("solar3dRoot");
+  if (container) {
+    api.mount(container);
+    container.dataset.mounted = "1";
+  }
+}
+
 const api: KspSolarMapApi = {
   mount(container: HTMLElement) {
     if (root) {
@@ -37,6 +48,7 @@ const api: KspSolarMapApi = {
     }
   },
   updateTelemetry(telemetry: TelemetrySnapshot | null) {
+    ensureMounted();
     useViewStore.getState().setTelemetry(telemetry);
   },
   getSolarRenderMode() {
@@ -51,4 +63,5 @@ declare global {
 }
 
 window.KspSolarMap = api;
+window.dispatchEvent(new CustomEvent("ksp-solar-map-ready"));
 export default api;

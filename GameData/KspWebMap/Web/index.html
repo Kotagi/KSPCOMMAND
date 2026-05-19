@@ -727,7 +727,8 @@
         var MIN_SCHEMA_VERSION = 6;
 
         function isSupportedSchemaVersion(version) {
-          return typeof version === "number" && version >= MIN_SCHEMA_VERSION;
+          var n = typeof version === "number" ? version : Number(version);
+          return isFinite(n) && n >= MIN_SCHEMA_VERSION;
         }
         var VISIBLE_POLL_MS = 1000;
         var HIDDEN_POLL_MS = 5000;
@@ -1170,7 +1171,7 @@
         function renderSolarSystem(telemetry) {
           var mode = syncSolarViewMode();
 
-          if (window.KspSolarMap && mode === "3d") {
+          if (mode === "3d" && window.KspSolarMap) {
             window.KspSolarMap.updateTelemetry(telemetry);
             var previewModel = buildSolarSystemModel(telemetry);
             updateSolarDiagnostics(previewModel);
@@ -3119,12 +3120,21 @@
         function mountSolar3d() {
           var root = document.getElementById("solar3dRoot");
 
-          if (root && window.KspSolarMap && !root.dataset.mounted) {
-            window.KspSolarMap.mount(root);
-            root.dataset.mounted = "1";
+          if (root && window.KspSolarMap) {
+            if (!root.dataset.mounted) {
+              window.KspSolarMap.mount(root);
+              root.dataset.mounted = "1";
+            }
+
+            if (state.lastGoodTelemetry) {
+              window.KspSolarMap.updateTelemetry(state.lastGoodTelemetry);
+            }
+
             syncSolarViewMode();
           }
         }
+
+        window.addEventListener("ksp-solar-map-ready", mountSolar3d);
 
         if (document.readyState === "loading") {
           document.addEventListener("DOMContentLoaded", mountSolar3d);
@@ -3133,6 +3143,6 @@
         }
       })();
     </script>
-    <script type="module" src="./assets/ksp-solar-map.js"></script>
+    <script type="module" src="./assets/ksp-solar-map.js?v=3"></script>
   </body>
 </html>
