@@ -1,0 +1,3077 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KSP Web Map Dashboard</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #071019;
+        --panel: #101d2a;
+        --panel-soft: #142536;
+        --border: #284156;
+        --text: #e7f0f7;
+        --muted: #9db1c3;
+        --accent: #67d3ff;
+        --good: #61d394;
+        --warn: #ffd166;
+        --bad: #ff6b6b;
+        --stale: #c792ea;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: radial-gradient(circle at top left, #102338 0, var(--bg) 40rem);
+        color: var(--text);
+        font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        line-height: 1.45;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      .page {
+        width: min(1400px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 24px 0 40px;
+      }
+
+      .hero {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(1.8rem, 3vw, 3rem);
+        letter-spacing: 0.02em;
+      }
+
+      h2 {
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+      }
+
+      h3 {
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+
+      .subtitle {
+        max-width: 760px;
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .status-pill {
+        min-width: 160px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--panel);
+        text-align: center;
+        font-weight: 700;
+      }
+
+      .status-connected {
+        color: var(--good);
+        border-color: rgba(97, 211, 148, 0.55);
+      }
+
+      .status-degraded {
+        color: var(--warn);
+        border-color: rgba(255, 209, 102, 0.55);
+      }
+
+      .status-disconnected {
+        color: var(--bad);
+        border-color: rgba(255, 107, 107, 0.55);
+      }
+
+      .status-stale,
+      .status-schema-mismatch {
+        color: var(--stale);
+        border-color: rgba(199, 146, 234, 0.55);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 16px;
+      }
+
+      .card {
+        grid-column: span 12;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: rgba(16, 29, 42, 0.92);
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .span-4 {
+        grid-column: span 4;
+      }
+
+      .span-6 {
+        grid-column: span 6;
+      }
+
+      .span-8 {
+        grid-column: span 8;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .metric {
+        min-height: 72px;
+        padding: 12px;
+        border: 1px solid rgba(40, 65, 86, 0.75);
+        border-radius: 14px;
+        background: var(--panel-soft);
+      }
+
+      .metric-label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .metric-value {
+        display: block;
+        overflow-wrap: anywhere;
+        font-size: 1.05rem;
+        font-weight: 700;
+      }
+
+      .wide-value {
+        font-size: 1.35rem;
+      }
+
+      .body-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+      }
+
+      .body-table th,
+      .body-table td {
+        padding: 9px 8px;
+        border-bottom: 1px solid rgba(40, 65, 86, 0.75);
+        text-align: left;
+      }
+
+      .body-table th {
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 0.72rem;
+      }
+
+      .table-wrap {
+        max-height: 360px;
+        overflow: auto;
+      }
+
+      .endpoints {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .endpoints a {
+        display: inline-flex;
+        padding: 7px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--panel-soft);
+        text-decoration: none;
+      }
+
+      .diagnostic {
+        margin: 10px 0 0;
+        color: var(--muted);
+      }
+
+      .error-text {
+        color: var(--bad);
+      }
+
+      pre {
+        max-height: 460px;
+        margin: 0;
+        padding: 14px;
+        overflow: auto;
+        border: 1px solid rgba(40, 65, 86, 0.75);
+        border-radius: 14px;
+        background: #07111c;
+        color: #d9edf7;
+        font-size: 0.84rem;
+      }
+
+      .map-wrap {
+        position: relative;
+        min-height: 460px;
+        overflow: hidden;
+        border: 1px solid rgba(40, 65, 86, 0.75);
+        border-radius: 18px;
+        background: radial-gradient(circle at center, #10243a 0, #07111c 70%);
+      }
+
+      #mapCanvas,
+      #solarCanvas {
+        display: block;
+        width: 100%;
+        height: 460px;
+      }
+
+      .map-message {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        padding: 10px 12px;
+        border: 1px solid rgba(40, 65, 86, 0.75);
+        border-radius: 12px;
+        background: rgba(7, 17, 28, 0.78);
+        color: var(--muted);
+      }
+
+      .route-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .route-item {
+        padding: 12px;
+        border: 1px solid rgba(40, 65, 86, 0.75);
+        border-radius: 14px;
+        background: var(--panel-soft);
+      }
+
+      .route-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+        font-weight: 700;
+      }
+
+      .route-meta {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .solar-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .solar-control-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .solar-btn {
+        padding: 7px 12px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--panel-soft);
+        color: var(--text);
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .solar-scrubber-row {
+        align-items: center;
+      }
+
+      .solar-scrubber-row label {
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      #solarTimeScrubber {
+        flex: 1 1 220px;
+        min-width: 160px;
+      }
+
+      .solar-scrub-label {
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      .solar-btn:hover {
+        border-color: rgba(103, 211, 255, 0.55);
+      }
+
+      .solar-btn.active {
+        color: var(--accent);
+        border-color: rgba(103, 211, 255, 0.65);
+      }
+
+      .solar-selection {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid rgba(40, 65, 86, 0.75);
+        border-radius: 14px;
+        background: var(--panel-soft);
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      .map-wrap canvas {
+        cursor: grab;
+      }
+
+      .map-wrap canvas.solar-dragging {
+        cursor: grabbing;
+      }
+
+      @media (max-width: 1000px) {
+        .span-4,
+        .span-6,
+        .span-8 {
+          grid-column: span 12;
+        }
+
+        .hero {
+          flex-direction: column;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .metric-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <div>
+          <h1>KSP Web Map Dashboard</h1>
+          <p class="subtitle">
+            Live browser dashboard served by Kerbal Space Program. This phase
+            validates the telemetry contract before map rendering begins.
+          </p>
+        </div>
+        <div id="connectionStatus" class="status-pill status-disconnected">Starting</div>
+      </header>
+
+      <section class="grid" aria-label="Telemetry dashboard">
+        <article class="card span-4">
+          <div class="card-header">
+            <h2>Snapshot</h2>
+            <span id="snapshotFreshness">N/A</span>
+          </div>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric-label">Schema</span>
+              <span id="schemaVersion" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Snapshot ID</span>
+              <span id="snapshotId" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Scene</span>
+              <span id="scene" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">KSP UT</span>
+              <span id="universalTime" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Captured UTC</span>
+              <span id="capturedAt" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Status</span>
+              <span id="telemetryStatus" class="metric-value">N/A</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card span-8">
+          <div class="card-header">
+            <h2>Active Vessel</h2>
+          </div>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric-label">Name</span>
+              <span id="vesselName" class="metric-value wide-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Type / Situation</span>
+              <span id="vesselTypeSituation" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Main Body</span>
+              <span id="vesselMainBody" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Altitude</span>
+              <span id="vesselAltitude" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Radar Altitude</span>
+              <span id="vesselRadarAltitude" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Surface Speed</span>
+              <span id="vesselSurfaceSpeed" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Orbital Speed</span>
+              <span id="vesselOrbitalSpeed" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Vessel ID</span>
+              <span id="vesselId" class="metric-value">N/A</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card span-6">
+          <div class="card-header">
+            <h2>Orbit</h2>
+          </div>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric-label">Reference Body</span>
+              <span id="orbitReferenceBody" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Apoapsis</span>
+              <span id="orbitApoapsis" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Periapsis</span>
+              <span id="orbitPeriapsis" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Semi-Major Axis</span>
+              <span id="orbitSemiMajorAxis" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Eccentricity</span>
+              <span id="orbitEccentricity" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Inclination</span>
+              <span id="orbitInclination" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Period</span>
+              <span id="orbitPeriod" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Time to Ap / Pe</span>
+              <span id="orbitTimes" class="metric-value">N/A</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card span-6">
+          <div class="card-header">
+            <h2>Map Prototype</h2>
+            <span id="mapRenderStatus">Waiting</span>
+          </div>
+          <div class="map-wrap">
+            <canvas id="mapCanvas" width="900" height="460" aria-label="2D orbit map prototype"></canvas>
+            <div id="mapMessage" class="map-message">Waiting for telemetry...</div>
+          </div>
+          <div class="metric-grid" style="margin-top: 12px;">
+            <div class="metric">
+              <span class="metric-label">Classification</span>
+              <span id="mapClassification" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Reference Body</span>
+              <span id="mapReferenceBody" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Scale</span>
+              <span id="mapScale" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Projection</span>
+              <span id="mapProjection" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Vessel / Conic Residual</span>
+              <span id="mapResidual" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Render Reason</span>
+              <span id="mapReason" class="metric-value">N/A</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card span-6">
+          <div class="card-header">
+            <h2>Patch Route</h2>
+            <span id="patchRouteStatus">Waiting</span>
+          </div>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric-label">Patch Count</span>
+              <span id="patchCount" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Chain Status</span>
+              <span id="patchChainStatus" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Next Transition</span>
+              <span id="patchNextTransition" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Encounter</span>
+              <span id="patchEncounter" class="metric-value">N/A</span>
+            </div>
+          </div>
+          <p class="diagnostic">
+            Patch geometry remains local-frame truth data. The solar-system panel places route anchors using ephemeris samples at patch start/end/encounter universal times when available.
+          </p>
+          <div id="patchRouteList" class="route-list" style="margin-top: 12px;">
+            <div class="route-item">Waiting for patch telemetry...</div>
+          </div>
+        </article>
+
+        <article class="card span-6">
+          <div class="card-header">
+            <h2>Solar System Frame</h2>
+            <span id="solarRenderStatus">Waiting</span>
+          </div>
+          <div class="solar-controls" id="solarControls" aria-label="Solar map controls">
+            <div class="solar-control-row" aria-label="Camera mode">
+              <button type="button" class="solar-btn active" data-camera-mode="fullSystem">Full System</button>
+              <button type="button" class="solar-btn" data-camera-mode="activeVessel">Vessel</button>
+              <button type="button" class="solar-btn" data-camera-mode="currentReferenceBody">Reference</button>
+              <button type="button" class="solar-btn" data-camera-mode="encounterBody">Encounter</button>
+              <button type="button" class="solar-btn" data-camera-mode="route">Route</button>
+            </div>
+            <div class="solar-control-row">
+              <button type="button" class="solar-btn" data-solar-action="recenter">Recenter</button>
+              <button type="button" class="solar-btn" data-solar-action="resetView">Reset View</button>
+            </div>
+            <div class="solar-control-row solar-scrubber-row">
+              <label for="solarTimeScrubber">Ephemeris preview UT</label>
+              <input type="range" id="solarTimeScrubber" min="0" max="1" step="1" value="0" disabled />
+              <button type="button" class="solar-btn" id="solarScrubLive" data-solar-action="scrubLive">Live</button>
+              <span id="solarScrubLabel" class="solar-scrub-label">Live simulation time</span>
+            </div>
+          </div>
+          <div class="map-wrap">
+            <canvas id="solarCanvas" width="900" height="460" aria-label="2D solar-system frame map"></canvas>
+            <div id="solarMessage" class="map-message">Waiting for shared-frame telemetry...</div>
+          </div>
+          <div id="solarSelection" class="solar-selection">Click a body, vessel, or patch anchor for details.</div>
+          <div class="metric-grid" style="margin-top: 12px;">
+            <div class="metric">
+              <span class="metric-label">Camera Mode</span>
+              <span id="solarCameraMode" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Root Frame</span>
+              <span id="solarRootFrame" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Root Body</span>
+              <span id="solarRootBody" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Projection</span>
+              <span id="solarProjection" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Scale</span>
+              <span id="solarScale" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Route Overlay</span>
+              <span id="solarRouteOverlay" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Ephemeris</span>
+              <span id="solarEphemerisStatus" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Selection</span>
+              <span id="solarSelectionLabel" class="metric-value">None</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Hovered</span>
+              <span id="solarHovered" class="metric-value">None</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Placement Mode</span>
+              <span id="solarPlacementMode" class="metric-value">N/A</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Frame Warning</span>
+              <span id="solarWarning" class="metric-value">N/A</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card span-6">
+          <div class="card-header">
+            <h2>Celestial Bodies</h2>
+            <span id="bodyCount">0 bodies</span>
+          </div>
+          <div class="table-wrap">
+            <table class="body-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Radius</th>
+                  <th>Atmosphere</th>
+                  <th>Grav Parameter</th>
+                </tr>
+              </thead>
+              <tbody id="bodiesTable">
+                <tr>
+                  <td colspan="4">No body data available.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2>Developer Diagnostics</h2>
+          </div>
+          <p class="diagnostic">
+            Last successful update: <span id="lastSuccess">N/A</span>
+          </p>
+          <p class="diagnostic">
+            Last error: <span id="lastError" class="error-text">None</span>
+          </p>
+          <div class="endpoints" aria-label="Endpoint links">
+            <a href="/api/health">/api/health</a>
+            <a href="/api/telemetry">/api/telemetry</a>
+            <a href="/api/active-vessel">/api/active-vessel</a>
+            <a href="/api/orbit">/api/orbit</a>
+            <a href="/api/bodies">/api/bodies</a>
+          </div>
+          <h3 style="margin-top: 16px;">Raw /api/telemetry</h3>
+          <pre id="rawJson">Waiting for telemetry...</pre>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var EXPECTED_SCHEMA_VERSION = 6;
+        var VISIBLE_POLL_MS = 1000;
+        var HIDDEN_POLL_MS = 5000;
+        var REQUEST_TIMEOUT_MS = 2000;
+        var STALE_AFTER_MS = 5000;
+
+        var state = {
+          inFlight: false,
+          timerId: null,
+          lastGoodTelemetry: null,
+          lastGoodRaw: null,
+          lastSuccessAt: null,
+          lastSnapshotId: null,
+          lastSnapshotAdvanceAt: null,
+          lastError: null
+        };
+
+        var solarViewState = {
+          mode: "fullSystem",
+          zoom: 1,
+          panX: 0,
+          panY: 0,
+          selectedObjectId: null,
+          hoverObjectId: null,
+          autoFitEnabled: true,
+          needsFit: true,
+          dragging: false,
+          dragStartX: 0,
+          dragStartY: 0,
+          dragPanStartX: 0,
+          dragPanStartY: 0,
+          interactionsBound: false,
+          lastModel: null,
+          lastSize: null,
+          scrubUniversalTime: null,
+          scrubEnabled: false
+        };
+
+        var elements = {};
+
+        document.addEventListener("DOMContentLoaded", function () {
+          cacheElements();
+          initSolarInteractions();
+          renderEmpty();
+          scheduleNextPoll(0);
+        });
+
+        document.addEventListener("visibilitychange", function () {
+          scheduleNextPoll(0);
+        });
+
+        function cacheElements() {
+          [
+            "connectionStatus",
+            "snapshotFreshness",
+            "schemaVersion",
+            "snapshotId",
+            "scene",
+            "universalTime",
+            "capturedAt",
+            "telemetryStatus",
+            "vesselName",
+            "vesselTypeSituation",
+            "vesselMainBody",
+            "vesselAltitude",
+            "vesselRadarAltitude",
+            "vesselSurfaceSpeed",
+            "vesselOrbitalSpeed",
+            "vesselId",
+            "orbitReferenceBody",
+            "orbitApoapsis",
+            "orbitPeriapsis",
+            "orbitSemiMajorAxis",
+            "orbitEccentricity",
+            "orbitInclination",
+            "orbitPeriod",
+            "orbitTimes",
+            "mapCanvas",
+            "mapRenderStatus",
+            "mapMessage",
+            "mapClassification",
+            "mapReferenceBody",
+            "mapScale",
+            "mapProjection",
+            "mapResidual",
+            "mapReason",
+            "patchRouteStatus",
+            "patchCount",
+            "patchChainStatus",
+            "patchNextTransition",
+            "patchEncounter",
+            "patchRouteList",
+            "solarCanvas",
+            "solarRenderStatus",
+            "solarMessage",
+            "solarRootFrame",
+            "solarRootBody",
+            "solarProjection",
+            "solarScale",
+            "solarPlacementMode",
+            "solarWarning",
+            "solarControls",
+            "solarCameraMode",
+            "solarRouteOverlay",
+            "solarEphemerisStatus",
+            "solarTimeScrubber",
+            "solarScrubLabel",
+            "solarSelectionLabel",
+            "solarHovered",
+            "solarSelection",
+            "bodyCount",
+            "bodiesTable",
+            "lastSuccess",
+            "lastError",
+            "rawJson"
+          ].forEach(function (id) {
+            elements[id] = document.getElementById(id);
+          });
+        }
+
+        function scheduleNextPoll(delayMs) {
+          if (state.timerId !== null) {
+            clearTimeout(state.timerId);
+            state.timerId = null;
+          }
+
+          var delay = typeof delayMs === "number"
+            ? delayMs
+            : (document.hidden ? HIDDEN_POLL_MS : VISIBLE_POLL_MS);
+
+          state.timerId = setTimeout(pollTelemetry, delay);
+        }
+
+        function pollTelemetry() {
+          if (state.inFlight) {
+            scheduleNextPoll();
+            return;
+          }
+
+          state.inFlight = true;
+
+          fetchWithTimeout("/api/telemetry", REQUEST_TIMEOUT_MS)
+            .then(function (response) {
+              if (!response.ok) {
+                throw new Error("HTTP " + response.status + " " + response.statusText);
+              }
+              return response.text();
+            })
+            .then(function (rawText) {
+              var telemetry;
+              try {
+                telemetry = JSON.parse(rawText);
+              } catch (error) {
+                throw new Error("Invalid JSON: " + error.message);
+              }
+
+              state.lastGoodTelemetry = telemetry;
+              state.lastGoodRaw = rawText;
+              state.lastSuccessAt = new Date();
+              state.lastError = null;
+
+              if (telemetry.snapshotId !== state.lastSnapshotId) {
+                state.lastSnapshotId = telemetry.snapshotId;
+                state.lastSnapshotAdvanceAt = Date.now();
+              }
+
+              renderTelemetry(telemetry);
+            })
+            .catch(function (error) {
+              state.lastError = error.message || String(error);
+              renderDisconnected();
+            })
+            .then(function () {
+              state.inFlight = false;
+              scheduleNextPoll();
+            });
+        }
+
+        function fetchWithTimeout(url, timeoutMs) {
+          if (window.AbortController) {
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function () {
+              controller.abort();
+            }, timeoutMs);
+
+            return fetch(url, { cache: "no-store", signal: controller.signal })
+              .then(function (response) {
+                clearTimeout(timeoutId);
+                return response;
+              })
+              .catch(function (error) {
+                clearTimeout(timeoutId);
+                throw error;
+              });
+          }
+
+          return Promise.race([
+            fetch(url, { cache: "no-store" }),
+            new Promise(function (_, reject) {
+              setTimeout(function () {
+                reject(new Error("Request timed out"));
+              }, timeoutMs);
+            })
+          ]);
+        }
+
+        function renderTelemetry(telemetry) {
+          var status = getDashboardStatus(telemetry);
+          setStatus(status);
+
+          setText("schemaVersion", valueOrNA(telemetry.schemaVersion));
+          setText("snapshotId", valueOrNA(telemetry.snapshotId));
+          setText("scene", valueOrNA(telemetry.scene));
+          setText("universalTime", formatSeconds(telemetry.gameUniversalTimeSeconds));
+          setText("capturedAt", formatDate(telemetry.capturedAtUtc));
+          setText("telemetryStatus", valueOrNA(telemetry.status));
+          setText("snapshotFreshness", formatFreshness(telemetry));
+          setText("lastSuccess", state.lastSuccessAt ? state.lastSuccessAt.toLocaleTimeString() : "N/A");
+          setText("lastError", state.lastError || "None");
+
+          renderVessel(telemetry.activeVessel);
+          renderOrbit(telemetry.orbit);
+          renderMap(telemetry);
+          renderPatchRoute(telemetry);
+          renderSolarSystem(telemetry);
+          renderBodies(telemetry.bodies);
+
+          elements.rawJson.textContent = formatRawJson(state.lastGoodRaw);
+        }
+
+        function renderVessel(vessel) {
+          setText("vesselName", vessel ? valueOrNA(vessel.name) : "N/A");
+          setText("vesselTypeSituation", vessel ? joinValues([vessel.type, vessel.situation], " / ") : "N/A");
+          setText("vesselMainBody", vessel ? valueOrNA(vessel.mainBody) : "N/A");
+          setText("vesselAltitude", vessel ? formatDistance(vessel.altitudeMeters) : "N/A");
+          setText("vesselRadarAltitude", vessel ? formatDistance(vessel.radarAltitudeMeters) : "N/A");
+          setText("vesselSurfaceSpeed", vessel ? formatSpeed(vessel.surfaceSpeedMetersPerSecond) : "N/A");
+          setText("vesselOrbitalSpeed", vessel ? formatSpeed(vessel.orbitalSpeedMetersPerSecond) : "N/A");
+          setText("vesselId", vessel ? valueOrNA(vessel.id) : "N/A");
+        }
+
+        function renderOrbit(orbit) {
+          setText("orbitReferenceBody", orbit ? valueOrNA(orbit.referenceBody) : "N/A");
+          setText("orbitApoapsis", orbit ? formatDistance(orbit.apoapsisMeters) : "N/A");
+          setText("orbitPeriapsis", orbit ? formatDistance(orbit.periapsisMeters) : "N/A");
+          setText("orbitSemiMajorAxis", orbit ? formatDistance(orbit.semiMajorAxisMeters) : "N/A");
+          setText("orbitEccentricity", orbit ? formatNumber(orbit.eccentricity, 5) : "N/A");
+          setText("orbitInclination", orbit ? formatAngle(orbit.inclinationDegrees) : "N/A");
+          setText("orbitPeriod", orbit ? formatSeconds(orbit.periodSeconds) : "N/A");
+          setText("orbitTimes", orbit ? "Ap " + formatSeconds(orbit.timeToApoapsisSeconds) + " / Pe " + formatSeconds(orbit.timeToPeriapsisSeconds) : "N/A");
+        }
+
+        function renderMap(telemetry) {
+          var canvas = elements.mapCanvas;
+          var context = canvas.getContext("2d");
+          var model = buildMapModel(telemetry);
+          var size = prepareCanvas(canvas, context);
+          fitMapToCanvas(model, size);
+
+          clearMap(context, size);
+          drawMapBackground(context, size);
+
+          if (!model.canDrawBody) {
+            drawCenteredMessage(context, size, model.reason);
+            updateMapDiagnostics(model);
+            return;
+          }
+
+          drawBody(context, size, model);
+
+          if (model.canDrawOrbit) {
+            drawOrbitPath(context, size, model);
+            drawLocalFuturePatchPreviews(context, size, model);
+            drawApsisMarkers(context, size, model);
+          }
+
+          if (model.canDrawVessel) {
+            drawVesselMarker(context, size, model);
+          }
+
+          if (!model.canDrawOrbit) {
+            drawCenteredMessage(context, size, model.reason);
+          }
+
+          updateMapDiagnostics(model);
+        }
+
+        function initSolarInteractions() {
+          if (solarViewState.interactionsBound || !elements.solarCanvas) {
+            return;
+          }
+
+          var canvas = elements.solarCanvas;
+
+          canvas.addEventListener("wheel", function (event) {
+            if (!solarViewState.lastModel || !solarViewState.lastModel.canDraw) {
+              return;
+            }
+
+            event.preventDefault();
+            var rect = canvas.getBoundingClientRect();
+            var localX = event.clientX - rect.left;
+            var localY = event.clientY - rect.top;
+            zoomSolarAt(localX, localY, solarViewState.lastSize, solarViewState.lastModel, event.deltaY);
+            renderSolarSystem(state.lastGoodTelemetry);
+          }, { passive: false });
+
+          canvas.addEventListener("pointerdown", function (event) {
+            if (!solarViewState.lastModel || !solarViewState.lastModel.canDraw) {
+              return;
+            }
+
+            solarViewState.dragging = true;
+            solarViewState.dragStartX = event.clientX;
+            solarViewState.dragStartY = event.clientY;
+            solarViewState.dragPanStartX = solarViewState.panX;
+            solarViewState.dragPanStartY = solarViewState.panY;
+            canvas.classList.add("solar-dragging");
+            canvas.setPointerCapture(event.pointerId);
+          });
+
+          canvas.addEventListener("pointermove", function (event) {
+            if (!solarViewState.dragging) {
+              updateSolarHover(event);
+              return;
+            }
+
+            solarViewState.autoFitEnabled = false;
+            solarViewState.panX = solarViewState.dragPanStartX + (event.clientX - solarViewState.dragStartX);
+            solarViewState.panY = solarViewState.dragPanStartY + (event.clientY - solarViewState.dragStartY);
+            renderSolarSystem(state.lastGoodTelemetry);
+          });
+
+          canvas.addEventListener("pointerup", function (event) {
+            solarViewState.dragging = false;
+            canvas.classList.remove("solar-dragging");
+            try {
+              canvas.releasePointerCapture(event.pointerId);
+            } catch (_) {
+            }
+          });
+
+          canvas.addEventListener("pointerleave", function () {
+            if (!solarViewState.dragging) {
+              solarViewState.hoverObjectId = null;
+              updateSolarDiagnostics(solarViewState.lastModel || { canDraw: false, telemetry: {} });
+            }
+          });
+
+          canvas.addEventListener("dblclick", function () {
+            solarViewState.autoFitEnabled = true;
+            solarViewState.needsFit = true;
+            solarViewState.zoom = 1;
+            solarViewState.panX = 0;
+            solarViewState.panY = 0;
+            renderSolarSystem(state.lastGoodTelemetry);
+          });
+
+          canvas.addEventListener("click", function (event) {
+            selectSolarObjectAt(event);
+          });
+
+          if (elements.solarControls) {
+            elements.solarControls.addEventListener("click", function (event) {
+              var button = event.target.closest("[data-camera-mode], [data-solar-action]");
+              if (!button) {
+                return;
+              }
+
+              if (button.hasAttribute("data-camera-mode")) {
+                setSolarCameraMode(button.getAttribute("data-camera-mode"));
+                return;
+              }
+
+              var action = button.getAttribute("data-solar-action");
+              if (action === "recenter" || action === "resetView") {
+                solarViewState.autoFitEnabled = true;
+                solarViewState.needsFit = true;
+                solarViewState.zoom = 1;
+                solarViewState.panX = 0;
+                solarViewState.panY = 0;
+                if (action === "resetView") {
+                  solarViewState.selectedObjectId = null;
+                }
+                renderSolarSystem(state.lastGoodTelemetry);
+                return;
+              }
+
+              if (action === "scrubLive") {
+                solarViewState.scrubEnabled = false;
+                solarViewState.scrubUniversalTime = null;
+                updateSolarTimeScrubber(state.lastGoodTelemetry);
+                renderSolarSystem(state.lastGoodTelemetry);
+              }
+            });
+          }
+
+          if (elements.solarTimeScrubber) {
+            elements.solarTimeScrubber.addEventListener("input", function () {
+              solarViewState.scrubEnabled = true;
+              solarViewState.scrubUniversalTime = Number(elements.solarTimeScrubber.value);
+              updateSolarScrubLabel(state.lastGoodTelemetry);
+              renderSolarSystem(state.lastGoodTelemetry);
+            });
+          }
+
+          solarViewState.interactionsBound = true;
+        }
+
+        function setSolarCameraMode(mode) {
+          solarViewState.mode = mode || "fullSystem";
+          solarViewState.autoFitEnabled = true;
+          solarViewState.needsFit = true;
+
+          if (elements.solarControls) {
+            elements.solarControls.querySelectorAll("[data-camera-mode]").forEach(function (button) {
+              button.classList.toggle("active", button.getAttribute("data-camera-mode") === solarViewState.mode);
+            });
+          }
+
+          renderSolarSystem(state.lastGoodTelemetry);
+        }
+
+        function renderSolarSystem(telemetry) {
+          var canvas = elements.solarCanvas;
+          var context = canvas.getContext("2d");
+          var model = buildSolarSystemModel(telemetry);
+          var size = prepareCanvas(canvas, context);
+
+          solarViewState.lastModel = model;
+          solarViewState.lastSize = size;
+
+          if (solarViewState.autoFitEnabled || solarViewState.needsFit) {
+            fitSolarBounds(model, size, telemetry);
+            solarViewState.needsFit = false;
+          }
+
+          clearMap(context, size);
+          drawMapBackground(context, size);
+
+          if (!model.canDraw) {
+            drawCenteredMessage(context, size, model.reason);
+            updateSolarDiagnostics(model);
+            return;
+          }
+
+          updateSolarTimeScrubber(telemetry);
+          buildSolarHitTargets(model, size);
+          drawSolarRouteOverlay(context, size, model);
+          drawSolarPatchConics(context, size, model);
+          drawSolarVesselPath(context, size, model);
+          drawSolarSoi(context, size, model);
+          drawSolarBodies(context, size, model);
+          drawSolarPatchAnchors(context, size, model);
+          drawSolarScrubHighlights(context, size, model);
+          drawSolarVessel(context, size, model);
+          updateSolarDiagnostics(model);
+        }
+
+        function buildSolarSystemModel(telemetry) {
+          var bodies = telemetry && Array.isArray(telemetry.bodies) ? telemetry.bodies : [];
+          var vessel = telemetry && telemetry.activeVessel;
+          var patches = telemetry && Array.isArray(telemetry.orbitPatches) ? telemetry.orbitPatches : [];
+          var projectionMode = "rootXZ";
+          var bodyModels = [];
+          var patchAnchors = [];
+          var routeAnchors = [];
+          var placementMarkers = [];
+          var vesselPathPoints = [];
+          var scrubUniversalTime = solarViewState.scrubEnabled ? solarViewState.scrubUniversalTime : null;
+          var vesselPoint = vessel && vessel.positionRootRelativeMeters ? projectRootPoint(vessel.positionRootRelativeMeters, projectionMode) : null;
+          var reason = "ok";
+          var canDraw = false;
+          var placementMode = "currentReferenceBodyPosition";
+          var routeOverlayMode = "none";
+          var ephemerisStatus = telemetry ? valueOrNA(telemetry.ephemerisCaptureStatus) : "N/A";
+
+          bodies.forEach(function (body) {
+            if (!body) {
+              return;
+            }
+
+            var position = resolveBodyPositionForScrub(body, telemetry, scrubUniversalTime);
+            if (!position) {
+              return;
+            }
+
+            bodyModels.push({
+              body: body,
+              projected: projectRootPoint(position, projectionMode),
+              isScrubPreview: scrubUniversalTime !== null
+            });
+          });
+
+          patches.forEach(function (patch) {
+            if (!patch) {
+              return;
+            }
+
+            if (patch.patchPlacementMode) {
+              placementMode = patch.patchPlacementMode;
+            }
+
+            var samples = Array.isArray(patch.placementSamples) ? patch.placementSamples : [];
+            if (samples.length > 0) {
+              samples.forEach(function (sample) {
+                if (!sample || !sample.positionRootRelativeMeters) {
+                  return;
+                }
+
+                var projected = projectRootPoint(sample.positionRootRelativeMeters, projectionMode);
+                var marker = {
+                  patch: patch,
+                  sample: sample,
+                  projected: projected,
+                  role: sample.sampleRole,
+                  targetBody: sample.targetBody,
+                  sampleUniversalTimeSeconds: sample.sampleUniversalTimeSeconds
+                };
+
+                placementMarkers.push(marker);
+                routeAnchors.push(marker);
+
+                if (sample.sampleRole === "patchStart") {
+                  patchAnchors.push({
+                    patch: patch,
+                    projected: projected,
+                    role: "patch start"
+                  });
+                }
+              });
+            } else if (patch.referenceBodyPositionRootRelativeMeters) {
+              var fallbackProjected = projectRootPoint(patch.referenceBodyPositionRootRelativeMeters, projectionMode);
+              patchAnchors.push({
+                patch: patch,
+                projected: fallbackProjected,
+                role: "current frame"
+              });
+              routeAnchors.push({
+                patch: patch,
+                projected: fallbackProjected,
+                role: "current frame",
+                targetBody: patch.referenceBody,
+                sampleUniversalTimeSeconds: patch.referenceBodyPositionSampleUniversalTimeSeconds
+              });
+            }
+          });
+
+          routeAnchors.sort(function (a, b) {
+            return finiteOr(a.sampleUniversalTimeSeconds, 0) - finiteOr(b.sampleUniversalTimeSeconds, 0);
+          });
+
+          if (routeAnchors.length >= 2 && (placementMode === "multiSampleEphemeris" || placementMode === "multiSampleEphemerisPartial")) {
+            routeOverlayMode = "patched-conic route (KSP prediction)";
+          } else if (routeAnchors.length >= 2) {
+            routeOverlayMode = "current-frame approximate route";
+          }
+
+          if (vessel && Array.isArray(vessel.rootPathSamples)) {
+            vessel.rootPathSamples.forEach(function (sample) {
+              if (!sample || !sample.positionRootRelativeMeters) {
+                return;
+              }
+
+              vesselPathPoints.push(projectRootPoint(sample.positionRootRelativeMeters, projectionMode));
+            });
+          }
+
+          if (!telemetry || telemetry.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
+            reason = "Schema v6 telemetry is required for solar-system rendering.";
+          } else if (!telemetry.rootFrameName || !telemetry.rootBody) {
+            reason = "Root-frame metadata is unavailable.";
+          } else if (bodyModels.length === 0) {
+            reason = "No root-frame body positions are available.";
+          } else {
+            canDraw = true;
+          }
+
+          var orbit = telemetry && telemetry.orbit;
+          var encounterBody = null;
+
+          patches.forEach(function (patch) {
+            if (!encounterBody && patch && patch.encounterBody) {
+              encounterBody = patch.encounterBody;
+            }
+          });
+
+          return {
+            telemetry: telemetry,
+            bodies: bodyModels,
+            patches: patchAnchors,
+            placementMarkers: placementMarkers,
+            routeAnchors: routeAnchors,
+            vesselPathPoints: vesselPathPoints,
+            vesselPoint: vesselPoint,
+            referenceBody: orbit ? orbit.referenceBody : (vessel ? vessel.mainBody : null),
+            encounterBody: encounterBody,
+            projectionMode: projectionMode,
+            placementMode: placementMode,
+            routeOverlayMode: routeOverlayMode,
+            ephemerisStatus: ephemerisStatus,
+            scrubUniversalTime: scrubUniversalTime,
+            canDraw: canDraw,
+            reason: reason,
+            scaleMetersPerPixel: 1,
+            offsetMetersX: 0,
+            offsetMetersY: 0,
+            hitTargets: [],
+            labelRects: []
+          };
+        }
+
+        function resolveBodyPositionForScrub(body, telemetry, scrubUniversalTime) {
+          if (!body) {
+            return null;
+          }
+
+          if (scrubUniversalTime === null || !telemetry || !Array.isArray(telemetry.ephemerisSamples)) {
+            return body.positionRootRelativeMeters;
+          }
+
+          var nearest = null;
+          var nearestDelta = Infinity;
+
+          telemetry.ephemerisSamples.forEach(function (sample) {
+            if (!sample || sample.targetBody !== body.name || !sample.positionRootRelativeMeters) {
+              return;
+            }
+
+            var delta = Math.abs(finiteOr(sample.sampleUniversalTimeSeconds, 0) - scrubUniversalTime);
+            if (delta < nearestDelta) {
+              nearestDelta = delta;
+              nearest = sample.positionRootRelativeMeters;
+            }
+          });
+
+          return nearest || body.positionRootRelativeMeters;
+        }
+
+        function findPlacementSample(patch, sampleRole) {
+          if (!patch || !Array.isArray(patch.placementSamples)) {
+            return null;
+          }
+
+          for (var i = 0; i < patch.placementSamples.length; i++) {
+            var sample = patch.placementSamples[i];
+            if (sample && sample.sampleRole === sampleRole && sample.positionRootRelativeMeters) {
+              return sample;
+            }
+          }
+
+          return null;
+        }
+
+        function getSolarUniversalTimeRange(telemetry) {
+          if (!telemetry) {
+            return null;
+          }
+
+          var minUt = finiteOr(telemetry.gameUniversalTimeSeconds, 0);
+          var maxUt = minUt;
+          var patches = Array.isArray(telemetry.orbitPatches) ? telemetry.orbitPatches : [];
+
+          patches.forEach(function (patch) {
+            if (!patch) {
+              return;
+            }
+
+            [patch.patchStartUniversalTimeSeconds, patch.patchEndUniversalTimeSeconds, patch.closestEncounterUniversalTimeSeconds].forEach(function (ut) {
+              if (!isFiniteNumber(ut)) {
+                return;
+              }
+
+              minUt = Math.min(minUt, ut);
+              maxUt = Math.max(maxUt, ut);
+            });
+          });
+
+          if (maxUt <= minUt) {
+            maxUt = minUt + 1;
+          }
+
+          return { minUt: minUt, maxUt: maxUt };
+        }
+
+        function updateSolarTimeScrubber(telemetry) {
+          var slider = elements.solarTimeScrubber;
+          if (!slider) {
+            return;
+          }
+
+          var range = getSolarUniversalTimeRange(telemetry);
+          if (!range) {
+            slider.disabled = true;
+            return;
+          }
+
+          slider.disabled = false;
+          slider.min = String(Math.floor(range.minUt));
+          slider.max = String(Math.ceil(range.maxUt));
+          slider.step = String(Math.max(1, Math.round((range.maxUt - range.minUt) / 240)));
+
+          if (!solarViewState.scrubEnabled) {
+            slider.value = String(Math.round(finiteOr(telemetry.gameUniversalTimeSeconds, range.minUt)));
+          }
+
+          updateSolarScrubLabel(telemetry);
+        }
+
+        function updateSolarScrubLabel(telemetry) {
+          if (!elements.solarScrubLabel) {
+            return;
+          }
+
+          if (!solarViewState.scrubEnabled || solarViewState.scrubUniversalTime === null) {
+            elements.solarScrubLabel.textContent = "Live simulation time (read-only preview does not control KSP)";
+            return;
+          }
+
+          elements.solarScrubLabel.textContent = "Preview UT " + formatUniversalTime(solarViewState.scrubUniversalTime) + " | sampled ephemeris only";
+        }
+
+        function formatUniversalTime(universalTimeSeconds) {
+          if (!isFiniteNumber(universalTimeSeconds)) {
+            return "N/A";
+          }
+
+          return universalTimeSeconds.toFixed(0) + " s";
+        }
+
+        function projectRootPoint(point, projectionMode) {
+          if (!point) {
+            return null;
+          }
+
+          if (projectionMode === "rootXY") {
+            return { x: point.x, y: -point.y };
+          }
+
+          return { x: point.x, y: -point.z };
+        }
+
+        function fitSolarBounds(model, size, telemetry) {
+          if (!model || !size || !model.canDraw) {
+            return;
+          }
+
+          var bounds = getSolarCameraBounds(model, telemetry, solarViewState.mode);
+          var padding = 50;
+          var spanX = Math.max(bounds.maxX - bounds.minX, 1);
+          var spanY = Math.max(bounds.maxY - bounds.minY, 1);
+          var drawableWidth = Math.max(1, size.width - padding * 2);
+          var drawableHeight = Math.max(1, size.height - padding * 2);
+
+          model.scaleMetersPerPixel = Math.max(spanX / drawableWidth, spanY / drawableHeight, 1);
+          model.offsetMetersX = (bounds.minX + bounds.maxX) / 2;
+          model.offsetMetersY = (bounds.minY + bounds.maxY) / 2;
+        }
+
+        function getSolarCameraBounds(model, telemetry, mode) {
+          var bounds = createBounds();
+          var vessel = telemetry && telemetry.activeVessel;
+          var orbit = telemetry && telemetry.orbit;
+
+          function includeBodyByName(name) {
+            model.bodies.forEach(function (entry) {
+              if (entry && entry.body && entry.body.name === name && entry.projected) {
+                includePoint(bounds, entry.projected.x, entry.projected.y);
+                if (isFiniteNumber(entry.body.sphereOfInfluenceMeters) && entry.body.sphereOfInfluenceMeters > 0) {
+                  includeCircle(bounds, entry.projected.x, entry.projected.y, entry.body.sphereOfInfluenceMeters * 0.15);
+                }
+              }
+            });
+          }
+
+          if (mode === "activeVessel" && model.vesselPoint) {
+            includePoint(bounds, model.vesselPoint.x, model.vesselPoint.y);
+            includeCircle(bounds, model.vesselPoint.x, model.vesselPoint.y, 2500000);
+            if (model.referenceBody) {
+              includeBodyByName(model.referenceBody);
+            }
+          } else if (mode === "currentReferenceBody" && model.referenceBody) {
+            includeBodyByName(model.referenceBody);
+            if (model.vesselPoint) {
+              includePoint(bounds, model.vesselPoint.x, model.vesselPoint.y);
+            }
+          } else if (mode === "encounterBody" && model.encounterBody) {
+            includeBodyByName(model.encounterBody);
+            if (model.vesselPoint) {
+              includePoint(bounds, model.vesselPoint.x, model.vesselPoint.y);
+            }
+          } else if (mode === "route") {
+            (model.routeAnchors || model.patches).forEach(function (entry) {
+              if (entry && entry.projected) {
+                includePoint(bounds, entry.projected.x, entry.projected.y);
+              }
+            });
+            if (model.vesselPoint) {
+              includePoint(bounds, model.vesselPoint.x, model.vesselPoint.y);
+            }
+          } else {
+            model.bodies.forEach(function (entry) {
+              if (entry && entry.projected) {
+                includePoint(bounds, entry.projected.x, entry.projected.y);
+              }
+            });
+            model.patches.forEach(function (entry) {
+              if (entry && entry.projected) {
+                includePoint(bounds, entry.projected.x, entry.projected.y);
+              }
+            });
+            if (model.vesselPoint) {
+              includePoint(bounds, model.vesselPoint.x, model.vesselPoint.y);
+            }
+          }
+
+          if (!bounds.valid) {
+            includeCircle(bounds, 0, 0, 1);
+          }
+
+          return bounds;
+        }
+
+        function mapSolarToCanvas(point, size, model) {
+          var scale = model.scaleMetersPerPixel / Math.max(solarViewState.zoom, 0.05);
+          return {
+            x: size.centerX + solarViewState.panX + (point.x - model.offsetMetersX) / scale,
+            y: size.centerY + solarViewState.panY + (point.y - model.offsetMetersY) / scale
+          };
+        }
+
+        function canvasToSolar(canvasPoint, size, model) {
+          var scale = model.scaleMetersPerPixel / Math.max(solarViewState.zoom, 0.05);
+          return {
+            x: model.offsetMetersX + (canvasPoint.x - size.centerX - solarViewState.panX) * scale,
+            y: model.offsetMetersY + (canvasPoint.y - size.centerY - solarViewState.panY) * scale
+          };
+        }
+
+        function zoomSolarAt(canvasX, canvasY, size, model, deltaY) {
+          var worldBefore = canvasToSolar({ x: canvasX, y: canvasY }, size, model);
+          var oldZoom = solarViewState.zoom;
+          var factor = deltaY < 0 ? 1.12 : 1 / 1.12;
+          solarViewState.zoom = clamp(solarViewState.zoom * factor, 0.08, 40);
+          solarViewState.autoFitEnabled = false;
+          var scaleNew = model.scaleMetersPerPixel / Math.max(solarViewState.zoom, 0.05);
+          solarViewState.panX = canvasX - size.centerX - (worldBefore.x - model.offsetMetersX) / scaleNew;
+          solarViewState.panY = canvasY - size.centerY - (worldBefore.y - model.offsetMetersY) / scaleNew;
+          if (oldZoom === solarViewState.zoom) {
+            return;
+          }
+        }
+
+        function buildSolarHitTargets(model, size) {
+          model.hitTargets = [];
+
+          model.bodies.forEach(function (entry) {
+            if (!entry || !entry.projected) {
+              return;
+            }
+
+            var point = mapSolarToCanvas(entry.projected, size, model);
+            var radius = clamp(entry.body.radiusMeters / (model.scaleMetersPerPixel / Math.max(solarViewState.zoom, 0.05)), 4, 20);
+            model.hitTargets.push({
+              id: "body:" + entry.body.name,
+              type: "body",
+              label: entry.body.name,
+              x: point.x,
+              y: point.y,
+              radius: radius + 4,
+              data: entry.body
+            });
+          });
+
+          if (model.vesselPoint) {
+            var vesselPoint = mapSolarToCanvas(model.vesselPoint, size, model);
+            model.hitTargets.push({
+              id: "vessel:active",
+              type: "vessel",
+              label: "Active Vessel",
+              x: vesselPoint.x,
+              y: vesselPoint.y,
+              radius: 12,
+              data: model.telemetry.activeVessel
+            });
+          }
+
+          model.patches.forEach(function (entry) {
+            if (!entry || !entry.projected) {
+              return;
+            }
+
+            var point = mapSolarToCanvas(entry.projected, size, model);
+            model.hitTargets.push({
+              id: "patch:" + entry.patch.patchIndex,
+              type: "patch",
+              label: "Patch " + entry.patch.patchIndex + " (" + valueOrNA(entry.role) + ")",
+              x: point.x,
+              y: point.y,
+              radius: 12,
+              data: entry.patch
+            });
+          });
+
+          (model.placementMarkers || []).forEach(function (marker, index) {
+            if (!marker || !marker.projected) {
+              return;
+            }
+
+            var point = mapSolarToCanvas(marker.projected, size, model);
+            model.hitTargets.push({
+              id: "sample:" + marker.patch.patchIndex + ":" + marker.role + ":" + index,
+              type: "sample",
+              label: valueOrNA(marker.targetBody) + " " + valueOrNA(marker.role),
+              x: point.x,
+              y: point.y,
+              radius: 10,
+              data: marker
+            });
+          });
+        }
+
+        function findSolarHitTarget(canvasX, canvasY) {
+          var model = solarViewState.lastModel;
+          if (!model || !Array.isArray(model.hitTargets)) {
+            return null;
+          }
+
+          for (var i = model.hitTargets.length - 1; i >= 0; i--) {
+            var target = model.hitTargets[i];
+            var dx = canvasX - target.x;
+            var dy = canvasY - target.y;
+            if ((dx * dx + dy * dy) <= target.radius * target.radius) {
+              return target;
+            }
+          }
+
+          return null;
+        }
+
+        function selectSolarObjectAt(event) {
+          var canvas = elements.solarCanvas;
+          var rect = canvas.getBoundingClientRect();
+          var target = findSolarHitTarget(event.clientX - rect.left, event.clientY - rect.top);
+          solarViewState.selectedObjectId = target ? target.id : null;
+          updateSolarSelectionDetails(solarViewState.lastModel);
+          renderSolarSystem(state.lastGoodTelemetry);
+        }
+
+        function updateSolarHover(event) {
+          var canvas = elements.solarCanvas;
+          var rect = canvas.getBoundingClientRect();
+          var target = findSolarHitTarget(event.clientX - rect.left, event.clientY - rect.top);
+          var nextHover = target ? target.id : null;
+
+          if (nextHover !== solarViewState.hoverObjectId) {
+            solarViewState.hoverObjectId = nextHover;
+            renderSolarSystem(state.lastGoodTelemetry);
+          }
+        }
+
+        function drawSolarRouteOverlay(context, size, model) {
+          var anchors = model.routeAnchors || [];
+
+          if (anchors.length < 2) {
+            return;
+          }
+
+          context.save();
+          context.strokeStyle = model.routeOverlayMode.indexOf("patched-conic") >= 0
+            ? "rgba(199, 146, 234, 0.85)"
+            : "rgba(199, 146, 234, 0.55)";
+          context.lineWidth = 2;
+          context.setLineDash(model.routeOverlayMode.indexOf("patched-conic") >= 0 ? [12, 6] : [10, 8]);
+          context.beginPath();
+
+          anchors.forEach(function (anchor, index) {
+            if (!anchor || !anchor.projected) {
+              return;
+            }
+
+            var point = mapSolarToCanvas(anchor.projected, size, model);
+            if (index === 0) {
+              context.moveTo(point.x, point.y);
+            } else {
+              context.lineTo(point.x, point.y);
+            }
+          });
+
+          context.stroke();
+          context.restore();
+        }
+
+        function drawSolarPatchConics(context, size, model) {
+          if (!model.patches || model.patches.length === 0) {
+            return;
+          }
+
+          context.save();
+          context.strokeStyle = "rgba(103, 211, 255, 0.35)";
+          context.lineWidth = 1.5;
+          context.setLineDash([4, 6]);
+
+          model.patches.forEach(function (entry) {
+            var patch = entry.patch;
+            if (!patch) {
+              return;
+            }
+
+            var startSample = findPlacementSample(patch, "patchStart");
+            if (!startSample) {
+              return;
+            }
+
+            var anchor = projectRootPoint(startSample.positionRootRelativeMeters, model.projectionMode);
+            var geometry = buildConicGeometry(patch, patch.referenceBodyRadiusMeters, "orbitPlane", patch.classification === "Suborbital");
+
+            if (!geometry.canDraw) {
+              return;
+            }
+
+            geometry.segments.forEach(function (segment) {
+              if (!segment || segment.length < 2) {
+                return;
+              }
+
+              context.beginPath();
+              segment.forEach(function (point, index) {
+                if (!point) {
+                  return;
+                }
+
+                var worldPoint = {
+                  x: anchor.x + point.x,
+                  y: anchor.y + point.y
+                };
+                var canvasPoint = mapSolarToCanvas(worldPoint, size, model);
+
+                if (index === 0) {
+                  context.moveTo(canvasPoint.x, canvasPoint.y);
+                } else {
+                  context.lineTo(canvasPoint.x, canvasPoint.y);
+                }
+              });
+              context.stroke();
+            });
+          });
+
+          context.restore();
+        }
+
+        function drawSolarVesselPath(context, size, model) {
+          if (!model.vesselPathPoints || model.vesselPathPoints.length < 2) {
+            return;
+          }
+
+          context.save();
+          context.strokeStyle = "rgba(255, 209, 102, 0.7)";
+          context.lineWidth = 1.5;
+          context.setLineDash([3, 5]);
+          context.beginPath();
+
+          model.vesselPathPoints.forEach(function (point, index) {
+            var canvasPoint = mapSolarToCanvas(point, size, model);
+            if (index === 0) {
+              context.moveTo(canvasPoint.x, canvasPoint.y);
+            } else {
+              context.lineTo(canvasPoint.x, canvasPoint.y);
+            }
+          });
+
+          context.stroke();
+          context.restore();
+        }
+
+        function drawSolarScrubHighlights(context, size, model) {
+          if (model.scrubUniversalTime === null || !model.placementMarkers) {
+            return;
+          }
+
+          var threshold = Math.max(3600, (getSolarUniversalTimeRange(model.telemetry) || { maxUt: 0, minUt: 0 }).maxUt / 120);
+
+          context.save();
+          context.strokeStyle = "rgba(255, 255, 255, 0.85)";
+          context.lineWidth = 2;
+
+          model.placementMarkers.forEach(function (marker) {
+            if (!marker || !marker.projected) {
+              return;
+            }
+
+            var delta = Math.abs(finiteOr(marker.sampleUniversalTimeSeconds, 0) - model.scrubUniversalTime);
+            if (delta > threshold) {
+              return;
+            }
+
+            var point = mapSolarToCanvas(marker.projected, size, model);
+            context.beginPath();
+            context.arc(point.x, point.y, 14, 0, Math.PI * 2);
+            context.stroke();
+          });
+
+          context.restore();
+        }
+
+        function drawSolarSoi(context, size, model) {
+          context.save();
+          context.strokeStyle = "rgba(103, 211, 255, 0.16)";
+          context.lineWidth = 1;
+          var effectiveScale = model.scaleMetersPerPixel / Math.max(solarViewState.zoom, 0.05);
+
+          model.bodies.forEach(function (entry) {
+            var body = entry.body;
+
+            if (!body || !entry.projected || !isFiniteNumber(body.sphereOfInfluenceMeters) || body.sphereOfInfluenceMeters <= 0) {
+              return;
+            }
+
+            var point = mapSolarToCanvas(entry.projected, size, model);
+            var radius = body.sphereOfInfluenceMeters / effectiveScale;
+
+            if (radius < 3 || radius > Math.max(size.width, size.height) * 2) {
+              return;
+            }
+
+            context.beginPath();
+            context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+            context.stroke();
+          });
+
+          context.restore();
+        }
+
+        function getSolarObjectPriority(model, objectId) {
+          if (!objectId) {
+            return 0;
+          }
+
+          if (objectId === solarViewState.selectedObjectId) {
+            return 100;
+          }
+
+          if (objectId === "vessel:active") {
+            return 90;
+          }
+
+          if (model.referenceBody && objectId === "body:" + model.referenceBody) {
+            return 80;
+          }
+
+          if (model.encounterBody && objectId === "body:" + model.encounterBody) {
+            return 75;
+          }
+
+          if (model.telemetry && model.telemetry.rootBody && objectId === "body:" + model.telemetry.rootBody) {
+            return 70;
+          }
+
+          if (objectId.indexOf("patch:") === 0) {
+            return 60;
+          }
+
+          if (objectId === solarViewState.hoverObjectId) {
+            return 50;
+          }
+
+          return 20;
+        }
+
+        function drawSolarBodies(context, size, model) {
+          model.labelRects = [];
+          var effectiveScale = model.scaleMetersPerPixel / Math.max(solarViewState.zoom, 0.05);
+          var labelCandidates = [];
+
+          model.bodies.forEach(function (entry) {
+            var body = entry.body;
+            var objectId = "body:" + body.name;
+            var point = mapSolarToCanvas(entry.projected, size, model);
+            var radius = clamp(body.radiusMeters / effectiveScale, body.name === model.telemetry.rootBody ? 7 : 4, 20);
+            var isSelected = objectId === solarViewState.selectedObjectId;
+            var isHovered = objectId === solarViewState.hoverObjectId;
+            var isReference = body.name === model.referenceBody;
+            var isEncounter = body.name === model.encounterBody;
+            var fill = body.name === model.telemetry.rootBody ? "#ffd166" : (isReference ? "#61d394" : "#67d3ff");
+
+            context.save();
+            context.beginPath();
+            context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+            context.fillStyle = fill;
+            context.fill();
+            context.lineWidth = isSelected || isHovered ? 3 : 1.5;
+            context.strokeStyle = isSelected ? "#ffffff" : (isHovered ? "#ffd166" : "rgba(231, 240, 247, 0.8)");
+            context.stroke();
+            context.restore();
+
+            labelCandidates.push({
+              id: objectId,
+              priority: getSolarObjectPriority(model, objectId) + (isEncounter ? 5 : 0),
+              text: body.name,
+              x: point.x + radius + 6,
+              y: point.y - radius - 6
+            });
+          });
+
+          drawSolarLabels(context, model, labelCandidates);
+        }
+
+        function drawSolarVessel(context, size, model) {
+          if (!model.vesselPoint) {
+            return;
+          }
+
+          var objectId = "vessel:active";
+          var point = mapSolarToCanvas(model.vesselPoint, size, model);
+          var color = objectId === solarViewState.selectedObjectId ? "#ffffff" : (objectId === solarViewState.hoverObjectId ? "#ffd166" : "#ffffff");
+          drawMarker(context, point.x, point.y, "V", color);
+
+          drawSolarLabels(context, model, [{
+            id: objectId,
+            priority: getSolarObjectPriority(model, objectId),
+            text: model.telemetry.activeVessel ? model.telemetry.activeVessel.name : "Vessel",
+            x: point.x + 12,
+            y: point.y - 12
+          }]);
+        }
+
+        function drawSolarPatchAnchors(context, size, model) {
+          var labelCandidates = [];
+
+          model.patches.forEach(function (entry) {
+            var patch = entry.patch;
+            var objectId = "patch:" + patch.patchIndex;
+            var point = mapSolarToCanvas(entry.projected, size, model);
+            var label = "P" + valueOrNA(patch.patchIndex);
+            var color = patch.patchEndTransition === "ENCOUNTER" ? "#ffd166" : "#c792ea";
+
+            if (objectId === solarViewState.selectedObjectId || objectId === solarViewState.hoverObjectId) {
+              color = "#ffffff";
+            }
+
+            drawMarker(context, point.x, point.y, label, color);
+            labelCandidates.push({
+              id: objectId,
+              priority: getSolarObjectPriority(model, objectId),
+              text: label + " " + valueOrNA(patch.referenceBody),
+              x: point.x + 12,
+              y: point.y + 18
+            });
+          });
+
+          drawSolarLabels(context, model, labelCandidates);
+        }
+
+        function drawSolarLabels(context, model, candidates) {
+          candidates.sort(function (a, b) {
+            return b.priority - a.priority;
+          });
+
+          context.save();
+          context.font = "600 12px Segoe UI, sans-serif";
+
+          candidates.forEach(function (candidate) {
+            var width = context.measureText(candidate.text).width + 8;
+            var height = 16;
+            var rect = {
+              x: candidate.x,
+              y: candidate.y - height,
+              width: width,
+              height: height
+            };
+
+            if (rectCollides(rect, model.labelRects)) {
+              return;
+            }
+
+            model.labelRects.push(rect);
+            context.fillStyle = "#e7f0f7";
+            context.fillText(candidate.text, candidate.x + 4, candidate.y - 4);
+          });
+
+          context.restore();
+        }
+
+        function rectCollides(rect, rects) {
+          for (var i = 0; i < rects.length; i++) {
+            var other = rects[i];
+            if (!(rect.x + rect.width < other.x || other.x + other.width < rect.x || rect.y + rect.height < other.y || other.y + other.height < rect.y)) {
+              return true;
+            }
+          }
+
+          return false;
+        }
+
+        function updateSolarSelectionDetails(model) {
+          if (!elements.solarSelection) {
+            return;
+          }
+
+          var target = null;
+          if (model && Array.isArray(model.hitTargets) && solarViewState.selectedObjectId) {
+            model.hitTargets.forEach(function (entry) {
+              if (entry.id === solarViewState.selectedObjectId) {
+                target = entry;
+              }
+            });
+          }
+
+          if (!target) {
+            elements.solarSelection.textContent = "Click a body, vessel, or patch anchor for details.";
+            return;
+          }
+
+          if (target.type === "body") {
+            var body = target.data;
+            elements.solarSelection.textContent = "Body " + body.name + " | parent " + valueOrNA(body.parentBody) + " | radius " + formatDistance(body.radiusMeters) + " | SOI " + formatDistance(body.sphereOfInfluenceMeters);
+            return;
+          }
+
+          if (target.type === "vessel") {
+            var vessel = target.data;
+            elements.solarSelection.textContent = "Vessel " + valueOrNA(vessel.name) + " | " + valueOrNA(vessel.situation) + " around " + valueOrNA(vessel.mainBody) + " | altitude " + formatDistance(vessel.altitudeMeters);
+            return;
+          }
+
+          if (target.type === "patch") {
+            var patch = target.data;
+            elements.solarSelection.textContent = "Patch " + patch.patchIndex + " | " + valueOrNA(patch.referenceBody) + " | " + valueOrNA(patch.patchStartTransition) + " -> " + valueOrNA(patch.patchEndTransition) + " | encounter " + valueOrNA(patch.encounterBody) + ". " + valueOrNA(patch.patchPlacementWarning);
+            return;
+          }
+
+          if (target.type === "sample") {
+            var marker = target.data;
+            elements.solarSelection.textContent = valueOrNA(marker.targetBody) + " | " + valueOrNA(marker.role) + " at UT " + formatUniversalTime(marker.sampleUniversalTimeSeconds) + " | " + valueOrNA(marker.sample && marker.sample.sampleSource);
+          }
+        }
+
+        function updateSolarDiagnostics(model) {
+          var telemetry = model && model.telemetry ? model.telemetry : {};
+          var status = model && model.canDraw ? "Rendering" : "Unavailable";
+          var warning = telemetry.rootFrameWarning || "Ephemeris samples use KSP patched-conic propagation; not SPICE/N-body.";
+          var effectiveScale = model && isFiniteNumber(model.scaleMetersPerPixel)
+            ? model.scaleMetersPerPixel / Math.max(solarViewState.zoom, 0.05)
+            : NaN;
+          var hoverLabel = "None";
+          var selectionLabel = "None";
+
+          if (model && Array.isArray(model.hitTargets)) {
+            model.hitTargets.forEach(function (target) {
+              if (target.id === solarViewState.hoverObjectId) {
+                hoverLabel = target.label;
+              }
+              if (target.id === solarViewState.selectedObjectId) {
+                selectionLabel = target.label;
+              }
+            });
+          }
+
+          setText("solarRenderStatus", status);
+          setText("solarMessage", model && model.canDraw
+            ? "Interactive solar view: wheel zoom, drag pan, double-click reset. Route/conics use time-sampled patch anchors when ephemeris capture succeeds."
+            : (model ? model.reason : "Unavailable"));
+          setText("solarCameraMode", formatSolarCameraMode(solarViewState.mode));
+          setText("solarRootFrame", valueOrNA(telemetry.rootFrameName));
+          setText("solarRootBody", valueOrNA(telemetry.rootBody));
+          setText("solarProjection", model ? valueOrNA(model.projectionMode) : "N/A");
+          setText("solarScale", isFiniteNumber(effectiveScale) ? "1 px = " + formatDistance(effectiveScale) : "N/A");
+          setText("solarRouteOverlay", model ? valueOrNA(model.routeOverlayMode) : "none");
+          setText("solarEphemerisStatus", model ? valueOrNA(model.ephemerisStatus) : "N/A");
+          setText("solarSelectionLabel", selectionLabel);
+          setText("solarHovered", hoverLabel);
+          setText("solarPlacementMode", model ? valueOrNA(model.placementMode) : "N/A");
+          setText("solarWarning", warning);
+          updateSolarSelectionDetails(model);
+        }
+
+        function formatSolarCameraMode(mode) {
+          if (mode === "activeVessel") {
+            return "active vessel";
+          }
+
+          if (mode === "currentReferenceBody") {
+            return "current reference body";
+          }
+
+          if (mode === "encounterBody") {
+            return "encounter body";
+          }
+
+          if (mode === "route") {
+            return "route";
+          }
+
+          return "full system";
+        }
+
+        function buildMapModel(telemetry) {
+          var orbit = telemetry && telemetry.orbit;
+          var vessel = telemetry && telemetry.activeVessel;
+          var bodies = telemetry && Array.isArray(telemetry.bodies) ? telemetry.bodies : [];
+          var classification = orbit && orbit.classification ? orbit.classification : "Invalid";
+          var body = findBody(bodies, orbit ? orbit.referenceBody : null);
+          var bodyRadius = finiteOr(orbit && orbit.referenceBodyRadiusMeters, body ? body.radiusMeters : NaN);
+          var apoapsisRadius = finiteOr(orbit && orbit.apoapsisRadiusMeters, bodyRadius + finiteOr(orbit && orbit.apoapsisMeters, NaN));
+          var periapsisRadius = finiteOr(orbit && orbit.periapsisRadiusMeters, bodyRadius + finiteOr(orbit && orbit.periapsisMeters, NaN));
+          var eccentricity = finiteOr(orbit && orbit.eccentricity, NaN);
+          var projectionMode = "orbitPlane";
+          var patchRoute = buildPatchRouteModel(telemetry);
+          var geometry = null;
+          var vesselPoint = null;
+          var scaleMetersPerPixel = 1;
+          var reason = "ok";
+          var canDrawBody = isFiniteNumber(bodyRadius) && bodyRadius > 0;
+          var canDrawOrbit = false;
+          var canDrawVessel = false;
+          var residualMeters = NaN;
+
+          if (!telemetry || telemetry.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
+            reason = "Schema v6 telemetry is required for map rendering.";
+          } else if (!orbit) {
+            reason = "No orbit snapshot is available.";
+          } else if (!canDrawBody) {
+            reason = "Reference body radius is unavailable.";
+          } else if (classification === "Prelaunch" || classification === "Landed" || classification === "Splashed") {
+            reason = "Vessel is not in orbit; drawing body and vessel state only.";
+          } else if (classification === "Suborbital") {
+            geometry = buildConicGeometry(orbit, bodyRadius, projectionMode, true);
+            canDrawOrbit = geometry.canDraw;
+            reason = canDrawOrbit ? "Suborbital trajectory intersects the reference body." : geometry.reason;
+          } else if (classification === "Elliptic") {
+            geometry = buildConicGeometry(orbit, bodyRadius, projectionMode, false);
+            canDrawOrbit = geometry.canDraw;
+            reason = canDrawOrbit ? "ok" : geometry.reason;
+          } else if (classification === "HyperbolicEscape") {
+            geometry = buildConicGeometry(orbit, bodyRadius, projectionMode, false);
+            canDrawOrbit = geometry.canDraw;
+            reason = canDrawOrbit ? "Hyperbolic escape trajectory is truncated for bounded display." : geometry.reason;
+          } else {
+            reason = "Orbit classification is invalid or unsupported.";
+          }
+
+          if (vessel && vessel.positionRelativeToReferenceBodyMeters) {
+            vesselPoint = buildVesselMapPoint(vessel.positionRelativeToReferenceBodyMeters, orbit, projectionMode, geometry);
+            canDrawVessel = !!vesselPoint;
+          }
+
+          if (geometry && vessel && vessel.positionRelativeToReferenceBodyMeters) {
+            residualMeters = findClosestSampleToVessel(geometry.points, vessel.positionRelativeToReferenceBodyMeters);
+          }
+
+          return {
+            telemetry: telemetry,
+            orbit: orbit,
+            vessel: vessel,
+            body: body,
+            classification: classification,
+            referenceBody: orbit ? orbit.referenceBody : null,
+            bodyRadius: bodyRadius,
+            atmosphereDepth: body && body.hasAtmosphere ? body.atmosphereDepthMeters : 0,
+            apoapsisRadius: apoapsisRadius,
+            periapsisRadius: periapsisRadius,
+            eccentricity: eccentricity,
+            projectionMode: projectionMode,
+            patchRoute: patchRoute,
+            geometry: geometry,
+            vesselPoint: vesselPoint,
+            residualMeters: residualMeters,
+            offsetMetersX: 0,
+            offsetMetersY: 0,
+            scaleMetersPerPixel: scaleMetersPerPixel,
+            canDrawBody: canDrawBody,
+            canDrawOrbit: canDrawOrbit,
+            canDrawVessel: canDrawVessel,
+            reason: reason
+          };
+        }
+
+        function buildPatchRouteModel(telemetry) {
+          var patches = telemetry && Array.isArray(telemetry.orbitPatches) ? telemetry.orbitPatches : [];
+          var status = telemetry && telemetry.patchChainStatus ? telemetry.patchChainStatus : "unavailable";
+          var nextTransition = "N/A";
+          var encounter = "N/A";
+
+          for (var i = 0; i < patches.length; i++) {
+            var patch = patches[i];
+
+            if (!patch) {
+              continue;
+            }
+
+            if (nextTransition === "N/A" && patch.patchEndTransition && patch.patchEndTransition !== "FINAL") {
+              nextTransition = joinValues([patch.referenceBody, patch.patchEndTransition, patch.nextPatchReferenceBody], " -> ");
+            }
+
+            if (encounter === "N/A" && patch.patchEndTransition === "ENCOUNTER" && patch.nextPatchReferenceBody) {
+              encounter = joinValues([patch.nextPatchReferenceBody, formatSeconds(patch.timeToPatchEndSeconds)], " in ");
+            }
+          }
+
+          for (var j = 0; j < patches.length; j++) {
+            var encounterPatch = patches[j];
+
+            if (!encounterPatch) {
+              continue;
+            }
+
+            if (encounter === "N/A" && encounterPatch.encounterBody) {
+              encounter = joinValues([encounterPatch.encounterBody, formatSeconds(encounterPatch.closestEncounterUniversalTimeSeconds)], " @ UT ");
+            }
+          }
+
+          if (patches.length === 1 && nextTransition === "N/A") {
+            nextTransition = "No future patches";
+          }
+
+          return {
+            patches: patches,
+            status: status,
+            nextTransition: nextTransition,
+            encounter: encounter
+          };
+        }
+
+        function buildConicGeometry(orbit, bodyRadius, projectionMode, splitAtBodySurface) {
+          var eccentricity = finiteOr(orbit && orbit.eccentricity, NaN);
+          var semiMajorAxis = finiteOr(orbit && orbit.semiMajorAxisMeters, NaN);
+          var semiLatusRectum = finiteOr(orbit && orbit.semiLatusRectumMeters, calculateSemiLatusRectum(semiMajorAxis, eccentricity));
+          var sampleCount = eccentricity > 1 ? 180 : 240;
+          var points;
+
+          if (!isFiniteNumber(eccentricity) || eccentricity < 0) {
+            return emptyGeometry("Orbit eccentricity is unavailable.");
+          }
+
+          if (!isFiniteNumber(semiLatusRectum) || semiLatusRectum <= 0) {
+            return emptyGeometry("Conic semi-latus rectum is unavailable.");
+          }
+
+          if (eccentricity < 1) {
+            points = sampleEllipsePoints(orbit, semiLatusRectum, eccentricity, sampleCount, projectionMode);
+          } else if (eccentricity > 1) {
+            points = sampleHyperbolaPoints(orbit, bodyRadius, semiLatusRectum, eccentricity, sampleCount, projectionMode);
+          } else {
+            return emptyGeometry("Parabolic trajectories are deferred for this phase.");
+          }
+
+          if (points.length < 2) {
+            return emptyGeometry("Conic sampling produced too few drawable points.");
+          }
+
+          var segments = splitAtBodySurface ? splitSegmentsAboveRadius(points, bodyRadius) : [points];
+
+          if (segments.length === 0) {
+            return emptyGeometry("The sampled trajectory is below the reference body surface.");
+          }
+
+          return {
+            canDraw: true,
+            reason: "ok",
+            points: points,
+            segments: segments,
+            periapsisPoint: buildConicPoint(orbit, semiLatusRectum, eccentricity, 0, projectionMode),
+            apoapsisPoint: eccentricity < 1 ? buildConicPoint(orbit, semiLatusRectum, eccentricity, Math.PI, projectionMode) : null
+          };
+        }
+
+        function emptyGeometry(reason) {
+          return {
+            canDraw: false,
+            reason: reason,
+            points: [],
+            segments: [],
+            periapsisPoint: null,
+            apoapsisPoint: null
+          };
+        }
+
+        function sampleEllipsePoints(orbit, semiLatusRectum, eccentricity, sampleCount, projectionMode) {
+          var points = [];
+
+          for (var i = 0; i <= sampleCount; i++) {
+            var point = buildConicPoint(orbit, semiLatusRectum, eccentricity, (Math.PI * 2 * i) / sampleCount, projectionMode);
+
+            if (point) {
+              points.push(point);
+            }
+          }
+
+          return points;
+        }
+
+        function sampleHyperbolaPoints(orbit, bodyRadius, semiLatusRectum, eccentricity, sampleCount, projectionMode) {
+          var points = [];
+          var epsilon = 0.035;
+          var anomalyLimit = Math.acos(clamp(-1 / eccentricity, -1, 1)) - epsilon;
+          var soi = finiteOr(orbit && orbit.sphereOfInfluenceMeters, NaN);
+          var displayRadius = isFiniteNumber(soi) && soi > bodyRadius
+            ? soi
+            : Math.max(bodyRadius * 12, finiteOr(orbit && orbit.periapsisRadiusMeters, bodyRadius) * 8);
+          var soiLimit = trueAnomalyAtRadius(semiLatusRectum, eccentricity, displayRadius);
+
+          if (isFiniteNumber(soiLimit) && soiLimit > 0) {
+            anomalyLimit = Math.min(anomalyLimit, soiLimit);
+          }
+
+          anomalyLimit = clamp(anomalyLimit, 0.15, Math.PI - epsilon);
+
+          for (var i = 0; i <= sampleCount; i++) {
+            var t = i / sampleCount;
+            var anomaly = -anomalyLimit + (anomalyLimit * 2 * t);
+            var point = buildConicPoint(orbit, semiLatusRectum, eccentricity, anomaly, projectionMode);
+
+            if (point && point.radiusMeters <= displayRadius * 1.01) {
+              points.push(point);
+            }
+          }
+
+          return points;
+        }
+
+        function splitSegmentsAboveRadius(points, bodyRadius) {
+          var segments = [];
+          var current = [];
+
+          points.forEach(function (point) {
+            if (!point) {
+              return;
+            }
+
+            if (point.radiusMeters >= bodyRadius) {
+              current.push(point);
+              return;
+            }
+
+            if (current.length > 1) {
+              segments.push(current);
+            }
+
+            current = [];
+          });
+
+          if (current.length > 1) {
+            segments.push(current);
+          }
+
+          return segments;
+        }
+
+        function buildConicPoint(orbit, semiLatusRectum, eccentricity, trueAnomalyRadians, projectionMode) {
+          var denominator = 1 + eccentricity * Math.cos(trueAnomalyRadians);
+
+          if (Math.abs(denominator) < 1e-9) {
+            return null;
+          }
+
+          var radius = semiLatusRectum / denominator;
+
+          if (!isFiniteNumber(radius) || radius <= 0) {
+            return null;
+          }
+
+          var perifocal = {
+            x: radius * Math.cos(trueAnomalyRadians),
+            y: radius * Math.sin(trueAnomalyRadians),
+            z: 0
+          };
+          var inertial = perifocalToInertial(perifocal, orbit);
+          var projected = projectPoint(perifocal, inertial, projectionMode);
+
+          return {
+            trueAnomalyRadians: trueAnomalyRadians,
+            radiusMeters: radius,
+            perifocal: perifocal,
+            inertial: inertial,
+            projected: projected
+          };
+        }
+
+        function buildVesselMapPoint(vector, orbit, projectionMode, geometry) {
+          if (!vector) {
+            return null;
+          }
+
+          if (projectionMode === "orbitPlane" && geometry) {
+            var current = buildConicPoint(
+              orbit,
+              finiteOr(orbit && orbit.semiLatusRectumMeters, calculateSemiLatusRectum(orbit && orbit.semiMajorAxisMeters, orbit && orbit.eccentricity)),
+              finiteOr(orbit && orbit.eccentricity, NaN),
+              degreesToRadians(finiteOr(orbit && orbit.trueAnomalyDegrees, 0)),
+              projectionMode);
+
+            return current ? current.projected : null;
+          }
+
+          return projectPoint(null, vector, projectionMode);
+        }
+
+        function calculateSemiLatusRectum(semiMajorAxis, eccentricity) {
+          if (!isFiniteNumber(semiMajorAxis) || !isFiniteNumber(eccentricity)) {
+            return NaN;
+          }
+
+          if (eccentricity < 1) {
+            return semiMajorAxis * (1 - eccentricity * eccentricity);
+          }
+
+          if (eccentricity > 1) {
+            return Math.abs(semiMajorAxis) * (eccentricity * eccentricity - 1);
+          }
+
+          return NaN;
+        }
+
+        function perifocalToInertial(point, orbit) {
+          var lan = degreesToRadians(finiteOr(orbit && orbit.longitudeOfAscendingNodeDegrees, 0));
+          var inclination = degreesToRadians(finiteOr(orbit && orbit.inclinationDegrees, 0));
+          var argumentOfPeriapsis = degreesToRadians(finiteOr(orbit && orbit.argumentOfPeriapsisDegrees, 0));
+          var cosW = Math.cos(argumentOfPeriapsis);
+          var sinW = Math.sin(argumentOfPeriapsis);
+          var cosI = Math.cos(inclination);
+          var sinI = Math.sin(inclination);
+          var cosO = Math.cos(lan);
+          var sinO = Math.sin(lan);
+          var x1 = cosW * point.x - sinW * point.y;
+          var y1 = sinW * point.x + cosW * point.y;
+          var x2 = x1;
+          var y2 = cosI * y1;
+          var z2 = sinI * y1;
+
+          return {
+            x: cosO * x2 - sinO * y2,
+            y: sinO * x2 + cosO * y2,
+            z: z2
+          };
+        }
+
+        function projectPoint(perifocal, inertial, projectionMode) {
+          if (projectionMode === "referenceBodyInertialXZ") {
+            return { x: inertial.x, y: -inertial.z };
+          }
+
+          if (projectionMode === "referenceBodyInertialXY") {
+            return { x: inertial.x, y: -inertial.y };
+          }
+
+          if (perifocal) {
+            return { x: perifocal.x, y: -perifocal.y };
+          }
+
+          return { x: inertial.x, y: -inertial.z };
+        }
+
+        function trueAnomalyAtRadius(semiLatusRectum, eccentricity, radius) {
+          if (!isFiniteNumber(radius) || radius <= 0 || !isFiniteNumber(semiLatusRectum) || !isFiniteNumber(eccentricity) || eccentricity === 0) {
+            return NaN;
+          }
+
+          var value = (semiLatusRectum / radius - 1) / eccentricity;
+
+          if (value < -1 || value > 1) {
+            return NaN;
+          }
+
+          return Math.acos(clamp(value, -1, 1));
+        }
+
+        function findClosestSampleToVessel(points, vector) {
+          if (!Array.isArray(points) || points.length === 0 || !vector) {
+            return NaN;
+          }
+
+          var best = Infinity;
+
+          points.forEach(function (point) {
+            if (!point || !point.inertial) {
+              return;
+            }
+
+            var dx = point.inertial.x - vector.x;
+            var dy = point.inertial.y - vector.y;
+            var dz = point.inertial.z - vector.z;
+            var distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+            if (distance < best) {
+              best = distance;
+            }
+          });
+
+          return isFinite(best) ? best : NaN;
+        }
+
+        function fitMapToCanvas(model, size) {
+          if (!model || !size || !model.canDrawBody) {
+            return;
+          }
+
+          var bounds = createBounds();
+          var contextRadius = Math.max(model.bodyRadius, model.bodyRadius + finiteOr(model.atmosphereDepth, 0));
+
+          includeCircle(bounds, 0, 0, contextRadius);
+
+          if (model.geometry && Array.isArray(model.geometry.points)) {
+            model.geometry.points.forEach(function (point) {
+              if (point && point.projected) {
+                includePoint(bounds, point.projected.x, point.projected.y);
+              }
+            });
+          }
+
+          if (model.vesselPoint) {
+            includePoint(bounds, model.vesselPoint.x, model.vesselPoint.y);
+          }
+
+          if (!bounds.valid) {
+            includeCircle(bounds, 0, 0, Math.max(model.bodyRadius, 1));
+          }
+
+          var padding = 44;
+          var spanX = Math.max(bounds.maxX - bounds.minX, model.bodyRadius * 2, 1);
+          var spanY = Math.max(bounds.maxY - bounds.minY, model.bodyRadius * 2, 1);
+          var drawableWidth = Math.max(1, size.width - padding * 2);
+          var drawableHeight = Math.max(1, size.height - padding * 2);
+
+          model.scaleMetersPerPixel = Math.max(spanX / drawableWidth, spanY / drawableHeight, 1);
+          model.offsetMetersX = (bounds.minX + bounds.maxX) / 2;
+          model.offsetMetersY = (bounds.minY + bounds.maxY) / 2;
+        }
+
+        function createBounds() {
+          return { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity, valid: false };
+        }
+
+        function includeCircle(bounds, x, y, radius) {
+          if (!isFiniteNumber(radius) || radius <= 0) {
+            return;
+          }
+
+          includePoint(bounds, x - radius, y - radius);
+          includePoint(bounds, x + radius, y + radius);
+        }
+
+        function includePoint(bounds, x, y) {
+          if (!isFiniteNumber(x) || !isFiniteNumber(y)) {
+            return;
+          }
+
+          bounds.valid = true;
+          bounds.minX = Math.min(bounds.minX, x);
+          bounds.minY = Math.min(bounds.minY, y);
+          bounds.maxX = Math.max(bounds.maxX, x);
+          bounds.maxY = Math.max(bounds.maxY, y);
+        }
+
+        function mapToCanvas(point, size, model) {
+          return {
+            x: size.centerX + (point.x - model.offsetMetersX) / model.scaleMetersPerPixel,
+            y: size.centerY + (point.y - model.offsetMetersY) / model.scaleMetersPerPixel
+          };
+        }
+
+        function prepareCanvas(canvas, context) {
+          var rect = canvas.getBoundingClientRect();
+          var ratio = window.devicePixelRatio || 1;
+          var width = Math.max(320, Math.floor(rect.width));
+          var height = Math.max(320, Math.floor(rect.height));
+
+          if (canvas.width !== Math.floor(width * ratio) || canvas.height !== Math.floor(height * ratio)) {
+            canvas.width = Math.floor(width * ratio);
+            canvas.height = Math.floor(height * ratio);
+          }
+
+          context.setTransform(ratio, 0, 0, ratio, 0, 0);
+          return { width: width, height: height, centerX: width / 2, centerY: height / 2 };
+        }
+
+        function clearMap(context, size) {
+          context.clearRect(0, 0, size.width, size.height);
+        }
+
+        function drawMapBackground(context, size) {
+          context.save();
+          context.fillStyle = "#07111c";
+          context.fillRect(0, 0, size.width, size.height);
+          context.strokeStyle = "rgba(103, 211, 255, 0.08)";
+          context.lineWidth = 1;
+
+          for (var x = size.centerX % 48; x < size.width; x += 48) {
+            context.beginPath();
+            context.moveTo(x, 0);
+            context.lineTo(x, size.height);
+            context.stroke();
+          }
+
+          for (var y = size.centerY % 48; y < size.height; y += 48) {
+            context.beginPath();
+            context.moveTo(0, y);
+            context.lineTo(size.width, y);
+            context.stroke();
+          }
+
+          context.restore();
+        }
+
+        function drawBody(context, size, model) {
+          var center = mapToCanvas({ x: 0, y: 0 }, size, model);
+          var radius = Math.max(model.bodyRadius / model.scaleMetersPerPixel, 5);
+          var atmosphereRadius = model.atmosphereDepth > 0
+            ? Math.max((model.bodyRadius + model.atmosphereDepth) / model.scaleMetersPerPixel, radius + 4)
+            : 0;
+
+          context.save();
+
+          if (atmosphereRadius > 0) {
+            context.beginPath();
+            context.arc(center.x, center.y, atmosphereRadius, 0, Math.PI * 2);
+            context.fillStyle = "rgba(103, 211, 255, 0.08)";
+            context.fill();
+            context.strokeStyle = "rgba(103, 211, 255, 0.28)";
+            context.stroke();
+          }
+
+          context.beginPath();
+          context.arc(center.x, center.y, radius, 0, Math.PI * 2);
+          context.fillStyle = "#1d6f8f";
+          context.fill();
+          context.strokeStyle = "rgba(231, 240, 247, 0.75)";
+          context.lineWidth = 2;
+          context.stroke();
+          context.fillStyle = "#e7f0f7";
+          context.font = "600 13px Segoe UI, sans-serif";
+          context.textAlign = "center";
+          context.fillText(valueOrNA(model.referenceBody), center.x, center.y + radius + 18);
+          context.restore();
+        }
+
+        function drawOrbitPath(context, size, model) {
+          if (!model.geometry || !Array.isArray(model.geometry.segments)) {
+            return;
+          }
+
+          var color = model.classification === "Suborbital"
+            ? "rgba(255, 209, 102, 0.88)"
+            : (model.classification === "HyperbolicEscape" ? "rgba(103, 211, 255, 0.92)" : "rgba(97, 211, 148, 0.9)");
+          var dash = model.classification === "Suborbital" ? [8, 8] : (model.classification === "HyperbolicEscape" ? [12, 6] : []);
+
+          model.geometry.segments.forEach(function (segment) {
+            drawPolyline(context, size, model, segment, color, dash);
+          });
+        }
+
+        function drawLocalFuturePatchPreviews(context, size, model) {
+          if (!model.patchRoute || !Array.isArray(model.patchRoute.patches) || !model.referenceBody) {
+            return;
+          }
+
+          model.patchRoute.patches.forEach(function (patch) {
+            if (!patch || patch.patchIndex === 0 || patch.referenceBody !== model.referenceBody) {
+              return;
+            }
+
+            var geometry = buildConicGeometry(patch, model.bodyRadius, model.projectionMode, patch.classification === "Suborbital");
+
+            if (!geometry.canDraw) {
+              return;
+            }
+
+            geometry.segments.forEach(function (segment) {
+              drawPolyline(context, size, model, segment, "rgba(199, 146, 234, 0.55)", [4, 10]);
+            });
+          });
+        }
+
+        function drawApsisMarkers(context, size, model) {
+          if (!model.geometry) {
+            return;
+          }
+
+          if (model.geometry.apoapsisPoint) {
+            var ap = mapToCanvas(model.geometry.apoapsisPoint.projected, size, model);
+            drawMarker(context, ap.x, ap.y, "Ap", "#67d3ff");
+          }
+
+          if (model.geometry.periapsisPoint) {
+            var pe = mapToCanvas(model.geometry.periapsisPoint.projected, size, model);
+            drawMarker(context, pe.x, pe.y, "Pe", model.classification === "Suborbital" ? "#ffd166" : "#ff9f6e");
+          }
+        }
+
+        function drawVesselMarker(context, size, model) {
+          if (model.vesselPoint) {
+            var projected = mapToCanvas(model.vesselPoint, size, model);
+
+            if (isFiniteNumber(projected.x) && isFiniteNumber(projected.y)) {
+              drawMarker(context, projected.x, projected.y, "V", "#ffffff");
+              return;
+            }
+          }
+
+          if (model.classification === "Prelaunch" || model.classification === "Landed" || model.classification === "Splashed") {
+            var center = mapToCanvas({ x: 0, y: 0 }, size, model);
+            var radius = Math.max(model.bodyRadius / model.scaleMetersPerPixel, 5);
+            drawMarker(context, center.x, center.y - radius - 8, "V", "#ffd166");
+            return;
+          }
+        }
+
+        function drawPolyline(context, size, model, segment, color, dash) {
+          if (!Array.isArray(segment) || segment.length < 2) {
+            return;
+          }
+
+          context.save();
+          context.beginPath();
+
+          segment.forEach(function (point, index) {
+            var canvasPoint = mapToCanvas(point.projected, size, model);
+
+            if (index === 0) {
+              context.moveTo(canvasPoint.x, canvasPoint.y);
+            } else {
+              context.lineTo(canvasPoint.x, canvasPoint.y);
+            }
+          });
+
+          context.strokeStyle = color;
+          context.lineWidth = 2;
+
+          if (dash && dash.length > 0) {
+            context.setLineDash(dash);
+          }
+
+          context.stroke();
+          context.restore();
+        }
+
+        function drawMarker(context, x, y, label, color) {
+          context.save();
+          context.beginPath();
+          context.arc(x, y, 5, 0, Math.PI * 2);
+          context.fillStyle = color;
+          context.fill();
+          context.strokeStyle = "rgba(0, 0, 0, 0.55)";
+          context.stroke();
+          context.font = "700 12px Segoe UI, sans-serif";
+          context.fillStyle = color;
+          context.fillText(label, x + 9, y - 9);
+          context.restore();
+        }
+
+        function drawCenteredMessage(context, size, message) {
+          context.save();
+          context.fillStyle = "rgba(7, 17, 28, 0.72)";
+          context.fillRect(20, size.centerY - 34, size.width - 40, 68);
+          context.fillStyle = "#e7f0f7";
+          context.font = "600 15px Segoe UI, sans-serif";
+          context.textAlign = "center";
+          context.fillText(message, size.centerX, size.centerY + 5);
+          context.restore();
+        }
+
+        function updateMapDiagnostics(model) {
+          var status = model.canDrawOrbit ? "Rendering" : (model.canDrawBody ? "Degraded" : "Unavailable");
+          setText("mapRenderStatus", status);
+          setText("mapMessage", model.reason);
+          setText("mapClassification", valueOrNA(model.classification));
+          setText("mapReferenceBody", valueOrNA(model.referenceBody));
+          setText("mapScale", isFiniteNumber(model.scaleMetersPerPixel) ? "1 px = " + formatDistance(model.scaleMetersPerPixel) : "N/A");
+          setText("mapProjection", valueOrNA(model.projectionMode));
+          setText("mapResidual", isFiniteNumber(model.residualMeters) ? formatDistance(model.residualMeters) : "N/A");
+          setText("mapReason", model.reason);
+        }
+
+        function renderPatchRoute(telemetry) {
+          var route = buildPatchRouteModel(telemetry);
+          var patches = route.patches;
+
+          setText("patchRouteStatus", patches.length > 0 ? "Tracking" : "Unavailable");
+          setText("patchCount", String(patches.length));
+          setText("patchChainStatus", valueOrNA(route.status));
+          setText("patchNextTransition", valueOrNA(route.nextTransition));
+          setText("patchEncounter", valueOrNA(route.encounter));
+
+          if (!Array.isArray(patches) || patches.length === 0) {
+            elements.patchRouteList.innerHTML = '<div class="route-item">No patch chain telemetry available.</div>';
+            return;
+          }
+
+          elements.patchRouteList.innerHTML = patches.map(function (patch) {
+            if (!patch) {
+              return '<div class="route-item">Invalid patch entry.</div>';
+            }
+
+            var title = "Patch " + valueOrNA(patch.patchIndex) + ": " + joinValues([patch.referenceBody, patch.classification], " / ");
+            var transition = joinValues([patch.patchStartTransition, patch.patchEndTransition], " -> ");
+            var timing = joinValues([
+              "start " + formatSeconds(patch.timeToPatchStartSeconds),
+              "end " + formatSeconds(patch.timeToPatchEndSeconds)
+            ], " / ");
+            var next = patch.nextPatchReferenceBody ? "Next: " + patch.nextPatchReferenceBody : "Next: none";
+            var encounter = patch.encounterBody
+              ? "Encounter: " + patch.encounterBody + " (" + valueOrNA(patch.encounterLevel) + ") at UT " + formatUniversalTime(patch.closestEncounterUniversalTimeSeconds)
+              : "Encounter: none captured";
+            var placement = "Placement: " + valueOrNA(patch.patchPlacementMode);
+            var warning = patch.captureWarning ? '<div class="route-meta error-text">' + escapeHtml(patch.captureWarning) + '</div>' : "";
+            if (patch.patchPlacementWarning) {
+              warning += '<div class="route-meta">' + escapeHtml(patch.patchPlacementWarning) + '</div>';
+            }
+
+            return [
+              '<div class="route-item">',
+              '<div class="route-title"><span>', escapeHtml(title), '</span><span>', patch.isActivePatch ? 'active' : 'future', '</span></div>',
+              '<div class="route-meta">Transition: ', escapeHtml(transition), '</div>',
+              '<div class="route-meta">Timing: ', escapeHtml(timing), '</div>',
+              '<div class="route-meta">', escapeHtml(next), '</div>',
+              '<div class="route-meta">', escapeHtml(encounter), '</div>',
+              '<div class="route-meta">', escapeHtml(placement), '</div>',
+              warning,
+              '</div>'
+            ].join("");
+          }).join("");
+        }
+
+        function findBody(bodies, name) {
+          if (!name || !Array.isArray(bodies)) {
+            return null;
+          }
+
+          for (var i = 0; i < bodies.length; i++) {
+            if (bodies[i] && bodies[i].name === name) {
+              return bodies[i];
+            }
+          }
+
+          return null;
+        }
+
+        function finiteOr(value, fallback) {
+          return isFiniteNumber(value) ? value : fallback;
+        }
+
+        function clamp(value, min, max) {
+          return Math.max(min, Math.min(max, value));
+        }
+
+        function degreesToRadians(value) {
+          return isFiniteNumber(value) ? value * Math.PI / 180 : NaN;
+        }
+
+        function renderBodies(bodies) {
+          var list = Array.isArray(bodies) ? bodies : [];
+          setText("bodyCount", list.length + (list.length === 1 ? " body" : " bodies"));
+
+          if (list.length === 0) {
+            elements.bodiesTable.innerHTML = '<tr><td colspan="4">No body data available.</td></tr>';
+            return;
+          }
+
+          elements.bodiesTable.innerHTML = list.map(function (body) {
+            return [
+              "<tr>",
+              "<td>", escapeHtml(valueOrNA(body.name)), "</td>",
+              "<td>", escapeHtml(formatDistance(body.radiusMeters)), "</td>",
+              "<td>", escapeHtml(formatAtmosphere(body)), "</td>",
+              "<td>", escapeHtml(formatCompactNumber(body.gravParameter)), "</td>",
+              "</tr>"
+            ].join("");
+          }).join("");
+        }
+
+        function renderEmpty() {
+          setStatus({ label: "Starting", className: "status-disconnected" });
+          setText("lastError", "None");
+        }
+
+        function renderDisconnected() {
+          setStatus({ label: "Disconnected", className: "status-disconnected" });
+          setText("lastError", state.lastError || "Unable to reach telemetry endpoint.");
+          setText("lastSuccess", state.lastSuccessAt ? state.lastSuccessAt.toLocaleTimeString() : "N/A");
+
+          if (state.lastGoodTelemetry) {
+            renderVessel(state.lastGoodTelemetry.activeVessel);
+            renderOrbit(state.lastGoodTelemetry.orbit);
+            renderMap(state.lastGoodTelemetry);
+            renderPatchRoute(state.lastGoodTelemetry);
+            renderSolarSystem(state.lastGoodTelemetry);
+            renderBodies(state.lastGoodTelemetry.bodies);
+            elements.rawJson.textContent = formatRawJson(state.lastGoodRaw);
+          }
+        }
+
+        function getDashboardStatus(telemetry) {
+          if (!telemetry || telemetry.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
+            return { label: "Schema Mismatch", className: "status-schema-mismatch" };
+          }
+
+          if (isStale()) {
+            return { label: "Stale", className: "status-stale" };
+          }
+
+          if (telemetry.valid === false) {
+            return { label: "Degraded", className: "status-degraded" };
+          }
+
+          return { label: "Connected", className: "status-connected" };
+        }
+
+        function isStale() {
+          return state.lastSnapshotAdvanceAt !== null && (Date.now() - state.lastSnapshotAdvanceAt) > STALE_AFTER_MS;
+        }
+
+        function setStatus(status) {
+          elements.connectionStatus.textContent = status.label;
+          elements.connectionStatus.className = "status-pill " + status.className;
+        }
+
+        function formatFreshness(telemetry) {
+          if (!telemetry || !telemetry.capturedAtUtc) {
+            return "N/A";
+          }
+
+          var captured = new Date(telemetry.capturedAtUtc);
+          if (isNaN(captured.getTime())) {
+            return "N/A";
+          }
+
+          var ageSeconds = Math.max(0, (Date.now() - captured.getTime()) / 1000);
+          return formatNumber(ageSeconds, 1) + "s old";
+        }
+
+        function formatRawJson(rawText) {
+          if (!rawText) {
+            return "Waiting for telemetry...";
+          }
+
+          try {
+            return JSON.stringify(JSON.parse(rawText), null, 2);
+          } catch (_) {
+            return rawText;
+          }
+        }
+
+        function formatDistance(value) {
+          if (!isFiniteNumber(value)) {
+            return "N/A";
+          }
+
+          if (Math.abs(value) >= 10000) {
+            return formatNumber(value / 1000, 2) + " km";
+          }
+
+          return formatNumber(value, 1) + " m";
+        }
+
+        function formatSpeed(value) {
+          if (!isFiniteNumber(value)) {
+            return "N/A";
+          }
+
+          if (Math.abs(value) >= 1000) {
+            return formatNumber(value / 1000, 3) + " km/s";
+          }
+
+          return formatNumber(value, 2) + " m/s";
+        }
+
+        function formatSeconds(value) {
+          if (!isFiniteNumber(value)) {
+            return "N/A";
+          }
+
+          var sign = value < 0 ? "-" : "";
+          var total = Math.floor(Math.abs(value));
+          var seconds = total % 60;
+          var minutes = Math.floor(total / 60) % 60;
+          var hours = Math.floor(total / 3600);
+
+          if (hours > 0) {
+            return sign + hours + "h " + pad2(minutes) + "m " + pad2(seconds) + "s";
+          }
+
+          if (minutes > 0) {
+            return sign + minutes + "m " + pad2(seconds) + "s";
+          }
+
+          return sign + formatNumber(Math.abs(value), 1) + "s";
+        }
+
+        function formatAngle(value) {
+          return isFiniteNumber(value) ? formatNumber(value, 3) + " deg" : "N/A";
+        }
+
+        function formatAtmosphere(body) {
+          if (!body) {
+            return "N/A";
+          }
+
+          return body.hasAtmosphere ? "Yes, " + formatDistance(body.atmosphereDepthMeters) : "No";
+        }
+
+        function formatDate(value) {
+          if (!value) {
+            return "N/A";
+          }
+
+          var date = new Date(value);
+          return isNaN(date.getTime()) ? "N/A" : date.toISOString();
+        }
+
+        function formatNumber(value, decimals) {
+          if (!isFiniteNumber(value)) {
+            return "N/A";
+          }
+
+          return Number(value).toLocaleString(undefined, {
+            maximumFractionDigits: decimals,
+            minimumFractionDigits: 0
+          });
+        }
+
+        function formatCompactNumber(value) {
+          if (!isFiniteNumber(value)) {
+            return "N/A";
+          }
+
+          var abs = Math.abs(value);
+          if (abs >= 1000000000 || (abs > 0 && abs < 0.001)) {
+            return Number(value).toExponential(4);
+          }
+
+          return formatNumber(value, 2);
+        }
+
+        function valueOrNA(value) {
+          return value === null || value === undefined || value === "" ? "N/A" : String(value);
+        }
+
+        function joinValues(values, separator) {
+          return values.filter(function (value) {
+            return value !== null && value !== undefined && value !== "";
+          }).join(separator) || "N/A";
+        }
+
+        function isFiniteNumber(value) {
+          return typeof value === "number" && isFinite(value);
+        }
+
+        function pad2(value) {
+          return value < 10 ? "0" + value : String(value);
+        }
+
+        function setText(id, value) {
+          elements[id].textContent = value;
+        }
+
+        function escapeHtml(value) {
+          return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+      })();
+    </script>
+  </body>
+</html>
