@@ -5,6 +5,8 @@ import { conicToInertialPath } from "../../math/buildConicGeometry";
 import { finiteOr } from "../../math/util";
 import { useViewStore } from "../../store/viewStore";
 import { applyWorldShift, getFocusPosition } from "../../coords/worldShift";
+import { decimatePath } from "../../perf/lineDecimation";
+
 function findPatchStartPosition(patch: OrbitPatch): Vector3 | null {
   const samples = patch.placementSamples ?? [];
   for (const sample of samples) {
@@ -34,6 +36,7 @@ export function OrbitsLayer() {
   const model = useViewStore((s) => s.model);
   const displayScale = useViewStore((s) => s.displayScale);
   const focusBodyName = useViewStore((s) => s.focusBodyName);
+  const maxPoints = useViewStore((s) => s.getQuality().maxOrbitPointsPerPatch);
 
   const focus = useMemo(() => {
     if (!model || !focusBodyName) {
@@ -58,7 +61,7 @@ export function OrbitsLayer() {
           patch.referenceBodyRadiusMeters ?? refBody?.radiusMeters,
           1000,
         );
-        const inertial = conicToInertialPath(patch, bodyRadius, 200);
+        const inertial = conicToInertialPath(patch, bodyRadius, maxPoints * 2);
         if (inertial.length < 2) {
           return null;
         }
@@ -66,7 +69,10 @@ export function OrbitsLayer() {
         const useSampled =
           mode === "multiSampleEphemeris" || mode === "multiSampleEphemerisPartial";
         const anchor = useSampled ? findPatchStartPosition(patch) : null;
-        const rootPath = translateInertialToRoot(inertial, anchor);
+        const rootPath = decimatePath(
+          translateInertialToRoot(inertial, anchor),
+          maxPoints,
+        );
         const threePoints = rootPath.map((p) => {
           const shifted = applyWorldShift(p, focus, displayScale);
           return shifted as [number, number, number];
@@ -78,7 +84,7 @@ export function OrbitsLayer() {
         };
       })
       .filter(Boolean) as { key: string; points: [number, number, number][]; active: boolean }[];
-  }, [telemetry, focus, displayScale]);
+  }, [telemetry, focus, displayScale, maxPoints]);
 
   return (
     <group>
@@ -101,7 +107,6 @@ export function PlacementMarkersLayer() {
   const model = useViewStore((s) => s.model);
   const displayScale = useViewStore((s) => s.displayScale);
   const focusBodyName = useViewStore((s) => s.focusBodyName);
-  const scrubEnabled = useViewStore((s) => s.scrubEnabled);
 
   const focus = useMemo(() => {
     if (!model || !focusBodyName) {
@@ -116,17 +121,16 @@ export function PlacementMarkersLayer() {
 
   return (
     <group>
-      {model.placementMarkers.map((marker, i) => {
+      {model.placementMarkers.map((marker, index) => {
         const [x, y, z] = applyWorldShift(marker.position, focus, displayScale);
         const isEncounter = marker.role === "encounter";
-        const dim = isEncounter ? 0.35 : 0.2;
         return (
-          <mesh key={`marker-${i}`} position={[x, y, z]}>
-            <boxGeometry args={[dim, dim, dim]} />
+          <mesh key={`placement-${index}`} position={[x, y, z]}>
+            <boxGeometry args={[0.4, 0.4, 0.4]} />
             <meshStandardMaterial
               color={isEncounter ? "#ff6b6b" : "#ffd166"}
               emissive={isEncounter ? "#ff6b6b" : "#ffd166"}
-              emissiveIntensity={scrubEnabled ? 0.8 : 0.3}
+              emissiveIntensity={0.35}
             />
           </mesh>
         );

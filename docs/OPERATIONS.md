@@ -364,6 +364,22 @@ In flight, open `http://127.0.0.1:8750/`. Confirm `GET /assets/ksp-solar-map.js`
 
 Truth banner must state: **KSP patched-conic prediction — not SPICE/N-body**.
 
+## Phase 10.5 WebGL verification
+
+After install, hard-refresh `http://127.0.0.1:8750/?v=4` so `ksp-solar-map.js` reloads.
+
+| # | Scenario | Pass |
+|---|----------|------|
+| V-01 | LKO Kerbin | Labels, SOI LOD, vessel lerp, click selection, Pe/Ap markers, ≥30 FPS (Med preset) |
+| V-02 | Kerbin escape | Multi-patch arcs + route; camera Route mode frames anchors |
+| V-03 | Duna encounter | Encounter marker/label at sampled UT |
+| V-04 | Partial ephemeris | Warning visible; no crash |
+| V-05 | Controls | `#solarControls` hidden in 3D; MapHud scrub/camera only; 2D toggle restores legacy panel |
+| V-06 | Poll stability | Camera does not jump on 1 Hz telemetry (after manual orbit drag) |
+| V-07 | Static assets | `/assets/ksp-solar-map.js` returns 200 |
+
+**Textures:** Sun and Kerbin use small procedural canvas textures generated in the bundle (no external JPG required). Optional files under `Web/assets/textures/` are supported if added later.
+
 ## Logs
 
 KSP writes `KSP.log` in the KSP install folder. The plugin uses the `[KspWebMap]` prefix for startup, shutdown, and dev-button logs.

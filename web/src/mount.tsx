@@ -1,17 +1,40 @@
 import { createRoot, type Root } from "react-dom/client";
 import { SolarMapPanel } from "./components/SolarMapPanel";
-import { useViewStore } from "./store/viewStore";
+import { useViewStore, type CameraMode, type SolarRenderMode } from "./store/viewStore";
 import type { TelemetrySnapshot } from "./telemetry/schema-v6";
+import type { SolarSystemModel } from "./model/buildSolarSystemModel";
+import type { SelectionDetail } from "./selection/types";
 
 export interface KspSolarMapApi {
   mount: (container: HTMLElement) => void;
   unmount: () => void;
   updateTelemetry: (telemetry: TelemetrySnapshot | null) => void;
-  getSolarRenderMode: () => "3d" | "2d";
+  getSolarRenderMode: () => SolarRenderMode;
+  getCameraMode: () => CameraMode;
+  setCameraMode: (mode: CameraMode) => void;
+  setScrubEnabled: (enabled: boolean) => void;
+  setScrubUniversalTime: (ut: number | null) => void;
+  recenter: () => void;
+  resetView: () => void;
+  onSelectionChange: (callback: (detail: SelectionDetail | null) => void) => () => void;
+  getModel: () => SolarSystemModel | null;
+  getSelectionDetail: () => SelectionDetail | null;
+  getHoverObjectId: () => string | null;
 }
 
 let root: Root | null = null;
 let containerEl: HTMLElement | null = null;
+const selectionListeners = new Set<(detail: SelectionDetail | null) => void>();
+
+function notifySelection(detail: SelectionDetail | null) {
+  selectionListeners.forEach((cb) => cb(detail));
+}
+
+useViewStore.subscribe((state, prev) => {
+  if (state.selectionDetail !== prev.selectionDetail) {
+    notifySelection(state.selectionDetail);
+  }
+});
 
 function MountApp() {
   return <SolarMapPanel />;
@@ -46,6 +69,7 @@ const api: KspSolarMapApi = {
       containerEl.innerHTML = "";
       containerEl = null;
     }
+    selectionListeners.clear();
   },
   updateTelemetry(telemetry: TelemetrySnapshot | null) {
     ensureMounted();
@@ -53,6 +77,45 @@ const api: KspSolarMapApi = {
   },
   getSolarRenderMode() {
     return useViewStore.getState().solarRenderMode;
+  },
+  getCameraMode() {
+    return useViewStore.getState().cameraMode;
+  },
+  setCameraMode(mode: CameraMode) {
+    ensureMounted();
+    useViewStore.getState().setCameraMode(mode);
+  },
+  setScrubEnabled(enabled: boolean) {
+    ensureMounted();
+    useViewStore.getState().setScrubEnabled(enabled);
+  },
+  setScrubUniversalTime(ut: number | null) {
+    ensureMounted();
+    useViewStore.getState().setScrubUniversalTime(ut);
+  },
+  recenter() {
+    ensureMounted();
+    useViewStore.getState().recenter();
+  },
+  resetView() {
+    ensureMounted();
+    useViewStore.getState().resetView();
+  },
+  onSelectionChange(callback) {
+    selectionListeners.add(callback);
+    callback(useViewStore.getState().selectionDetail);
+    return () => {
+      selectionListeners.delete(callback);
+    };
+  },
+  getModel() {
+    return useViewStore.getState().model;
+  },
+  getSelectionDetail() {
+    return useViewStore.getState().selectionDetail;
+  },
+  getHoverObjectId() {
+    return useViewStore.getState().hoverObjectId;
   },
 };
 

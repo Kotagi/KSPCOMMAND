@@ -272,6 +272,10 @@
         display: none;
       }
 
+      body[data-solar-view="3d"] #solarControls {
+        display: none;
+      }
+
       .map-message {
         position: absolute;
         left: 16px;
@@ -1157,6 +1161,8 @@
           var root = document.getElementById("solar3dRoot");
           var canvas = elements.solarCanvas;
 
+          document.body.dataset.solarView = mode;
+
           if (root) {
             root.style.display = mode === "3d" ? "block" : "none";
           }
@@ -1173,7 +1179,9 @@
 
           if (mode === "3d" && window.KspSolarMap) {
             window.KspSolarMap.updateTelemetry(telemetry);
-            var previewModel = buildSolarSystemModel(telemetry);
+            var previewModel = window.KspSolarMap.getModel
+              ? window.KspSolarMap.getModel()
+              : buildSolarSystemModel(telemetry);
             updateSolarDiagnostics(previewModel);
             updateSolarTimeScrubber(telemetry);
             return;
@@ -2054,6 +2062,14 @@
             return;
           }
 
+          if (window.KspSolarMap && window.KspSolarMap.getSolarRenderMode() === "3d" && window.KspSolarMap.getSelectionDetail) {
+            var detail = window.KspSolarMap.getSelectionDetail();
+            elements.solarSelection.textContent = detail
+              ? detail.label + " | " + detail.detail
+              : "Click a body, vessel, or patch anchor for details.";
+            return;
+          }
+
           var target = null;
           if (model && Array.isArray(model.hitTargets) && solarViewState.selectedObjectId) {
             model.hitTargets.forEach(function (entry) {
@@ -2101,8 +2117,22 @@
             : NaN;
           var hoverLabel = "None";
           var selectionLabel = "None";
+          var mode3d = window.KspSolarMap && window.KspSolarMap.getSolarRenderMode() === "3d";
 
-          if (model && Array.isArray(model.hitTargets)) {
+          if (mode3d && window.KspSolarMap.getHoverObjectId) {
+            var hoverId = window.KspSolarMap.getHoverObjectId();
+            var selDetail = window.KspSolarMap.getSelectionDetail
+              ? window.KspSolarMap.getSelectionDetail()
+              : null;
+            if (hoverId && selDetail && hoverId === selDetail.id) {
+              hoverLabel = selDetail.label;
+            } else if (hoverId) {
+              hoverLabel = hoverId;
+            }
+            if (selDetail) {
+              selectionLabel = selDetail.label;
+            }
+          } else if (model && Array.isArray(model.hitTargets)) {
             model.hitTargets.forEach(function (target) {
               if (target.id === solarViewState.hoverObjectId) {
                 hoverLabel = target.label;
@@ -2117,7 +2147,12 @@
           setText("solarMessage", model && model.canDraw
             ? "Interactive solar view: wheel zoom, drag pan, double-click reset. Route/conics use time-sampled patch anchors when ephemeris capture succeeds."
             : (model ? model.reason : "Unavailable"));
-          setText("solarCameraMode", formatSolarCameraMode(solarViewState.mode));
+          setText(
+            "solarCameraMode",
+            mode3d && window.KspSolarMap.getCameraMode
+              ? formatSolarCameraMode(window.KspSolarMap.getCameraMode())
+              : formatSolarCameraMode(solarViewState.mode)
+          );
           setText("solarRootFrame", valueOrNA(telemetry.rootFrameName));
           setText("solarRootBody", valueOrNA(telemetry.rootBody));
           setText("solarProjection", model ? valueOrNA(model.projectionMode) : "N/A");
@@ -3143,6 +3178,6 @@
         }
       })();
     </script>
-    <script type="module" src="./assets/ksp-solar-map.js?v=3"></script>
+    <script type="module" src="./assets/ksp-solar-map.js?v=4"></script>
   </body>
 </html>

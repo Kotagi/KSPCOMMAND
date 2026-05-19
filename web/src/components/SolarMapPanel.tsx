@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Map3D } from "../scene/Map3D";
 import { MapHud } from "./MapHud";
 import { useViewStore } from "../store/viewStore";
@@ -5,6 +6,10 @@ import "./solar-map.css";
 
 export function SolarMapPanel() {
   const solarRenderMode = useViewStore((s) => s.solarRenderMode);
+
+  useEffect(() => {
+    document.body.dataset.solarView = solarRenderMode;
+  }, [solarRenderMode]);
 
   return (
     <div className="ksp-solar-panel">

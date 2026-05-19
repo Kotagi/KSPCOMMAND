@@ -235,7 +235,9 @@ Body propagation uses `Orbit.getTruePositionAtUT` with KSP's documented Y/Z flip
 
 The Solar System Frame panel requires schema v6+ telemetry.
 
-**3D (Phase 10, default):** React Three Fiber scene with `OrbitControls`, world-shift focus, display-scale compression, and layers for bodies, SOI, patch conics, route polyline, placement markers, vessel marker/path, and optional `bodyOrbitPaths[]` (schema v7).
+**3D (Phase 10–10.5, default):** React Three Fiber scene with `OrbitControls`, world-shift focus (`focusBodyName` on reference/encounter modes), display-scale compression, camera bounds fitting (`solarCameraBounds.ts`), vessel interpolation between polls, raycast selection, screen labels, atmosphere shells, Pe/Ap markers, SOI distance LOD, quality presets (Low/Med/High), and layers for bodies (procedural Sun/Kerbin textures), patch conics (decimated), route polyline, placement markers, vessel marker/path, and optional `bodyOrbitPaths[]` (schema v7).
+
+**Shell integration:** `window.KspSolarMap` exposes `setCameraMode`, `setScrub*`, `recenter`, `resetView`, `getModel`, `onSelectionChange`. In 3D mode the legacy `#solarControls` panel is hidden; `MapHud` is the sole control surface. `index.html` uses `getModel()` once per poll (no duplicate `buildSolarSystemModel`).
 
 **2D fallback:** Legacy Canvas renderer in `index.html` (`solarViewState`) — wheel zoom, drag pan, camera modes, route overlay, translated conics, vessel path, scrubber highlights.
 

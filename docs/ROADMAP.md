@@ -188,7 +188,7 @@ Exit criteria:
 
 ## Phase 10: WebGL Solar Renderer
 
-Status: current.
+Status: complete (MVP shipped; polish in Phase 10.5).
 
 - Add `web/` Vite + TypeScript + React + React Three Fiber bundle; ship `dist/` into `GameData/KspWebMap/Web/`.
 - Extract `buildSolarSystemModel` and `buildConicGeometry` into pure TS modules shared by 2D fallback and 3D renderer.
@@ -204,3 +204,22 @@ Exit criteria:
 - Camera modes and scrubber work without resetting on telemetry poll.
 - `scripts/build.ps1` runs `npm run build` and packages web assets; players do not run npm.
 - Map Prototype (local 2D conic) remains functional.
+
+## Phase 10.5: 3D Solar Map Polish
+
+Status: complete.
+
+- Unify 3D controls under React `MapHud`; hide legacy `#solarControls` when in 3D mode.
+- Extend `KspSolarMap` API (camera, scrub, recenter, selection, `getModel`).
+- Port camera framing from Phase 8; vessel interpolation between polls.
+- Add 3D selection, labels, atmosphere shell, apsis markers, SOI LOD, world-shift focus.
+- Quality presets (Low/Med/High); line decimation; minimal Sun/Kerbin textures.
+- Flight verification matrix; mark Phase 10 exit criteria satisfied.
+
+Exit criteria:
+
+- No duplicate scrub/camera controls in 3D default view.
+- Selection updates `#solarSelection`; labels visible for major bodies.
+- Camera modes frame content; recenter/reset in HUD; no jump on 1 Hz poll.
+- One `buildSolarSystemModel` per poll in 3D mode.
+- LKO / escape / encounter scenarios pass OPERATIONS Phase 10.5 checklist.

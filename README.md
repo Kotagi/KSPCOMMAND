@@ -2,7 +2,7 @@
 
 KSP Web Map is a Kerbal Space Program 1.12.3 mod intended to expose live map and vessel data to a local browser UI.
 
-The current milestone is Phase 10: schema v7 telemetry (v6-compatible) with a Vite + React Three Fiber 3D solar map (world-shift, display scale, patched-conic route, patch orbits, SOI, vessel path, camera modes, ephemeris scrubber, truth HUD) plus a 2D Canvas fallback. KSP captures read-only flight data on the main thread and serves the dashboard from the local mod folder.
+Phase 10 is complete: schema v7 telemetry (v6-compatible) with a polished Vite + React Three Fiber 3D solar map (unified MapHud controls, camera framing, selection, labels, atmosphere, apsis markers, SOI LOD, quality presets, line decimation, vessel lerp) plus a 2D Canvas fallback. KSP captures read-only flight data on the main thread and serves the dashboard from the local mod folder.
 
 ## Project Layout
 

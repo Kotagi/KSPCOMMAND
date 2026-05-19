@@ -1,23 +1,12 @@
 import { useMemo } from "react";
-import { useThree } from "@react-three/fiber";
 import { useViewStore } from "../../store/viewStore";
 import { applyWorldShift, getFocusPosition } from "../../coords/worldShift";
 
-/** Show SOI spheres when their visual size is meaningful for the current camera distance. */
-function shouldDrawSoi(visualRadius: number, cameraDistance: number): boolean {
-  if (visualRadius <= 0) {
-    return false;
-  }
-  const ratio = visualRadius / Math.max(cameraDistance, 0.01);
-  return ratio >= 0.02 && ratio <= 80;
-}
-
-export function SoiLayer() {
+export function AtmosphereLayer() {
   const model = useViewStore((s) => s.model);
   const displayScale = useViewStore((s) => s.displayScale);
   const focusBodyName = useViewStore((s) => s.focusBodyName);
   const cameraMode = useViewStore((s) => s.cameraMode);
-  const { camera } = useThree();
 
   const focus = useMemo(() => {
     if (!model) {
@@ -36,29 +25,24 @@ export function SoiLayer() {
     return null;
   }
 
-  const camDist = camera.position.length();
-
   return (
     <group>
       {model.bodies.map((entry) => {
-        const soi = entry.body.sphereOfInfluenceMeters;
-        if (!soi || soi <= 0) {
+        if (!entry.body.hasAtmosphere) {
           return null;
         }
         const name = entry.body.name ?? "body";
-        const visualRadius = soi * displayScale;
-        if (!shouldDrawSoi(visualRadius, camDist)) {
-          return null;
-        }
+        const radius = Math.max(entry.body.radiusMeters ?? 1000, 1000);
+        const depth = entry.body.atmosphereDepthMeters ?? radius * 0.05;
+        const visualRadius = (radius + depth) * displayScale;
         const [x, y, z] = applyWorldShift(entry.position, focus, displayScale);
         return (
-          <mesh key={`soi-${name}`} position={[x, y, z]}>
-            <sphereGeometry args={[visualRadius, 32, 32]} />
+          <mesh key={`atmo-${name}`} position={[x, y, z]}>
+            <sphereGeometry args={[visualRadius, 24, 24]} />
             <meshBasicMaterial
               color="#67d3ff"
               transparent
-              opacity={0.06}
-              wireframe={false}
+              opacity={0.08}
               depthWrite={false}
             />
           </mesh>

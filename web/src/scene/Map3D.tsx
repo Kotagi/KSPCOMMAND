@@ -6,7 +6,11 @@ import { VesselLayer } from "./layers/VesselLayer";
 import { OrbitsLayer, PlacementMarkersLayer } from "./layers/OrbitsLayer";
 import { BodyOrbitsLayer } from "./layers/BodyOrbitsLayer";
 import { SceneEffects } from "./layers/Effects";
+import { AtmosphereLayer } from "./layers/AtmosphereLayer";
+import { ApsisMarkersLayer } from "./layers/ApsisMarkersLayer";
+import { LabelsLayer } from "./layers/LabelsLayer";
 import { CameraRig } from "./CameraRig";
+import { SelectionController } from "./SelectionController";
 
 export function Map3D() {
   return (
@@ -20,12 +24,16 @@ export function Map3D() {
       <directionalLight position={[10, 20, 10]} intensity={1.1} />
       <SceneEffects />
       <BodiesLayer />
+      <AtmosphereLayer />
       <SoiLayer />
       <BodyOrbitsLayer />
       <OrbitsLayer />
       <RouteLayer />
       <PlacementMarkersLayer />
+      <ApsisMarkersLayer />
       <VesselLayer />
+      <LabelsLayer />
+      <SelectionController />
       <CameraRig />
     </Canvas>
   );
