@@ -170,7 +170,7 @@ Exit criteria:
 
 ## Phase 9: Future Ephemeris And Solar Trajectories
 
-Status: current.
+Status: complete.
 
 - Bump telemetry to schema v6 with `ephemerisSamples[]`, per-patch `placementSamples[]`, and `ephemerisCaptureStatus`.
 - Sample reference and encounter body root-frame positions at patch start, end, and closest-encounter universal times using KSP orbit propagation (`getTruePositionAtUT` with Y/Z flip handling).
@@ -188,8 +188,19 @@ Exit criteria:
 
 ## Phase 10: WebGL Solar Renderer
 
-Status: future.
+Status: current.
 
-- Swap the 2D Canvas solar renderer for WebGL while consuming the same schema v6 telemetry contract.
-- Add true 3D camera, mesh bodies, and lighting.
-- Defer maneuver nodes and targeting UI.
+- Add `web/` Vite + TypeScript + React + React Three Fiber bundle; ship `dist/` into `GameData/KspWebMap/Web/`.
+- Extract `buildSolarSystemModel` and `buildConicGeometry` into pure TS modules shared by 2D fallback and 3D renderer.
+- Serve static assets under `/assets/*` from the local HTTP server.
+- 3D solar map: world-shift, display scale, bodies, SOI, patch conics, patched-conic route, vessel path, camera modes, ephemeris scrubber, truth HUD.
+- Schema v7 (optional): `bodyOrbitPaths[]` for celestial body orbit trails in 3D.
+- Defer maneuver nodes, other vessels UI, and browser-to-KSP control.
+
+Exit criteria:
+
+- Dashboard requires schema v6 for 3D solar rendering (schema mismatch banner otherwise).
+- Stable orbit, Kerbin escape, and Duna encounter scenarios match Phase 9 truth rules in 3D.
+- Camera modes and scrubber work without resetting on telemetry poll.
+- `scripts/build.ps1` runs `npm run build` and packages web assets; players do not run npm.
+- Map Prototype (local 2D conic) remains functional.
