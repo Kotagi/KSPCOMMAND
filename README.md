@@ -2,12 +2,13 @@
 
 KSP Web Map is a Kerbal Space Program 1.12.3 mod intended to expose live map and vessel data to a local browser UI.
 
-The current milestone is Phase 9: schema v6 ephemeris telemetry with time-sampled patch placement, time-keyed solar route overlays, approximate solar-frame conic segments, active-patch vessel path samples, and a read-only ephemeris UT scrubber on top of the Phase 8 interactive solar map. KSP loads the plugin, captures read-only flight data on the main thread, and serves a self-contained browser UI from the local mod folder. WebGL remains Phase 10+.
+The current milestone is Phase 10: schema v7 telemetry (v6-compatible) with a Vite + React Three Fiber 3D solar map (world-shift, display scale, patched-conic route, patch orbits, SOI, vessel path, camera modes, ephemeris scrubber, truth HUD) plus a 2D Canvas fallback. KSP captures read-only flight data on the main thread and serves the dashboard from the local mod folder.
 
 ## Project Layout
 
 ```text
 artifacts/              Generated build and staged package output
+web/                    Vite + TypeScript + React Three Fiber solar map (Phase 10)
 GameData/
   KspWebMap/            Source package assets copied into staged builds
 src/
@@ -29,6 +30,7 @@ scripts/                Build, install, and uninstall helpers
 - One C# build path:
   - .NET SDK with .NET Framework 4.7.2 targeting support, or
   - Windows .NET Framework compiler fallback at `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe`
+- Node.js 20+ and npm (for building `web/`; `build.ps1` runs this automatically)
 
 ## Quick Start
 

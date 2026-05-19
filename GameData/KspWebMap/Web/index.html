@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>KSP Web Map Dashboard</title>
+    <link rel="stylesheet" href="./assets/ksp-solar-map.css">
     <style>
       :root {
         color-scheme: dark;
@@ -252,10 +253,23 @@
       }
 
       #mapCanvas,
-      #solarCanvas {
+      #solarCanvas,
+      #solar3dRoot {
         display: block;
         width: 100%;
         height: 460px;
+      }
+
+      #solar3dRoot {
+        position: relative;
+      }
+
+      #solarCanvas.solar-2d-visible {
+        display: block;
+      }
+
+      #solarCanvas:not(.solar-2d-visible) {
+        display: none;
       }
 
       .map-message {
@@ -605,7 +619,8 @@
               <span id="solarScrubLabel" class="solar-scrub-label">Live simulation time</span>
             </div>
           </div>
-          <div class="map-wrap">
+          <div class="map-wrap solar-map-host">
+            <div id="solar3dRoot" class="solar-3d-root" aria-label="3D solar-system map"></div>
             <canvas id="solarCanvas" width="900" height="460" aria-label="2D solar-system frame map"></canvas>
             <div id="solarMessage" class="map-message">Waiting for shared-frame telemetry...</div>
           </div>
@@ -709,7 +724,11 @@
       (function () {
         "use strict";
 
-        var EXPECTED_SCHEMA_VERSION = 6;
+        var MIN_SCHEMA_VERSION = 6;
+
+        function isSupportedSchemaVersion(version) {
+          return typeof version === "number" && version >= MIN_SCHEMA_VERSION;
+        }
         var VISIBLE_POLL_MS = 1000;
         var HIDDEN_POLL_MS = 5000;
         var REQUEST_TIMEOUT_MS = 2000;
@@ -1132,7 +1151,33 @@
           renderSolarSystem(state.lastGoodTelemetry);
         }
 
+        function syncSolarViewMode() {
+          var mode = window.KspSolarMap ? window.KspSolarMap.getSolarRenderMode() : "3d";
+          var root = document.getElementById("solar3dRoot");
+          var canvas = elements.solarCanvas;
+
+          if (root) {
+            root.style.display = mode === "3d" ? "block" : "none";
+          }
+
+          if (canvas) {
+            canvas.classList.toggle("solar-2d-visible", mode === "2d");
+          }
+
+          return mode;
+        }
+
         function renderSolarSystem(telemetry) {
+          var mode = syncSolarViewMode();
+
+          if (window.KspSolarMap && mode === "3d") {
+            window.KspSolarMap.updateTelemetry(telemetry);
+            var previewModel = buildSolarSystemModel(telemetry);
+            updateSolarDiagnostics(previewModel);
+            updateSolarTimeScrubber(telemetry);
+            return;
+          }
+
           var canvas = elements.solarCanvas;
           var context = canvas.getContext("2d");
           var model = buildSolarSystemModel(telemetry);
@@ -1277,8 +1322,8 @@
             });
           }
 
-          if (!telemetry || telemetry.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
-            reason = "Schema v6 telemetry is required for solar-system rendering.";
+          if (!telemetry || !isSupportedSchemaVersion(telemetry.schemaVersion)) {
+            reason = "Schema v6+ telemetry is required for solar-system rendering.";
           } else if (!telemetry.rootFrameName || !telemetry.rootBody) {
             reason = "Root-frame metadata is unavailable.";
           } else if (bodyModels.length === 0) {
@@ -2126,7 +2171,7 @@
           var canDrawVessel = false;
           var residualMeters = NaN;
 
-          if (!telemetry || telemetry.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
+          if (!telemetry || !isSupportedSchemaVersion(telemetry.schemaVersion)) {
             reason = "Schema v6 telemetry is required for map rendering.";
           } else if (!orbit) {
             reason = "No orbit snapshot is available.";
@@ -2900,7 +2945,7 @@
         }
 
         function getDashboardStatus(telemetry) {
-          if (!telemetry || telemetry.schemaVersion !== EXPECTED_SCHEMA_VERSION) {
+          if (!telemetry || !isSupportedSchemaVersion(telemetry.schemaVersion)) {
             return { label: "Schema Mismatch", className: "status-schema-mismatch" };
           }
 
@@ -3071,7 +3116,23 @@
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#39;");
         }
+        function mountSolar3d() {
+          var root = document.getElementById("solar3dRoot");
+
+          if (root && window.KspSolarMap && !root.dataset.mounted) {
+            window.KspSolarMap.mount(root);
+            root.dataset.mounted = "1";
+            syncSolarViewMode();
+          }
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", mountSolar3d);
+        } else {
+          mountSolar3d();
+        }
       })();
     </script>
+    <script type="module" src="./assets/ksp-solar-map.js"></script>
   </body>
 </html>

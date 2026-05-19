@@ -87,7 +87,7 @@ GET /index.html
 HEAD /index.html
 ```
 
-Telemetry endpoints use schema version `6` and explicit unit suffixes such as `Meters`, `MetersPerSecond`, and `Seconds`.
+Telemetry endpoints use schema version `7` (dashboard accepts `>= 6`) and explicit unit suffixes such as `Meters`, `MetersPerSecond`, and `Seconds`.
 
 Schema v6 extends v5 with ephemeris and time-sampled placement fields:
 
@@ -113,9 +113,16 @@ bodies[].positionSampleUniversalTimeSeconds
 activeVessel.rootPathSamples[]
 activeVessel.rootPathSamples[].sampleUniversalTimeSeconds
 activeVessel.rootPathSamples[].positionRootRelativeMeters
+bodyOrbitCaptureStatus
+bodyOrbitPaths[]
+bodyOrbitPaths[].bodyName
+bodyOrbitPaths[].referenceBody
+bodyOrbitPaths[].samples[]
+bodyOrbitPaths[].samples[].sampleUniversalTimeSeconds
+bodyOrbitPaths[].samples[].positionRootRelativeMeters
 ```
 
-Schema v5/v6 shared map-safe conic, patch-chain, and shared-frame fields:
+Schema v5/v6/v7 shared map-safe conic, patch-chain, and shared-frame fields:
 
 ```text
 orbit.classification
@@ -178,7 +185,9 @@ Local conic positions use `orbitReferenceBodyCenteredInertial`. Shared solar-sys
 
 ## Browser Dashboard
 
-The dashboard is currently a self-contained `index.html` with inline CSS and JavaScript. This avoids a frontend build step and matches the server's current static-file allowlist of `/` and `/index.html`.
+The dashboard shell is [GameData/KspWebMap/Web/index.html](GameData/KspWebMap/Web/index.html) with inline CSS and JavaScript for metrics, Map Prototype (2D local conic), and polling. Phase 10 adds a Vite-built WebGL solar map bundle at `Web/assets/ksp-solar-map.js`, mounted via `window.KspSolarMap`.
+
+The local HTTP server serves `/`, `/index.html`, and static files under `/assets/*` (JS, CSS, fonts, images).
 
 Dashboard behavior:
 
@@ -190,14 +199,25 @@ Dashboard behavior:
 - Displays connected, degraded, disconnected, stale, and schema mismatch states.
 - Includes a Canvas map renderer that samples conic geometry from orbital elements.
 - Includes patch-route diagnostics from KSP's predicted `nextPatch` chain.
-- Includes a Solar System Frame panel that projects root-frame body, vessel, SOI, and patch-anchor positions.
-- Includes interactive solar-map controls: pan, zoom, camera modes, hover/click selection, route overlay, and label decluttering.
-- Does not add WebSockets, WebGL, external dependencies, maneuver nodes, or browser-to-KSP control.
+- Includes a **3D Solar System Frame** (React Three Fiber) with world-shift, display scale, bodies, SOI, patch conics, patched-conic route, vessel path, camera modes, and truth HUD.
+- Retains a **2D Canvas fallback** for the solar panel (toggle in the 3D HUD).
+- Does not add WebSockets, maneuver nodes, or browser-to-KSP control.
 - Adds read-only ephemeris UT scrubbing for sampled placement preview (does not advance KSP time).
+
+### Web UI source (`web/`)
+
+```text
+web/src/model/buildSolarSystemModel.ts   Pure telemetry → view model (no WebGL)
+web/src/math/buildConicGeometry.ts       Kepler sampling (shared with Map Prototype logic)
+web/src/scene/Map3D.tsx                  R3F scene and layers
+web/src/mount.tsx                        window.KspSolarMap embed API
+```
+
+`scripts/build.ps1` runs `npm run build` and copies `web/dist/assets/*` into the staged package.
 
 ## Map Renderer
 
-The map renderer is browser-only. It consumes schema v6 telemetry and never accesses KSP directly.
+The map renderer is browser-only. It consumes schema v6+ telemetry and never accesses KSP directly.
 
 The renderer generates conic points in a perifocal orbital plane, rotates them into the reference-body inertial frame using longitude of ascending node, inclination, and argument of periapsis, then projects those points to the 2D Canvas. The default projection mode is `orbitPlane` so the conic shape remains readable while the math foundation is validated. Diagnostic fields show the active projection and the closest sampled conic distance to the live vessel position when available.
 
@@ -211,15 +231,13 @@ Patch placement uses schema v6 ephemeris samples when capture succeeds. `orbitPa
 
 Body propagation uses `Orbit.getTruePositionAtUT` with KSP's documented Y/Z flip applied in one helper. A validation pass at capture time compares propagated positions to current `body.position` and reports `ephemerisValidationResidualMeters`.
 
-## Interactive Solar Map (Phases 8–9)
+## Interactive Solar Map (Phases 8–10)
 
-The Solar System Frame panel in [GameData/KspWebMap/Web/index.html](GameData/KspWebMap/Web/index.html) requires schema v6 and keeps browser-side camera state in `solarViewState`:
+The Solar System Frame panel requires schema v6+ telemetry.
 
-- Wheel zoom, drag pan, double-click reset, and camera modes (`fullSystem`, `activeVessel`, `currentReferenceBody`, `encounterBody`, `route`).
-- Route overlay connects time-ordered `placementSamples` when `patchPlacementMode` is `multiSampleEphemeris`.
-- `drawSolarPatchConics` translates local conic geometry by the patch-start sampled reference-body position (`solarFrameConicApproximate`).
-- `drawSolarVesselPath` plots `activeVessel.rootPathSamples[]` for the active patch.
-- Read-only UT scrubber highlights nearest samples without controlling KSP time.
+**3D (Phase 10, default):** React Three Fiber scene with `OrbitControls`, world-shift focus, display-scale compression, and layers for bodies, SOI, patch conics, route polyline, placement markers, vessel marker/path, and optional `bodyOrbitPaths[]` (schema v7).
+
+**2D fallback:** Legacy Canvas renderer in `index.html` (`solarViewState`) — wheel zoom, drag pan, camera modes, route overlay, translated conics, vessel path, scrubber highlights.
 
 Truth rules (NASA-aligned patched-conic context; not SPICE/N-body):
 
@@ -234,7 +252,7 @@ Truth rules (NASA-aligned patched-conic context; not SPICE/N-body):
 
 References: [NASA Basics of Space Flight — Trajectories](https://science.nasa.gov/learn/basics-of-space-flight/chapter4-1/), [NASA PatCon SOI patching (AAS 07-160)](https://ntrs.nasa.gov/api/citations/20070010447/downloads/20070010447.pdf).
 
-WebGL rendering is deferred to Phase 10 and will consume the same schema v6 contract.
+Schema v7 adds `bodyOrbitPaths[]` — root-frame samples of major celestial orbits for faint planet trail lines in 3D.
 
 Rendering rules:
 

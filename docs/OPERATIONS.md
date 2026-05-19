@@ -36,6 +36,30 @@ KSP_x64_Data/Managed/UnityEngine.IMGUIModule.dll
 
 If no .NET SDK is available, the script falls back to the Windows .NET Framework compiler.
 
+### Web UI build (Phase 10)
+
+When `web/package.json` exists, `build.ps1` also runs:
+
+```powershell
+cd web
+npm ci   # or npm install if no package-lock.json
+npm run build
+```
+
+Output is copied to `artifacts/package/GameData/KspWebMap/Web/assets/` (`ksp-solar-map.js`, `ksp-solar-map.css`).
+
+Developers can run the solar map against a live KSP server:
+
+```powershell
+cd web
+npm install
+npm run dev
+```
+
+Vite proxies `/api/*` to `http://127.0.0.1:8750`.
+
+Players only need the built assets from `build.ps1` + `install.ps1`; they do not run npm.
+
 ## Install
 
 Install the staged package into KSP:
@@ -323,6 +347,22 @@ http://127.0.0.1:8750/../KSP.log
 Expected result: `404 Not Found`.
 
 After leaving the flight scene, the port should be released. Re-entering flight should start the server again.
+
+## Phase 10 WebGL verification
+
+In flight, open `http://127.0.0.1:8750/`. Confirm `GET /assets/ksp-solar-map.js` returns 200.
+
+| Scenario | Pass |
+|----------|------|
+| Stable Kerbin orbit | 3D bodies, SOI, active patch conic, vessel marker; Map Prototype unchanged |
+| Kerbin escape | Multi-patch arcs + time-keyed route (patched-conic label) |
+| Duna encounter | Encounter marker at sampled UT, not current Duna position |
+| Camera modes | Full system / vessel / reference / encounter / route; no jump on 1 Hz poll |
+| Scrubber | Read-only UT preview; KSP time unchanged |
+| Schema v5 JSON | Schema mismatch banner; no silent 3D render |
+| 2D toggle | HUD View → 2D Canvas shows legacy solar map |
+
+Truth banner must state: **KSP patched-conic prediction — not SPICE/N-body**.
 
 ## Logs
 
