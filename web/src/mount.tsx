@@ -20,6 +20,9 @@ export interface KspSolarMapApi {
   getModel: () => SolarSystemModel | null;
   getSelectionDetail: () => SelectionDetail | null;
   getHoverObjectId: () => string | null;
+  getSolarFullscreen: () => boolean;
+  setSolarFullscreen: (enabled: boolean) => void;
+  toggleSolarFullscreen: () => void;
 }
 
 let root: Root | null = null;
@@ -117,14 +120,31 @@ const api: KspSolarMapApi = {
   getHoverObjectId() {
     return useViewStore.getState().hoverObjectId;
   },
+  getSolarFullscreen() {
+    return useViewStore.getState().solarFullscreen;
+  },
+  setSolarFullscreen(enabled: boolean) {
+    ensureMounted();
+    useViewStore.getState().setSolarFullscreen(enabled);
+  },
+  toggleSolarFullscreen() {
+    ensureMounted();
+    useViewStore.getState().toggleSolarFullscreen();
+  },
 };
 
 declare global {
   interface Window {
     KspSolarMap?: KspSolarMapApi;
+    KspSolarMapUiVersion?: string;
   }
 }
 
+/** Bumped when web UI changes; check in devtools if map looks stale. */
+export const KSP_WEB_MAP_UI_VERSION = "48-restore-moon-lod";
+
 window.KspSolarMap = api;
+window.KspSolarMapUiVersion = KSP_WEB_MAP_UI_VERSION;
+console.log("[KspWebMap] UI", KSP_WEB_MAP_UI_VERSION);
 window.dispatchEvent(new CustomEvent("ksp-solar-map-ready"));
 export default api;

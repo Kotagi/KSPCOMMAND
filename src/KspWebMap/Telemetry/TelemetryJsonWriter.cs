@@ -24,12 +24,55 @@ namespace KspWebMap
             WriteStringOrNull(builder, snapshot.EphemerisCaptureStatus);
             builder.Append(',');
             WriteProperty(builder, "ephemerisValidationResidualMeters", snapshot.EphemerisValidationResidualMeters);
+            builder.Append(',');
+            WriteProperty(builder, "ephemerisLivePropagationResidualMeters", snapshot.EphemerisLivePropagationResidualMeters);
+            builder.Append(',');
+            WriteProperty(builder, "iconTrailSample0ResidualMeters", snapshot.IconTrailSample0ResidualMeters);
+            builder.Append(',');
+            WriteProperty(builder, "bodyOrbitPropagationResidualMeters", snapshot.BodyOrbitPropagationResidualMeters);
+            builder.Append(',');
+            WriteProperty(builder, "bodyOrbitFlipPropagationResidualMeters", snapshot.BodyOrbitFlipPropagationResidualMeters);
+            builder.Append(',');
+            WriteProperty(builder, "bodyOrbitSampleResidualMeters", snapshot.BodyOrbitSampleResidualMeters);
+            builder.Append(',');
+            WriteProperty(builder, "bodyOrbitAnalyticResidualMeters", snapshot.BodyOrbitAnalyticResidualMeters);
+            builder.Append(',');
+            WriteProperty(builder, "bodyOrbitPeriodClosureResidualMeters", snapshot.BodyOrbitPeriodClosureResidualMeters);
             builder.Append(",\"ephemerisSamples\":");
             WriteEphemerisSamples(builder, snapshot.EphemerisSamples);
             builder.Append(",\"bodyOrbitCaptureStatus\":");
             WriteStringOrNull(builder, snapshot.BodyOrbitCaptureStatus);
+            builder.Append(",\"frameDiagnostics\":");
+            WriteFrameDiagnostics(builder, snapshot.FrameDiagnostics);
+            builder.Append(",\"positionValidation\":");
+            WritePositionValidation(builder, snapshot.PositionValidation);
             builder.Append(",\"bodyOrbitPaths\":");
             WriteBodyOrbitPaths(builder, snapshot.BodyOrbitPaths);
+            builder.Append('}');
+            return builder.ToString();
+        }
+
+        public static string WriteDiagnostics(TelemetrySnapshot snapshot)
+        {
+            StringBuilder builder = new StringBuilder(4096);
+            builder.Append('{');
+            WriteProperty(builder, "schemaVersion", snapshot != null ? snapshot.SchemaVersion : 0);
+            builder.Append(',');
+            WriteProperty(builder, "snapshotId", snapshot != null ? snapshot.SnapshotId : 0);
+            builder.Append(',');
+            WriteProperty(builder, "valid", snapshot != null && snapshot.Valid);
+            builder.Append(",\"frameDiagnostics\":");
+            WriteFrameDiagnostics(builder, snapshot != null ? snapshot.FrameDiagnostics : null);
+            builder.Append(",\"positionValidation\":");
+            WritePositionValidation(builder, snapshot != null ? snapshot.PositionValidation : null);
+            builder.Append(',');
+            WriteProperty(builder, "iconTrailSample0ResidualMeters", snapshot != null ? snapshot.IconTrailSample0ResidualMeters : double.NaN);
+            builder.Append(',');
+            WriteProperty(builder, "ephemerisValidationResidualMeters", snapshot != null ? snapshot.EphemerisValidationResidualMeters : double.NaN);
+            builder.Append(',');
+            WriteProperty(builder, "ephemerisLivePropagationResidualMeters", snapshot != null ? snapshot.EphemerisLivePropagationResidualMeters : double.NaN);
+            builder.Append(",\"bodyOrbitPaths\":");
+            WriteBodyOrbitDiagnosticsOnly(builder, snapshot != null ? snapshot.BodyOrbitPaths : null);
             builder.Append('}');
             return builder.ToString();
         }
@@ -364,6 +407,16 @@ namespace KspWebMap
             builder.Append("\"positionRootRelativeMeters\":");
             WriteVector(builder, body.PositionRootRelativeMeters);
             builder.Append(',');
+            builder.Append("\"positionLiveRootRelativeMeters\":");
+            WriteVector(builder, body.PositionLiveRootRelativeMeters);
+            builder.Append(',');
+            builder.Append("\"positionTrueRootRelativeMeters\":");
+            WriteVector(builder, body.PositionTrueRootRelativeMeters);
+            builder.Append(',');
+            WriteProperty(builder, "liveVsTrueDeltaMeters", body.LiveVsTrueDeltaMeters);
+            builder.Append(',');
+            WriteProperty(builder, "eclipticLongitudeDegrees", body.EclipticLongitudeDegrees);
+            builder.Append(',');
             WriteProperty(builder, "velocityReferenceFrame", body.VelocityReferenceFrame);
             builder.Append(',');
             builder.Append("\"velocityRootRelativeMetersPerSecond\":");
@@ -509,6 +562,9 @@ namespace KspWebMap
             builder.Append(',');
             builder.Append("\"positionRootRelativeMeters\":");
             WriteVector(builder, sample.PositionRootRelativeMeters);
+            builder.Append(',');
+            builder.Append("\"parentPositionRootRelativeMeters\":");
+            WriteVector(builder, sample.ParentPositionRootRelativeMeters);
             builder.Append('}');
         }
 
@@ -669,8 +725,148 @@ namespace KspWebMap
             WriteProperty(builder, "classification", path.Classification);
             builder.Append(',');
             WriteProperty(builder, "captureWarning", path.CaptureWarning);
+            builder.Append(",\"orbitElements\":");
+            WriteBodyOrbitElements(builder, path.OrbitElements);
             builder.Append(",\"samples\":");
             WriteVesselRootPathSamples(builder, path.Samples);
+            builder.Append(",\"validation\":");
+            WriteBodyOrbitPathValidation(builder, path.Validation);
+            builder.Append('}');
+        }
+
+        private static void WriteBodyOrbitElements(StringBuilder builder, BodyOrbitElementsSnapshot elements)
+        {
+            if (elements == null)
+            {
+                builder.Append("null");
+                return;
+            }
+
+            builder.Append('{');
+            WriteProperty(builder, "referenceBody", elements.ReferenceBody);
+            builder.Append(',');
+            WriteProperty(builder, "classification", elements.Classification);
+            builder.Append(',');
+            WriteProperty(builder, "referenceBodyRadiusMeters", elements.ReferenceBodyRadiusMeters);
+            builder.Append(',');
+            WriteProperty(builder, "sphereOfInfluenceMeters", elements.SphereOfInfluenceMeters);
+            builder.Append(',');
+            WriteProperty(builder, "semiMajorAxisMeters", elements.SemiMajorAxisMeters);
+            builder.Append(',');
+            WriteProperty(builder, "semiLatusRectumMeters", elements.SemiLatusRectumMeters);
+            builder.Append(',');
+            WriteProperty(builder, "eccentricity", elements.Eccentricity);
+            builder.Append(',');
+            WriteProperty(builder, "inclinationDegrees", elements.InclinationDegrees);
+            builder.Append(',');
+            WriteProperty(builder, "longitudeOfAscendingNodeDegrees", elements.LongitudeOfAscendingNodeDegrees);
+            builder.Append(',');
+            WriteProperty(builder, "argumentOfPeriapsisDegrees", elements.ArgumentOfPeriapsisDegrees);
+            builder.Append(',');
+            WriteProperty(builder, "epochUniversalTimeSeconds", elements.EpochUniversalTimeSeconds);
+            builder.Append(',');
+            WriteProperty(builder, "periodSeconds", elements.PeriodSeconds);
+            builder.Append(',');
+            WriteProperty(builder, "trueAnomalyDegreesAtCapture", elements.TrueAnomalyDegreesAtCapture);
+            builder.Append(',');
+            WriteProperty(builder, "meanAnomalyRadiansAtCapture", elements.MeanAnomalyRadiansAtCapture);
+            builder.Append('}');
+        }
+
+        private static void WritePositionValidation(StringBuilder builder, PositionValidationSnapshot validation)
+        {
+            if (validation == null)
+            {
+                builder.Append("null");
+                return;
+            }
+
+            builder.Append('{');
+            WriteProperty(builder, "worstBodyName", validation.WorstBodyName);
+            builder.Append(',');
+            WriteProperty(builder, "worstCheck", validation.WorstCheck);
+            builder.Append(',');
+            WriteProperty(builder, "worstResidualMeters", validation.WorstResidualMeters);
+            builder.Append('}');
+        }
+
+        private static void WriteFrameDiagnostics(StringBuilder builder, FrameDiagnosticsSnapshot diagnostics)
+        {
+            if (diagnostics == null)
+            {
+                builder.Append("null");
+                return;
+            }
+
+            builder.Append('{');
+            WriteProperty(builder, "resolverVersion", diagnostics.ResolverVersion);
+            builder.Append(',');
+            WriteProperty(builder, "orbitOffsetMode", diagnostics.OrbitOffsetMode);
+            builder.Append(',');
+            WriteProperty(builder, "vesselOffsetMode", diagnostics.VesselOffsetMode);
+            builder.Append(',');
+            WriteProperty(builder, "pluginBuildUtc", diagnostics.PluginBuildUtc);
+            builder.Append(',');
+            WriteProperty(builder, "captureDurationMs", diagnostics.CaptureDurationMs);
+            builder.Append(',');
+            WriteProperty(builder, "bodiesCaptured", diagnostics.BodiesCaptured);
+            builder.Append(',');
+            WriteProperty(builder, "bodyPathsCaptured", diagnostics.BodyPathsCaptured);
+            builder.Append('}');
+        }
+
+        private static void WriteBodyOrbitDiagnosticsOnly(StringBuilder builder, BodyOrbitPathSnapshot[] paths)
+        {
+            builder.Append('[');
+
+            if (paths != null)
+            {
+                for (int i = 0; i < paths.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        builder.Append(',');
+                    }
+
+                    BodyOrbitPathSnapshot path = paths[i];
+                    builder.Append('{');
+                    WriteProperty(builder, "bodyName", path != null ? path.BodyName : null);
+                    builder.Append(",\"validation\":");
+                    WriteBodyOrbitPathValidation(builder, path != null ? path.Validation : null);
+                    builder.Append('}');
+                }
+            }
+
+            builder.Append(']');
+        }
+
+        private static void WriteBodyOrbitPathValidation(StringBuilder builder, BodyOrbitPathValidationSnapshot validation)
+        {
+            if (validation == null)
+            {
+                builder.Append("null");
+                return;
+            }
+
+            builder.Append('{');
+            WriteProperty(builder, "liveToSample0Meters", validation.LiveToSample0Meters);
+            builder.Append(',');
+            WriteProperty(builder, "liveToAnalyticMeters", validation.LiveToAnalyticMeters);
+            builder.Append(',');
+            WriteProperty(builder, "maxSampleToRecomputedMeters", validation.MaxSampleToRecomputedMeters);
+            builder.Append(',');
+            WriteProperty(builder, "maxSampleToTrailFrameMeters", validation.MaxSampleToTrailFrameMeters);
+            builder.Append(',');
+            WriteProperty(builder, "periodClosureMeters", validation.PeriodClosureMeters);
+            builder.Append(',');
+            builder.Append("\"planeNormalRootRelative\":");
+            WriteVector(builder, validation.PlaneNormalRootRelative);
+            builder.Append(',');
+            WriteProperty(builder, "planeAngleToAnalyticDegrees", validation.PlaneAngleToAnalyticDegrees);
+            builder.Append(',');
+            WriteProperty(builder, "trailRenderMode", validation.TrailRenderMode);
+            builder.Append(',');
+            WriteProperty(builder, "trailWarning", validation.TrailWarning);
             builder.Append('}');
         }
 

@@ -3,29 +3,19 @@ import { Line } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useViewStore } from "../../store/viewStore";
-import { applyWorldShift, getFocusPosition } from "../../coords/worldShift";
+import { applyWorldShift } from "../../coords/worldShift";
+import { selectVesselPathLegContainingShip } from "../../coords/buildPatchConic";
+import { isRenderableVesselRootPath } from "../vesselPathValidation";
+import { distance3 } from "../../perf/pathSegments";
+import { useTrajectoryFocus } from "./useTrajectoryFocus";
 
 export function VesselLayer() {
   const model = useViewStore((s) => s.model);
   const displayScale = useViewStore((s) => s.displayScale);
-  const focusBodyName = useViewStore((s) => s.focusBodyName);
-  const cameraMode = useViewStore((s) => s.cameraMode);
   const vesselTarget = useViewStore((s) => s.vesselTargetPosition);
   const meshRef = useRef<THREE.Mesh>(null);
   const displayPos = useRef(new THREE.Vector3());
-
-  const focus = useMemo(() => {
-    if (!model) {
-      return null;
-    }
-    if (focusBodyName) {
-      return getFocusPosition(model.bodies, focusBodyName);
-    }
-    if (cameraMode === "currentReferenceBody" && model.referenceBody) {
-      return getFocusPosition(model.bodies, model.referenceBody);
-    }
-    return null;
-  }, [model, focusBodyName, cameraMode]);
+  const focus = useTrajectoryFocus();
 
   const targetScene = useMemo(() => {
     if (!vesselTarget) {
@@ -35,11 +25,27 @@ export function VesselLayer() {
     return new THREE.Vector3(x, y, z);
   }, [vesselTarget, focus, displayScale]);
 
-  const pathPoints = useMemo(() => {
+  const pathSegments = useMemo(() => {
     if (!model?.vesselPathPoints.length) {
       return [];
     }
-    return model.vesselPathPoints.map((p) => applyWorldShift(p, focus, displayScale));
+    const legs = selectVesselPathLegContainingShip(
+      model.vesselPathPoints,
+      model.vesselPosition,
+    );
+    const vesselPos = model.vesselPosition;
+    return legs.map((leg) => {
+      const shifted = leg.map((p) => applyWorldShift(p, focus, displayScale));
+      if (!vesselPos || shifted.length === 0) {
+        return shifted;
+      }
+      const nearVessel = leg.some((p) => distance3(p, vesselPos) < 1000);
+      if (!nearVessel) {
+        const [vx, vy, vz] = applyWorldShift(vesselPos, focus, displayScale);
+        shifted.push([vx, vy, vz]);
+      }
+      return shifted;
+    });
   }, [model, focus, displayScale]);
 
   useFrame((_, delta) => {
@@ -58,18 +64,23 @@ export function VesselLayer() {
     return null;
   }
 
+  const showGreenPath =
+    pathSegments.length > 0 &&
+    !isRenderableVesselRootPath(model.vesselPathPoints);
+
   return (
     <group>
-      {pathPoints.length >= 2 && (
-        <Line
-          points={pathPoints}
-          color="#61d394"
-          lineWidth={1.5}
-          dashed
-          dashSize={0.3}
-          gapSize={0.2}
-        />
-      )}
+      {showGreenPath &&
+        pathSegments.map((points, index) => (
+          <Line
+            key={`vessel-path-${index}`}
+            points={points}
+            color="#61d394"
+            lineWidth={1.25}
+            transparent
+            opacity={0.85}
+          />
+        ))}
       <mesh ref={meshRef} position={targetScene}>
         <coneGeometry args={[0.25, 0.6, 8]} />
         <meshStandardMaterial

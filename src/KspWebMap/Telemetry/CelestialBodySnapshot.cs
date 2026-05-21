@@ -7,6 +7,10 @@ namespace KspWebMap
         public string PositionReferenceFrame;
         public double PositionSampleUniversalTimeSeconds;
         public Vector3Snapshot PositionRootRelativeMeters;
+        public Vector3Snapshot PositionLiveRootRelativeMeters;
+        public Vector3Snapshot PositionTrueRootRelativeMeters;
+        public double LiveVsTrueDeltaMeters;
+        public double EclipticLongitudeDegrees;
         public string VelocityReferenceFrame;
         public Vector3Snapshot VelocityRootRelativeMetersPerSecond;
         public string OrbitReferenceBody;

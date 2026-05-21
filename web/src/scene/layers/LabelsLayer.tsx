@@ -2,8 +2,12 @@ import { useMemo } from "react";
 import { Html } from "@react-three/drei";
 import { useViewStore } from "../../store/viewStore";
 import { applyWorldShift, getFocusPosition } from "../../coords/worldShift";
+import { getQualitySettings } from "../../settings/qualityStore";
+import { useMoonVisibilityContext } from "../MoonVisibilityContext";
+import { bodyMeshRadius, moonLabelOffset } from "../bodyVisualScale";
+import { isMoon } from "../../model/bodyHierarchy";
 
-const PRIORITY_BODIES = new Set(["Sun", "Kerbin", "Mun", "Minmus", "Duna"]);
+const PRIORITY_BODIES = new Set(["Sun", "Kerbin", "Mun", "Minmus", "Duna", "Ike"]);
 
 interface LabelItem {
   key: string;
@@ -17,7 +21,12 @@ export function LabelsLayer() {
   const displayScale = useViewStore((s) => s.displayScale);
   const focusBodyName = useViewStore((s) => s.focusBodyName);
   const cameraMode = useViewStore((s) => s.cameraMode);
-  const quality = useViewStore((s) => s.getQuality());
+  const qualityPreset = useViewStore((s) => s.qualityPreset);
+  const { visibleBodyNames, hostPlanetOpen } = useMoonVisibilityContext();
+  const quality = useMemo(
+    () => getQualitySettings(qualityPreset),
+    [qualityPreset],
+  );
 
   const focus = useMemo(() => {
     if (!model) {
@@ -36,22 +45,56 @@ export function LabelsLayer() {
   }, [model, focusBodyName, cameraMode]);
 
   const labels = useMemo((): LabelItem[] => {
-    if (!model?.canDraw || !quality.labelsEnabled) {
+    if (!model?.canDraw || !model.hierarchy || !quality.labelsEnabled) {
       return [];
     }
     const items: LabelItem[] = [];
+    const hierarchy = model.hierarchy;
+    const scaleBase = {
+      displayScale,
+      hierarchy,
+      hostPlanetOpen,
+    };
+
+    const bodyPositions = new Map<string, [number, number, number]>();
+
     model.bodies.forEach((entry) => {
       const name = entry.body.name ?? "body";
+      if (!visibleBodyNames.has(name)) {
+        return;
+      }
       const priority = PRIORITY_BODIES.has(name) ? 10 : 1;
-      const [x, y, z] = applyWorldShift(entry.position, focus, displayScale);
-      const radius = Math.max((entry.body.radiusMeters ?? 1000) * displayScale, 0.15);
+      const scenePos = applyWorldShift(entry.position, focus, displayScale) as [
+        number,
+        number,
+        number,
+      ];
+      bodyPositions.set(name, scenePos);
+      const meshR = bodyMeshRadius({
+        ...scaleBase,
+        bodyName: name,
+        radiusMeters: Math.max(entry.body.radiusMeters ?? 1000, 1000),
+      });
+
+      let labelPos: [number, number, number];
+      if (isMoon(hierarchy, name)) {
+        const host = hierarchy.planetForBody[name];
+        const parentPos = host ? bodyPositions.get(host) : undefined;
+        labelPos = parentPos
+          ? moonLabelOffset(scenePos, parentPos, meshR)
+          : [scenePos[0], scenePos[1] + meshR + 0.35, scenePos[2]];
+      } else {
+        labelPos = [scenePos[0], scenePos[1] + meshR + 0.4, scenePos[2]];
+      }
+
       items.push({
         key: `body-${name}`,
         text: name,
-        position: [x, y + radius + 0.4, z],
+        position: labelPos,
         priority,
       });
     });
+
     model.routeAnchors.forEach((anchor, index) => {
       const role = anchor.role ?? "anchor";
       if (role !== "encounter" && role !== "escape") {
@@ -66,8 +109,15 @@ export function LabelsLayer() {
       });
     });
     items.sort((a, b) => b.priority - a.priority);
-    return items.slice(0, 24);
-  }, [model, focus, displayScale, quality.labelsEnabled]);
+    return items.slice(0, 32);
+  }, [
+    model,
+    focus,
+    displayScale,
+    quality.labelsEnabled,
+    visibleBodyNames,
+    hostPlanetOpen,
+  ]);
 
   if (!labels.length) {
     return null;

@@ -1,42 +1,65 @@
 import { useMemo } from "react";
 import { Line } from "@react-three/drei";
 import { useViewStore } from "../../store/viewStore";
-import { applyWorldShift, getFocusPosition } from "../../coords/worldShift";
+import { applyWorldShift } from "../../coords/worldShift";
+import { buildTrajectoryPreviewSegments } from "../../coords/buildPatchConic";
+import { buildRouteChordSegments } from "../../coords/routeOverlay";
+import { useTrajectoryFocus } from "./useTrajectoryFocus";
 
 export function RouteLayer() {
+  const telemetry = useViewStore((s) => s.telemetry);
   const model = useViewStore((s) => s.model);
   const displayScale = useViewStore((s) => s.displayScale);
-  const focusBodyName = useViewStore((s) => s.focusBodyName);
+  const focus = useTrajectoryFocus();
 
-  const focus = useMemo(() => {
-    if (!model || !focusBodyName) {
-      return null;
+  const lineGroups = useMemo(() => {
+    if (!model) {
+      return [] as { key: string; points: [number, number, number][]; dashed: boolean }[];
     }
-    return getFocusPosition(model.bodies, focusBodyName);
-  }, [model, focusBodyName]);
 
-  const points = useMemo(() => {
-    if (!model || model.routeAnchors.length < 2) {
-      return [];
-    }
-    return model.routeAnchors.map((anchor) =>
-      applyWorldShift(anchor.position, focus, displayScale),
-    );
-  }, [model, focus, displayScale]);
+    const isPrediction = model.routeOverlayMode.includes("patched-conic");
+    const rootBodyName = telemetry?.rootBody ?? null;
+    const vesselRoot =
+      model.vesselPosition ??
+      telemetry?.activeVessel?.positionRootRelativeMeters ??
+      null;
 
-  if (points.length < 2) {
+    const rootSegments = isPrediction
+      ? buildTrajectoryPreviewSegments(
+          telemetry?.orbitPatches ?? [],
+          model.bodies,
+          rootBodyName,
+          vesselRoot,
+          model.vesselPathPoints,
+        )
+      : buildRouteChordSegments(model.routeAnchors, rootBodyName);
+
+    return rootSegments.map((segment, index) => ({
+      key: `route-seg-${index}`,
+      points: segment.map(
+        (p) => applyWorldShift(p, focus, displayScale) as [number, number, number],
+      ),
+      dashed: !isPrediction,
+    }));
+  }, [telemetry, model, focus, displayScale]);
+
+  if (!lineGroups.length) {
     return null;
   }
 
-  const isPrediction = model?.routeOverlayMode.includes("patched-conic");
   return (
-    <Line
-      points={points}
-      color={isPrediction ? "#ffd166" : "#ff6b6b"}
-      lineWidth={2}
-      dashed={!isPrediction}
-      dashSize={0.5}
-      gapSize={0.25}
-    />
+    <group>
+      {lineGroups.map((line) => (
+        <Line
+          key={line.key}
+          points={line.points}
+          color="#ffd166"
+          lineWidth={2}
+          dashed={line.dashed}
+          dashSize={0.5}
+          gapSize={0.25}
+        />
+      ))}
+    </group>
   );
 }

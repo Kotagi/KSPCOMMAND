@@ -10,6 +10,8 @@ C:\Users\brand\OneDrive\Desktop\Kerbal\1.12.3\Kerbal Space Program
 
 That folder should contain `KSP_x64.exe`, `GameData`, and `KSP_x64_Data`.
 
+**Build/install troubleshooting (including `KSP_ROOT` not set):** see [BUILD_AND_INSTALL.md](BUILD_AND_INSTALL.md). **Install updated DLL (KSP quit):** [INSTALL_DLL.md](INSTALL_DLL.md).
+
 ## Build
 
 Run from the repository root:
@@ -366,7 +368,34 @@ Truth banner must state: **KSP patched-conic prediction — not SPICE/N-body**.
 
 ## Phase 10.5 WebGL verification
 
-After install, hard-refresh `http://127.0.0.1:8750/?v=4` so `ksp-solar-map.js` reloads.
+After install, hard-refresh `http://127.0.0.1:8750/?v=22` so `ksp-solar-map.js` reloads.
+
+## Body–orbit alignment and frame truth (schema v8, Phase 11)
+
+With KSP in flight and the mod loaded:
+
+```powershell
+.\scripts\verify-telemetry.ps1
+.\scripts\verify-body-positions.ps1
+```
+
+- `verify-telemetry.ps1` — trail render mode, `liveToSample0`, analytic gates, same-UT `ephemerisValidationResidualMeters ≤ 1 Mm`.
+- `verify-body-positions.ps1` — icon↔trail₀, Sun-child `liveVsTrueDeltaMeters ≤ 1 km` at now.
+
+Diagnostics-only polling: `GET http://127.0.0.1:8750/api/diagnostics` (includes `positionValidation.worstBodyName` / `worstCheck`).
+
+HUD truth banner: primary **Validation (same-UT)** and **Icon↔trail₀**; **60s orbital sep (diag)** is not a position error.
+
+### Regression vs KSP map
+
+1. Full-system view in web vs in-game map (neutral rotation).
+2. `node scripts/diagnose-planet-positions.mjs` — planet clocks and `liveVsTrue` table.
+3. See [BODY_ORBIT_VNV.md](BODY_ORBIT_VNV.md) for AC-009–012 and metric glossary.
+4. Moon LOD (planets-only at solar zoom, moons in SOI context): [MOON_DISPLAY_VNV.md](MOON_DISPLAY_VNV.md) — AC-M01–M09, `verify-body-positions.mjs` moon–parent gates.
+
+## Phase 10.5 WebGL verification (cache bust)
+
+After install, hard-refresh `http://127.0.0.1:8750/?v=4` so `ksp-solar-map.js` reloads (legacy note; prefer `?v=22` above).
 
 | # | Scenario | Pass |
 |---|----------|------|

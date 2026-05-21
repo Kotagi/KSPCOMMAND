@@ -34,6 +34,10 @@ export interface OrbitElements {
   longitudeOfAscendingNodeDegrees?: number;
   argumentOfPeriapsisDegrees?: number;
   trueAnomalyDegrees?: number;
+  trueAnomalyDegreesAtCapture?: number;
+  meanAnomalyRadiansAtCapture?: number;
+  epochUniversalTimeSeconds?: number;
+  periodSeconds?: number;
   referenceBodyRadiusMeters?: number;
   apoapsisRadiusMeters?: number;
   periapsisRadiusMeters?: number;
@@ -73,6 +77,10 @@ export interface CelestialBody {
   positionReferenceFrame?: string;
   positionSampleUniversalTimeSeconds?: number;
   positionRootRelativeMeters?: Vector3;
+  positionLiveRootRelativeMeters?: Vector3;
+  positionTrueRootRelativeMeters?: Vector3;
+  liveVsTrueDeltaMeters?: number;
+  eclipticLongitudeDegrees?: number;
   velocityReferenceFrame?: string;
   velocityRootRelativeMetersPerSecond?: Vector3;
 }
@@ -96,6 +104,39 @@ export interface ActiveVessel {
 export interface BodyOrbitPathSample {
   sampleUniversalTimeSeconds?: number;
   positionRootRelativeMeters?: Vector3;
+  parentPositionRootRelativeMeters?: Vector3;
+}
+
+/** Keplerian elements for analytic body-orbit trails (schema v7). */
+export interface BodyOrbitElements {
+  referenceBody?: string;
+  classification?: string;
+  referenceBodyRadiusMeters?: number;
+  sphereOfInfluenceMeters?: number;
+  semiMajorAxisMeters?: number;
+  semiLatusRectumMeters?: number;
+  eccentricity?: number;
+  inclinationDegrees?: number;
+  longitudeOfAscendingNodeDegrees?: number;
+  argumentOfPeriapsisDegrees?: number;
+  epochUniversalTimeSeconds?: number;
+  periodSeconds?: number;
+  trueAnomalyDegreesAtCapture?: number;
+  meanAnomalyRadiansAtCapture?: number;
+}
+
+export interface BodyOrbitPathValidation {
+  liveToSample0Meters?: number;
+  liveToAnalyticMeters?: number;
+  maxSampleToRecomputedMeters?: number;
+  maxSampleToTrailFrameMeters?: number;
+  /** @deprecated use maxSampleToTrailFrameMeters */
+  maxSampleToTrueMeters?: number;
+  periodClosureMeters?: number;
+  planeNormalRootRelative?: Vector3;
+  planeAngleToAnalyticDegrees?: number;
+  trailRenderMode?: "samples" | "analytic" | "hidden" | string;
+  trailWarning?: string | null;
 }
 
 export interface BodyOrbitPath {
@@ -104,6 +145,24 @@ export interface BodyOrbitPath {
   classification?: string;
   captureWarning?: string;
   samples?: BodyOrbitPathSample[];
+  orbitElements?: BodyOrbitElements;
+  validation?: BodyOrbitPathValidation;
+}
+
+export interface PositionValidation {
+  worstBodyName?: string | null;
+  worstCheck?: string | null;
+  worstResidualMeters?: number;
+}
+
+export interface FrameDiagnostics {
+  resolverVersion?: string;
+  orbitOffsetMode?: string;
+  vesselOffsetMode?: string;
+  pluginBuildUtc?: string;
+  captureDurationMs?: number;
+  bodiesCaptured?: number;
+  bodyPathsCaptured?: number;
 }
 
 export interface TelemetrySnapshot {
@@ -119,6 +178,15 @@ export interface TelemetrySnapshot {
   patchChainStatus?: string;
   ephemerisCaptureStatus?: string;
   ephemerisValidationResidualMeters?: number;
+  ephemerisLivePropagationResidualMeters?: number;
+  iconTrailSample0ResidualMeters?: number;
+  bodyOrbitPropagationResidualMeters?: number;
+  bodyOrbitFlipPropagationResidualMeters?: number;
+  bodyOrbitSampleResidualMeters?: number;
+  positionValidation?: PositionValidation;
+  bodyOrbitAnalyticResidualMeters?: number;
+  bodyOrbitPeriodClosureResidualMeters?: number;
+  frameDiagnostics?: FrameDiagnostics;
   bodies?: CelestialBody[];
   activeVessel?: ActiveVessel;
   orbit?: OrbitElements;

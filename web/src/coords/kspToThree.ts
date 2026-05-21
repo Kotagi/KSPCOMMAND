@@ -1,6 +1,6 @@
 import type { Vector3 } from "../telemetry/schema-v6";
 
-/** KSP root-relative meters → Three.js world (Y up, XZ ground plane). */
+/** KSP root-relative meters → Three.js world (ecliptic in XY plane, +Z toward camera). */
 export function kspRootToThree(position: Vector3): [number, number, number] {
   return [position.x, position.z, -position.y];
 }

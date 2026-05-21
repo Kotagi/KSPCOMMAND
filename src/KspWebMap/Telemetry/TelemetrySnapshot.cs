@@ -4,7 +4,7 @@ namespace KspWebMap
 {
     public sealed class TelemetrySnapshot
     {
-        public const int CurrentSchemaVersion = 7;
+        public const int CurrentSchemaVersion = 8;
 
         public int SchemaVersion;
         public long SnapshotId;
@@ -26,8 +26,17 @@ namespace KspWebMap
         public EphemerisSampleSnapshot[] EphemerisSamples;
         public string EphemerisCaptureStatus;
         public double EphemerisValidationResidualMeters;
+        public double EphemerisLivePropagationResidualMeters;
+        public double IconTrailSample0ResidualMeters;
+        public double BodyOrbitPropagationResidualMeters;
+        public double BodyOrbitFlipPropagationResidualMeters;
+        public double BodyOrbitSampleResidualMeters;
+        public double BodyOrbitAnalyticResidualMeters;
+        public double BodyOrbitPeriodClosureResidualMeters;
         public BodyOrbitPathSnapshot[] BodyOrbitPaths;
         public string BodyOrbitCaptureStatus;
+        public FrameDiagnosticsSnapshot FrameDiagnostics;
+        public PositionValidationSnapshot PositionValidation;
 
         public static TelemetrySnapshot CreateInvalid(long snapshotId, string status)
         {
@@ -52,9 +61,17 @@ namespace KspWebMap
                 Bodies = new CelestialBodySnapshot[0],
                 EphemerisSamples = new EphemerisSampleSnapshot[0],
                 EphemerisCaptureStatus = "unsupported",
-                EphemerisValidationResidualMeters = double.NaN,
-                BodyOrbitPaths = new BodyOrbitPathSnapshot[0],
-                BodyOrbitCaptureStatus = "unsupported"
+                        EphemerisValidationResidualMeters = double.NaN,
+                        EphemerisLivePropagationResidualMeters = double.NaN,
+                        IconTrailSample0ResidualMeters = double.NaN,
+                        BodyOrbitPropagationResidualMeters = double.NaN,
+                        BodyOrbitFlipPropagationResidualMeters = double.NaN,
+                        BodyOrbitSampleResidualMeters = double.NaN,
+                        BodyOrbitAnalyticResidualMeters = double.NaN,
+                        BodyOrbitPeriodClosureResidualMeters = double.NaN,
+                        BodyOrbitPaths = new BodyOrbitPathSnapshot[0],
+                BodyOrbitCaptureStatus = "unsupported",
+                FrameDiagnostics = null
             };
         }
     }

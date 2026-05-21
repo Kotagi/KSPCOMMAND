@@ -1,25 +1,13 @@
-import { useMemo } from "react";
 import { useViewStore } from "../../store/viewStore";
-import { applyWorldShift, getFocusPosition } from "../../coords/worldShift";
+import { applyWorldShift } from "../../coords/worldShift";
+import { useMoonVisibilityContext } from "../MoonVisibilityContext";
+import { useLayerFocus } from "./useLayerFocus";
 
 export function AtmosphereLayer() {
   const model = useViewStore((s) => s.model);
   const displayScale = useViewStore((s) => s.displayScale);
-  const focusBodyName = useViewStore((s) => s.focusBodyName);
-  const cameraMode = useViewStore((s) => s.cameraMode);
-
-  const focus = useMemo(() => {
-    if (!model) {
-      return null;
-    }
-    if (focusBodyName) {
-      return getFocusPosition(model.bodies, focusBodyName);
-    }
-    if (cameraMode === "currentReferenceBody" && model.referenceBody) {
-      return getFocusPosition(model.bodies, model.referenceBody);
-    }
-    return null;
-  }, [model, focusBodyName, cameraMode]);
+  const { visibleBodyNames } = useMoonVisibilityContext();
+  const focus = useLayerFocus();
 
   if (!model?.canDraw) {
     return null;
@@ -28,10 +16,10 @@ export function AtmosphereLayer() {
   return (
     <group>
       {model.bodies.map((entry) => {
-        if (!entry.body.hasAtmosphere) {
+        const name = entry.body.name ?? "body";
+        if (!visibleBodyNames.has(name) || !entry.body.hasAtmosphere) {
           return null;
         }
-        const name = entry.body.name ?? "body";
         const radius = Math.max(entry.body.radiusMeters ?? 1000, 1000);
         const depth = entry.body.atmosphereDepthMeters ?? radius * 0.05;
         const visualRadius = (radius + depth) * displayScale;

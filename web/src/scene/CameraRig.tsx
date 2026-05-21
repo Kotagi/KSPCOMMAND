@@ -4,8 +4,10 @@ import { OrbitControls } from "@react-three/drei";
 import { useViewStore } from "../store/viewStore";
 import {
   getBoundsCenterAndRadius,
+  getEclipticLevelCameraPose,
   getSolarCameraBounds3D,
 } from "../camera/solarCameraBounds";
+import { useMoonVisibilityContext } from "./MoonVisibilityContext";
 
 export function CameraRig() {
   const controlsRef = useRef<React.ComponentRef<typeof OrbitControls>>(null);
@@ -14,6 +16,7 @@ export function CameraRig() {
   const cameraMode = useViewStore((s) => s.cameraMode);
   const displayScale = useViewStore((s) => s.displayScale);
   const focusBodyName = useViewStore((s) => s.focusBodyName);
+  const { displayFocus, reason: moonLodReason } = useMoonVisibilityContext();
   const userInteracted = useViewStore((s) => s.userInteractedCamera);
   const cameraFitNonce = useViewStore((s) => s.cameraFitNonce);
   const setUserInteracted = useViewStore((s) => s.setUserInteractedCamera);
@@ -35,15 +38,19 @@ export function CameraRig() {
       cameraMode,
       displayScale,
       focusBodyName,
+      displayFocus,
     );
     const { center, radius } = getBoundsCenterAndRadius(bounds);
-    const dist = Math.max(radius * 2.8, 4);
-    controlsRef.current.target.set(center[0], center[1], center[2]);
-    camera.position.set(
-      center[0] + dist,
-      center[1] + dist * 0.65,
-      center[2] + dist,
+    const hostCentered =
+      cameraMode === "bodyFocus" || moonLodReason === "soiZoom";
+    const orbitCenter: [number, number, number] = hostCentered ? [0, 0, 0] : center;
+    const { position, up } = getEclipticLevelCameraPose(
+      orbitCenter,
+      hostCentered ? Math.max(radius, 0.5) : radius,
     );
+    controlsRef.current.target.set(orbitCenter[0], orbitCenter[1], orbitCenter[2]);
+    camera.position.set(position[0], position[1], position[2]);
+    camera.up.set(up[0], up[1], up[2]);
     controlsRef.current.update();
   }, [
     cameraMode,
@@ -51,10 +58,11 @@ export function CameraRig() {
     telemetry,
     displayScale,
     focusBodyName,
+    displayFocus,
+    moonLodReason,
     userInteracted,
     cameraFitNonce,
     camera,
-    userInteracted,
   ]);
 
   useFrame(() => {
@@ -63,12 +71,16 @@ export function CameraRig() {
     camera.updateProjectionMatrix();
   });
 
+  const isBodyFocus = cameraMode === "bodyFocus";
+
   return (
     <OrbitControls
       ref={controlsRef}
       makeDefault
       enableDamping
       dampingFactor={0.08}
+      minDistance={isBodyFocus ? 0.4 : 0.01}
+      maxDistance={isBodyFocus ? 5000 : 100000}
       onStart={() => setUserInteracted(true)}
     />
   );

@@ -46,8 +46,10 @@ namespace KspWebMap
             private const int MaxOrbitPatchCount = 8;
             private const int VesselRootPathSampleCount = 32;
             private const int BodyOrbitPathSampleCount = 48;
-            private const int MaxBodyOrbitPathCount = 24;
+            private const int MaxBodyOrbitPathCount = 48;
             private const double EphemerisValidationToleranceSeconds = 1d;
+            private const double VesselPathLiveToleranceMeters = 1000d;
+            private const double VesselPathUniversalTimeToleranceSeconds = 1d;
             private const string RootFrameName = "solarSystemRootCenteredInertial";
             private TelemetryStore _store;
             private float _nextCaptureTime;
@@ -86,9 +88,12 @@ namespace KspWebMap
             private TelemetrySnapshot CaptureSnapshot()
             {
                 long snapshotId = _store.NextSnapshotId();
+                DateTime captureStartedUtc = DateTime.UtcNow;
                 double universalTime = GetUniversalTimeSeconds();
                 CelestialBody rootBody = FindRootBody();
                 string rootFrameWarning = rootBody == null ? "Root body could not be identified." : null;
+                RootRelativePositionResolver.ResetCalibration();
+                RootRelativePositionResolver.EnsureCalibrated(rootBody, universalTime);
                 CelestialBodySnapshot[] bodies = CaptureBodies(rootBody, universalTime);
 
                 Vessel vessel = FlightGlobals.ActiveVessel;
@@ -117,6 +122,7 @@ namespace KspWebMap
                         EphemerisSamples = new EphemerisSampleSnapshot[0],
                         EphemerisCaptureStatus = rootBody != null ? "partial" : "unsupported",
                         EphemerisValidationResidualMeters = double.NaN,
+                        BodyOrbitPropagationResidualMeters = double.NaN,
                         BodyOrbitPaths = CaptureBodyOrbitPaths(rootBody, universalTime),
                         BodyOrbitCaptureStatus = rootBody != null ? "ok" : "unsupported"
                     };
@@ -127,7 +133,35 @@ namespace KspWebMap
                 OrbitPatchSnapshot[] orbitPatches = CaptureOrbitPatches(vessel, orbit, universalTime, rootBody, out patchChainStatus);
                 EphemerisSampleSnapshot[] ephemerisSamples = CaptureEphemerisSamples(orbitPatches, rootBody, universalTime);
                 string ephemerisCaptureStatus = DetermineEphemerisCaptureStatus(orbitPatches, ephemerisSamples);
-                double ephemerisValidationResidual = ValidateEphemerisPropagation(rootBody, universalTime);
+                BodyOrbitPathSnapshot[] bodyOrbitPaths = CaptureBodyOrbitPaths(rootBody, universalTime);
+                double bodyOrbitPropagationResidual;
+                double bodyOrbitFlipPropagationResidual;
+                double bodyOrbitSampleResidual;
+                double bodyOrbitAnalyticResidual;
+                double bodyOrbitPeriodClosureResidual;
+                double ephemerisLivePropagationResidual;
+                double iconTrailSample0Residual;
+                PositionValidationSnapshot positionValidation;
+                double ephemerisValidationResidual = ValidateEphemerisPropagation(
+                    rootBody,
+                    universalTime,
+                    bodies,
+                    bodyOrbitPaths,
+                    out iconTrailSample0Residual,
+                    out bodyOrbitPropagationResidual,
+                    out bodyOrbitFlipPropagationResidual,
+                    out bodyOrbitSampleResidual,
+                    out bodyOrbitAnalyticResidual,
+                    out bodyOrbitPeriodClosureResidual,
+                    out ephemerisLivePropagationResidual,
+                    out positionValidation);
+
+                DiagnosticsLogger.LogBodyOrbitWarnings(bodyOrbitPaths, universalTime);
+
+                FrameDiagnosticsSnapshot frameDiagnostics = BuildFrameDiagnostics(
+                    captureStartedUtc,
+                    bodies != null ? bodies.Length : 0,
+                    bodyOrbitPaths != null ? bodyOrbitPaths.Length : 0);
 
                 return new TelemetrySnapshot
                 {
@@ -151,8 +185,34 @@ namespace KspWebMap
                     EphemerisSamples = ephemerisSamples,
                     EphemerisCaptureStatus = ephemerisCaptureStatus,
                     EphemerisValidationResidualMeters = ephemerisValidationResidual,
-                    BodyOrbitPaths = CaptureBodyOrbitPaths(rootBody, universalTime),
-                    BodyOrbitCaptureStatus = DetermineBodyOrbitCaptureStatus(rootBody)
+                    EphemerisLivePropagationResidualMeters = ephemerisLivePropagationResidual,
+                    IconTrailSample0ResidualMeters = iconTrailSample0Residual,
+                    BodyOrbitPropagationResidualMeters = bodyOrbitFlipPropagationResidual,
+                    BodyOrbitFlipPropagationResidualMeters = bodyOrbitFlipPropagationResidual,
+                    BodyOrbitSampleResidualMeters = bodyOrbitSampleResidual,
+                    BodyOrbitAnalyticResidualMeters = bodyOrbitAnalyticResidual,
+                    BodyOrbitPeriodClosureResidualMeters = bodyOrbitPeriodClosureResidual,
+                    BodyOrbitPaths = bodyOrbitPaths,
+                    BodyOrbitCaptureStatus = DetermineBodyOrbitCaptureStatus(rootBody),
+                    FrameDiagnostics = frameDiagnostics,
+                    PositionValidation = positionValidation
+                };
+            }
+
+            private static FrameDiagnosticsSnapshot BuildFrameDiagnostics(
+                DateTime captureStartedUtc,
+                int bodiesCaptured,
+                int bodyPathsCaptured)
+            {
+                return new FrameDiagnosticsSnapshot
+                {
+                    ResolverVersion = RootRelativePositionResolver.ResolverVersion,
+                    OrbitOffsetMode = RootRelativePositionResolver.OrbitOffsetModeName,
+                    VesselOffsetMode = RootRelativePositionResolver.VesselOffsetModeName,
+                    PluginBuildUtc = captureStartedUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    CaptureDurationMs = (DateTime.UtcNow - captureStartedUtc).TotalMilliseconds,
+                    BodiesCaptured = bodiesCaptured,
+                    BodyPathsCaptured = bodyPathsCaptured
                 };
             }
 
@@ -371,7 +431,7 @@ namespace KspWebMap
 
                 Vector3Snapshot anchorPosition = startSample != null
                     ? startSample.PositionRootRelativeMeters
-                    : CaptureBodyRootPosition(referenceBody, rootBody);
+                    : CaptureBodyRootPosition(referenceBody, rootBody, universalTime);
 
                 double anchorSampleUt = startSample != null
                     ? startSample.SampleUniversalTimeSeconds
@@ -403,7 +463,7 @@ namespace KspWebMap
                 return new OrbitPatchSnapshot
                 {
                     PatchIndex = patchIndex,
-                    IsActivePatch = orbit.activePatch,
+                    IsActivePatch = patchIndex == 0,
                     Classification = patchIndex == 0 ? ClassifyOrbit(vessel, orbit) : ClassifyPatchOrbit(orbit),
                     ReferenceBody = referenceBody != null ? referenceBody.bodyName : null,
                     ReferenceFrame = referenceBody != null ? "orbitReferenceBodyCenteredInertial" : null,
@@ -634,14 +694,51 @@ namespace KspWebMap
                 return ToSnapshot(vessel.obt_velocity + referenceBodyRootVelocity);
             }
 
-            private static Vector3Snapshot CaptureBodyRootPosition(CelestialBody body, CelestialBody rootBody)
+            private static Vector3Snapshot CaptureBodyRootPosition(
+                CelestialBody body,
+                CelestialBody rootBody,
+                double universalTime)
             {
                 if (body == null || rootBody == null)
                 {
                     return null;
                 }
 
-                return ToSnapshot(body.position - rootBody.position);
+                return ToSnapshot(RootRelativePositionResolver.GetBodyDisplayRootRelative(
+                    body,
+                    rootBody,
+                    universalTime,
+                    universalTime));
+            }
+
+            private static Vector3Snapshot CaptureBodyTrailSamplePosition(
+                CelestialBody body,
+                CelestialBody rootBody,
+                double sampleUniversalTime,
+                double currentUniversalTime)
+            {
+                if (body == null || rootBody == null || !IsValidUniversalTime(sampleUniversalTime))
+                {
+                    return null;
+                }
+
+                if (body == rootBody)
+                {
+                    return ToSnapshot(Vector3d.zero);
+                }
+
+                try
+                {
+                    return ToSnapshot(RootRelativePositionResolver.GetBodyRootRelativeForTrailSample(
+                        body,
+                        rootBody,
+                        sampleUniversalTime,
+                        currentUniversalTime));
+                }
+                catch
+                {
+                    return null;
+                }
             }
 
             private static Vector3Snapshot CaptureBodyRootPositionAtUniversalTime(
@@ -672,9 +769,11 @@ namespace KspWebMap
 
                 try
                 {
-                    Vector3d bodyWorld = GetBodyWorldPositionAtUniversalTime(body, universalTime, currentUniversalTime);
-                    Vector3d rootWorld = GetBodyWorldPositionAtUniversalTime(rootBody, universalTime, currentUniversalTime);
-                    return ToSnapshot(bodyWorld - rootWorld);
+                    return ToSnapshot(RootRelativePositionResolver.GetBodyRootRelative(
+                        body,
+                        rootBody,
+                        universalTime,
+                        currentUniversalTime));
                 }
                 catch (Exception ex)
                 {
@@ -758,8 +857,11 @@ namespace KspWebMap
                     };
                 }
 
-                string warning;
-                Vector3Snapshot position = CaptureBodyRootPositionAtUniversalTime(body, rootBody, sampleUniversalTime, currentUniversalTime, out warning);
+                Vector3Snapshot position = CaptureBodyTrailSamplePosition(
+                    body,
+                    rootBody,
+                    sampleUniversalTime,
+                    currentUniversalTime);
 
                 return new PlacementSampleSnapshot
                 {
@@ -768,7 +870,7 @@ namespace KspWebMap
                     SampleUniversalTimeSeconds = sampleUniversalTime,
                     PositionRootRelativeMeters = position,
                     SampleSource = "celestialBodyOrbitPropagation",
-                    SampleWarning = warning
+                    SampleWarning = position == null ? "Body trail sample unavailable." : null
                 };
             }
 
@@ -791,10 +893,10 @@ namespace KspWebMap
                             AddEphemerisSample(samples, dedupeKeys, placement.TargetBody, placement.SampleRole, placement.SampleUniversalTimeSeconds, placement.PositionRootRelativeMeters, null, placement.SampleSource, placement.SampleWarning);
                         }
 
-                        AddEphemerisSample(samples, dedupeKeys, patch.ReferenceBody, "chainBody", universalTime, CaptureBodyRootPosition(FindBodyByName(patch.ReferenceBody), rootBody), CaptureBodyRootVelocity(FindBodyByName(patch.ReferenceBody), rootBody), "celestialBodyCurrentState", null);
-                        AddEphemerisSample(samples, dedupeKeys, patch.EncounterBody, "chainBody", universalTime, CaptureBodyRootPosition(FindBodyByName(patch.EncounterBody), rootBody), CaptureBodyRootVelocity(FindBodyByName(patch.EncounterBody), rootBody), "celestialBodyCurrentState", null);
-                        AddEphemerisSample(samples, dedupeKeys, patch.NextPatchReferenceBody, "chainBody", universalTime, CaptureBodyRootPosition(FindBodyByName(patch.NextPatchReferenceBody), rootBody), CaptureBodyRootVelocity(FindBodyByName(patch.NextPatchReferenceBody), rootBody), "celestialBodyCurrentState", null);
-                        AddEphemerisSample(samples, dedupeKeys, patch.PreviousPatchReferenceBody, "chainBody", universalTime, CaptureBodyRootPosition(FindBodyByName(patch.PreviousPatchReferenceBody), rootBody), CaptureBodyRootVelocity(FindBodyByName(patch.PreviousPatchReferenceBody), rootBody), "celestialBodyCurrentState", null);
+                        AddEphemerisSample(samples, dedupeKeys, patch.ReferenceBody, "chainBody", universalTime, CaptureBodyRootPosition(FindBodyByName(patch.ReferenceBody), rootBody, universalTime), CaptureBodyRootVelocity(FindBodyByName(patch.ReferenceBody), rootBody), "celestialBodyCurrentState", null);
+                        AddEphemerisSample(samples, dedupeKeys, patch.EncounterBody, "chainBody", universalTime, CaptureBodyRootPosition(FindBodyByName(patch.EncounterBody), rootBody, universalTime), CaptureBodyRootVelocity(FindBodyByName(patch.EncounterBody), rootBody), "celestialBodyCurrentState", null);
+                        AddEphemerisSample(samples, dedupeKeys, patch.NextPatchReferenceBody, "chainBody", universalTime, CaptureBodyRootPosition(FindBodyByName(patch.NextPatchReferenceBody), rootBody, universalTime), CaptureBodyRootVelocity(FindBodyByName(patch.NextPatchReferenceBody), rootBody), "celestialBodyCurrentState", null);
+                        AddEphemerisSample(samples, dedupeKeys, patch.PreviousPatchReferenceBody, "chainBody", universalTime, CaptureBodyRootPosition(FindBodyByName(patch.PreviousPatchReferenceBody), rootBody, universalTime), CaptureBodyRootVelocity(FindBodyByName(patch.PreviousPatchReferenceBody), rootBody), "celestialBodyCurrentState", null);
                     }
                 }
 
@@ -876,14 +978,40 @@ namespace KspWebMap
                 return anyFailed ? "partial" : "unsupported";
             }
 
-            private static double ValidateEphemerisPropagation(CelestialBody rootBody, double universalTime)
+            private static double ValidateEphemerisPropagation(
+                CelestialBody rootBody,
+                double universalTime,
+                CelestialBodySnapshot[] bodies,
+                BodyOrbitPathSnapshot[] bodyOrbitPaths,
+                out double iconTrailSample0Residual,
+                out double bodyOrbitPropagationResidual,
+                out double bodyOrbitFlipPropagationResidual,
+                out double bodyOrbitSampleResidual,
+                out double bodyOrbitAnalyticResidual,
+                out double bodyOrbitPeriodClosureResidual,
+                out double ephemerisLivePropagationResidual,
+                out PositionValidationSnapshot positionValidation)
             {
+                iconTrailSample0Residual = 0d;
+                bodyOrbitPropagationResidual = 0d;
+                bodyOrbitFlipPropagationResidual = 0d;
+                bodyOrbitSampleResidual = 0d;
+                bodyOrbitAnalyticResidual = 0d;
+                bodyOrbitPeriodClosureResidual = 0d;
+                ephemerisLivePropagationResidual = 0d;
+                positionValidation = new PositionValidationSnapshot
+                {
+                    WorstBodyName = null,
+                    WorstCheck = null,
+                    WorstResidualMeters = 0d
+                };
+
                 if (rootBody == null || FlightGlobals.Bodies == null || !IsValidUniversalTime(universalTime))
                 {
                     return double.NaN;
                 }
 
-                double maxResidual = 0d;
+                double primaryMaxResidual = 0d;
 
                 foreach (CelestialBody body in FlightGlobals.Bodies)
                 {
@@ -892,23 +1020,305 @@ namespace KspWebMap
                         continue;
                     }
 
-                    Vector3Snapshot current = CaptureBodyRootPosition(body, rootBody);
+                    Vector3Snapshot current = CaptureBodyRootPosition(body, rootBody, universalTime);
                     string warning;
-                    Vector3Snapshot propagated = CaptureBodyRootPositionAtUniversalTime(body, rootBody, universalTime, universalTime, out warning);
+                    Vector3Snapshot propagated = CaptureBodyRootPositionAtUniversalTime(
+                        body,
+                        rootBody,
+                        universalTime + 60d,
+                        universalTime,
+                        out warning);
 
                     if (current == null || propagated == null || !string.IsNullOrEmpty(warning))
                     {
                         continue;
                     }
 
-                    Vector3d delta = new Vector3d(
-                        current.X - propagated.X,
-                        current.Y - propagated.Y,
-                        current.Z - propagated.Z);
-                    maxResidual = Math.Max(maxResidual, delta.magnitude);
+                    double orbitalSeparation = ResidualMeters(current, propagated);
+                    ephemerisLivePropagationResidual = Math.Max(ephemerisLivePropagationResidual, orbitalSeparation);
                 }
 
-                return maxResidual;
+                if (bodyOrbitPaths != null)
+                {
+                    foreach (BodyOrbitPathSnapshot path in bodyOrbitPaths)
+                    {
+                        if (path == null || string.IsNullOrEmpty(path.BodyName))
+                        {
+                            continue;
+                        }
+
+                        if (path.Validation != null)
+                        {
+                            if (!double.IsNaN(path.Validation.LiveToSample0Meters))
+                            {
+                                iconTrailSample0Residual = Math.Max(
+                                    iconTrailSample0Residual,
+                                    path.Validation.LiveToSample0Meters);
+                                primaryMaxResidual = Math.Max(primaryMaxResidual, path.Validation.LiveToSample0Meters);
+                                RecordWorstPositionCheck(
+                                    positionValidation,
+                                    path.BodyName,
+                                    "iconTrailSample0",
+                                    path.Validation.LiveToSample0Meters);
+                            }
+
+                            if (!double.IsNaN(path.Validation.LiveToAnalyticMeters))
+                            {
+                                bodyOrbitAnalyticResidual = Math.Max(
+                                    bodyOrbitAnalyticResidual,
+                                    path.Validation.LiveToAnalyticMeters);
+                            }
+
+                            if (!double.IsNaN(path.Validation.MaxSampleToRecomputedMeters))
+                            {
+                                bodyOrbitSampleResidual = Math.Max(
+                                    bodyOrbitSampleResidual,
+                                    path.Validation.MaxSampleToRecomputedMeters);
+                                primaryMaxResidual = Math.Max(
+                                    primaryMaxResidual,
+                                    path.Validation.MaxSampleToRecomputedMeters);
+                                RecordWorstPositionCheck(
+                                    positionValidation,
+                                    path.BodyName,
+                                    "trailSampleRecomputed",
+                                    path.Validation.MaxSampleToRecomputedMeters);
+                            }
+
+                            if (!double.IsNaN(path.Validation.PeriodClosureMeters))
+                            {
+                                bodyOrbitPeriodClosureResidual = Math.Max(
+                                    bodyOrbitPeriodClosureResidual,
+                                    path.Validation.PeriodClosureMeters);
+                            }
+                        }
+
+                        if (path.Samples == null || path.Samples.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        CelestialBody body = FindBodyByName(path.BodyName);
+
+                        if (body == null)
+                        {
+                            continue;
+                        }
+
+                        CelestialBodySnapshot bodySnapshot = FindBodySnapshotByName(bodies, path.BodyName);
+                        VesselRootPathSampleSnapshot trailSample0 = path.Samples != null && path.Samples.Length > 0
+                            ? path.Samples[0]
+                            : null;
+                        if (bodySnapshot != null
+                            && bodySnapshot.PositionRootRelativeMeters != null
+                            && trailSample0 != null
+                            && trailSample0.PositionRootRelativeMeters != null)
+                        {
+                            double iconTrail0 = ResidualMeters(
+                                bodySnapshot.PositionRootRelativeMeters,
+                                trailSample0.PositionRootRelativeMeters);
+                            iconTrailSample0Residual = Math.Max(iconTrailSample0Residual, iconTrail0);
+                            primaryMaxResidual = Math.Max(primaryMaxResidual, iconTrail0);
+                            RecordWorstPositionCheck(
+                                positionValidation,
+                                path.BodyName,
+                                "iconTrailSample0",
+                                iconTrail0);
+                        }
+
+                        foreach (VesselRootPathSampleSnapshot sample in path.Samples)
+                        {
+                            if (sample == null || sample.PositionRootRelativeMeters == null)
+                            {
+                                continue;
+                            }
+
+                            string warning;
+                            Vector3Snapshot flipRecomputed = CaptureBodyRootPositionAtUniversalTime(
+                                body,
+                                rootBody,
+                                sample.SampleUniversalTimeSeconds,
+                                universalTime,
+                                out warning);
+
+                            if (flipRecomputed == null || !string.IsNullOrEmpty(warning))
+                            {
+                                continue;
+                            }
+
+                            double flipResidual = ResidualMeters(sample.PositionRootRelativeMeters, flipRecomputed);
+                            bodyOrbitFlipPropagationResidual = Math.Max(bodyOrbitFlipPropagationResidual, flipResidual);
+                            RecordWorstPositionCheck(
+                                positionValidation,
+                                path.BodyName,
+                                "trailFlipPropagate",
+                                flipResidual);
+                        }
+                    }
+                }
+
+                if (bodies != null)
+                {
+                    foreach (CelestialBodySnapshot bodySnapshot in bodies)
+                    {
+                        if (bodySnapshot == null
+                            || string.IsNullOrEmpty(bodySnapshot.Name)
+                            || double.IsNaN(bodySnapshot.LiveVsTrueDeltaMeters))
+                        {
+                            continue;
+                        }
+
+                        RecordWorstPositionCheck(
+                            positionValidation,
+                            bodySnapshot.Name,
+                            "liveVsTrue",
+                            bodySnapshot.LiveVsTrueDeltaMeters);
+                    }
+                }
+
+                bodyOrbitPropagationResidual = bodyOrbitFlipPropagationResidual;
+                return primaryMaxResidual;
+            }
+
+            private static void RecordWorstPositionCheck(
+                PositionValidationSnapshot positionValidation,
+                string bodyName,
+                string check,
+                double residualMeters)
+            {
+                if (positionValidation == null
+                    || string.IsNullOrEmpty(bodyName)
+                    || double.IsNaN(residualMeters)
+                    || double.IsInfinity(residualMeters))
+                {
+                    return;
+                }
+
+                if (residualMeters > positionValidation.WorstResidualMeters)
+                {
+                    positionValidation.WorstBodyName = bodyName;
+                    positionValidation.WorstCheck = check;
+                    positionValidation.WorstResidualMeters = residualMeters;
+                }
+            }
+
+            private static CelestialBodySnapshot FindBodySnapshotByName(
+                CelestialBodySnapshot[] bodies,
+                string bodyName)
+            {
+                if (bodies == null || string.IsNullOrEmpty(bodyName))
+                {
+                    return null;
+                }
+
+                foreach (CelestialBodySnapshot body in bodies)
+                {
+                    if (body != null && body.Name == bodyName)
+                    {
+                        return body;
+                    }
+                }
+
+                return null;
+            }
+
+            private static double ResidualMeters(Vector3Snapshot a, Vector3Snapshot b)
+            {
+                if (a == null || b == null)
+                {
+                    return 0d;
+                }
+
+                Vector3d delta = new Vector3d(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
+                return delta.magnitude;
+            }
+
+            private static void EnsureVesselPathSampleAtUniversalTime(
+                List<VesselRootPathSampleSnapshot> samples,
+                Vessel vessel,
+                CelestialBody rootBody,
+                double universalTime)
+            {
+                if (samples == null || vessel == null || rootBody == null || !IsValidUniversalTime(universalTime))
+                {
+                    return;
+                }
+
+                Vector3Snapshot live = ToSnapshot(vessel.GetWorldPos3D() - rootBody.position);
+                int existingIndex = -1;
+
+                for (int i = 0; i < samples.Count; i++)
+                {
+                    VesselRootPathSampleSnapshot sample = samples[i];
+
+                    if (sample == null || sample.PositionRootRelativeMeters == null)
+                    {
+                        continue;
+                    }
+
+                    if (Math.Abs(sample.SampleUniversalTimeSeconds - universalTime)
+                        <= VesselPathUniversalTimeToleranceSeconds)
+                    {
+                        existingIndex = i;
+                        break;
+                    }
+                }
+
+                if (existingIndex >= 0)
+                {
+                    samples[existingIndex].PositionRootRelativeMeters = live;
+                    samples[existingIndex].SampleUniversalTimeSeconds = universalTime;
+                    return;
+                }
+
+                int nearestIndex = -1;
+                double nearestDistance = double.MaxValue;
+
+                for (int i = 0; i < samples.Count; i++)
+                {
+                    VesselRootPathSampleSnapshot sample = samples[i];
+
+                    if (sample == null || sample.PositionRootRelativeMeters == null)
+                    {
+                        continue;
+                    }
+
+                    double distance = ResidualMeters(live, sample.PositionRootRelativeMeters);
+
+                    if (distance < nearestDistance)
+                    {
+                        nearestDistance = distance;
+                        nearestIndex = i;
+                    }
+                }
+
+                VesselRootPathSampleSnapshot liveSample = new VesselRootPathSampleSnapshot
+                {
+                    SampleUniversalTimeSeconds = universalTime,
+                    PositionRootRelativeMeters = live
+                };
+
+                if (nearestIndex < 0 || nearestDistance <= VesselPathLiveToleranceMeters)
+                {
+                    if (nearestIndex >= 0)
+                    {
+                        samples[nearestIndex] = liveSample;
+                    }
+
+                    return;
+                }
+
+                int insertIndex = samples.Count;
+
+                for (int i = 0; i < samples.Count; i++)
+                {
+                    if (samples[i].SampleUniversalTimeSeconds > universalTime)
+                    {
+                        insertIndex = i;
+                        break;
+                    }
+                }
+
+                samples.Insert(insertIndex, liveSample);
             }
 
             private static VesselRootPathSampleSnapshot[] CaptureVesselRootPathSamples(
@@ -941,6 +1351,12 @@ namespace KspWebMap
                     return samples.ToArray();
                 }
 
+                RootRelativePositionResolver.EnsureVesselOffsetCalibrated(
+                    vessel,
+                    orbit,
+                    rootBody,
+                    universalTime);
+
                 double startUt = activePatch.PatchStartUniversalTimeSeconds;
                 double endUt = activePatch.PatchEndUniversalTimeSeconds;
 
@@ -964,12 +1380,16 @@ namespace KspWebMap
 
                     try
                     {
-                        Vector3d vesselWorld = FlipOrbitVector(orbit.getTruePositionAtUT(sampleUt));
-                        Vector3d rootWorld = GetBodyWorldPositionAtUniversalTime(rootBody, sampleUt, universalTime);
+                        Vector3d vesselRootRelative = RootRelativePositionResolver.GetVesselRootRelativeForTrailSample(
+                            orbit,
+                            rootBody,
+                            sampleUt,
+                            universalTime,
+                            vessel);
                         samples.Add(new VesselRootPathSampleSnapshot
                         {
                             SampleUniversalTimeSeconds = sampleUt,
-                            PositionRootRelativeMeters = ToSnapshot(vesselWorld - rootWorld)
+                            PositionRootRelativeMeters = ToSnapshot(vesselRootRelative)
                         });
                     }
                     catch
@@ -977,6 +1397,8 @@ namespace KspWebMap
                         // Skip invalid vessel propagation samples.
                     }
                 }
+
+                EnsureVesselPathSampleAtUniversalTime(samples, vessel, rootBody, universalTime);
 
                 return samples.ToArray();
             }
@@ -991,8 +1413,9 @@ namespace KspWebMap
                 }
 
                 int captured = 0;
+                List<CelestialBody> captureOrder = BuildBodyOrbitPathCaptureOrder(rootBody);
 
-                foreach (CelestialBody body in FlightGlobals.Bodies)
+                foreach (CelestialBody body in captureOrder)
                 {
                     if (body == null || body.orbit == null || body == rootBody)
                     {
@@ -1018,29 +1441,45 @@ namespace KspWebMap
 
                     for (int i = 0; i < BodyOrbitPathSampleCount; i++)
                     {
-                        double fraction = BodyOrbitPathSampleCount == 1 ? 0d : i / (double)(BodyOrbitPathSampleCount - 1);
+                        // Never sample at fraction=1.0 (UT+period); KSP orbit APIs misbehave at exact period wrap.
+                        double fraction = i / (double)BodyOrbitPathSampleCount;
                         double sampleUt = startUt + (endUt - startUt) * fraction;
 
                         try
                         {
-                            string sampleWarning;
-                            Vector3Snapshot position = CaptureBodyRootPositionAtUniversalTime(
+                            Vector3Snapshot position = CaptureBodyTrailSamplePosition(
                                 body,
                                 rootBody,
                                 sampleUt,
-                                universalTime,
-                                out sampleWarning);
+                                universalTime);
 
                             if (position == null)
                             {
-                                warning = sampleWarning ?? "Body orbit sample unavailable.";
+                                warning = "Body orbit sample unavailable.";
                                 continue;
+                            }
+
+                            Vector3Snapshot parentPosition = null;
+                            CelestialBody parent = body.orbit.referenceBody;
+
+                            if (parent != null && parent != body && parent != rootBody)
+                            {
+                                parentPosition = CaptureBodyTrailSamplePosition(
+                                    parent,
+                                    rootBody,
+                                    sampleUt,
+                                    universalTime);
+                            }
+                            else if (parent == rootBody)
+                            {
+                                parentPosition = ToSnapshot(Vector3d.zero);
                             }
 
                             samples.Add(new VesselRootPathSampleSnapshot
                             {
                                 SampleUniversalTimeSeconds = sampleUt,
-                                PositionRootRelativeMeters = position
+                                PositionRootRelativeMeters = position,
+                                ParentPositionRootRelativeMeters = parentPosition
                             });
                         }
                         catch
@@ -1055,18 +1494,93 @@ namespace KspWebMap
                     }
 
                     CelestialBody referenceBody = body.orbit.referenceBody;
-                    paths.Add(new BodyOrbitPathSnapshot
+                    BodyOrbitPathSnapshot path = new BodyOrbitPathSnapshot
                     {
                         BodyName = body.bodyName,
                         ReferenceBody = referenceBody != null ? referenceBody.bodyName : null,
                         Classification = ClassifyPatchOrbit(body.orbit),
                         CaptureWarning = warning,
-                        Samples = samples.ToArray()
-                    });
+                        Samples = samples.ToArray(),
+                        OrbitElements = CaptureBodyOrbitElements(body.orbit, referenceBody, universalTime)
+                    };
+                    path.Validation = BodyOrbitDiagnostics.ValidatePath(body, rootBody, path, universalTime);
+                    paths.Add(path);
                     captured++;
                 }
 
                 return paths.ToArray();
+            }
+
+            private static List<CelestialBody> BuildBodyOrbitPathCaptureOrder(CelestialBody rootBody)
+            {
+                List<CelestialBody> moons = new List<CelestialBody>();
+                List<CelestialBody> planets = new List<CelestialBody>();
+                List<CelestialBody> other = new List<CelestialBody>();
+
+                if (FlightGlobals.Bodies == null)
+                {
+                    return other;
+                }
+
+                foreach (CelestialBody body in FlightGlobals.Bodies)
+                {
+                    if (body == null || body.orbit == null || body == rootBody)
+                    {
+                        continue;
+                    }
+
+                    CelestialBody parent = body.orbit.referenceBody;
+
+                    if (parent != null && parent != rootBody && parent != body)
+                    {
+                        moons.Add(body);
+                    }
+                    else if (parent == rootBody)
+                    {
+                        planets.Add(body);
+                    }
+                    else
+                    {
+                        other.Add(body);
+                    }
+                }
+
+                List<CelestialBody> ordered = new List<CelestialBody>();
+                ordered.AddRange(moons);
+                ordered.AddRange(planets);
+                ordered.AddRange(other);
+                return ordered;
+            }
+
+            private static BodyOrbitElementsSnapshot CaptureBodyOrbitElements(
+                Orbit orbit,
+                CelestialBody referenceBody,
+                double universalTime)
+            {
+                if (orbit == null)
+                {
+                    return null;
+                }
+
+                double referenceBodyRadius = referenceBody != null ? referenceBody.Radius : 0d;
+
+                return new BodyOrbitElementsSnapshot
+                {
+                    ReferenceBody = referenceBody != null ? referenceBody.bodyName : null,
+                    Classification = ClassifyPatchOrbit(orbit),
+                    ReferenceBodyRadiusMeters = referenceBodyRadius,
+                    SphereOfInfluenceMeters = referenceBody != null ? referenceBody.sphereOfInfluence : double.NaN,
+                    SemiMajorAxisMeters = orbit.semiMajorAxis,
+                    SemiLatusRectumMeters = CalculateSemiLatusRectum(orbit.semiMajorAxis, orbit.eccentricity),
+                    Eccentricity = orbit.eccentricity,
+                    InclinationDegrees = orbit.inclination,
+                    LongitudeOfAscendingNodeDegrees = orbit.LAN,
+                    ArgumentOfPeriapsisDegrees = orbit.argumentOfPeriapsis,
+                    EpochUniversalTimeSeconds = orbit.epoch,
+                    PeriodSeconds = orbit.period,
+                    TrueAnomalyDegreesAtCapture = orbit.trueAnomaly,
+                    MeanAnomalyRadiansAtCapture = orbit.meanAnomaly
+                };
             }
 
             private static string DetermineBodyOrbitCaptureStatus(CelestialBody rootBody)
@@ -1089,35 +1603,28 @@ namespace KspWebMap
                 try
                 {
                     double encounterUt = orbit.closestTgtApprUT;
-                    Vector3d vesselWorld = FlipOrbitVector(orbit.getTruePositionAtUT(encounterUt));
-                    Vector3d encounterWorld = GetBodyWorldPositionAtUniversalTime(encounterBody, encounterUt, encounterUt);
-                    return (vesselWorld - encounterWorld).magnitude;
+                    CelestialBody rootBody = FindRootBody();
+                    if (rootBody == null)
+                    {
+                        return double.NaN;
+                    }
+
+                    Vector3d vesselRootRelative = RootRelativePositionResolver.GetVesselRootRelative(
+                        orbit,
+                        rootBody,
+                        encounterUt,
+                        encounterUt);
+                    Vector3d encounterRootRelative = RootRelativePositionResolver.GetBodyDisplayRootRelative(
+                        encounterBody,
+                        rootBody,
+                        encounterUt,
+                        encounterUt);
+                    return (vesselRootRelative - encounterRootRelative).magnitude;
                 }
                 catch
                 {
                     return double.NaN;
                 }
-            }
-
-            private static Vector3d GetBodyWorldPositionAtUniversalTime(CelestialBody body, double universalTime, double currentUniversalTime)
-            {
-                if (body == null)
-                {
-                    return Vector3d.zero;
-                }
-
-                if (body.orbit == null)
-                {
-                    return body.position;
-                }
-
-                if (IsValidUniversalTime(currentUniversalTime)
-                    && Math.Abs(universalTime - currentUniversalTime) <= EphemerisValidationToleranceSeconds)
-                {
-                    return body.position;
-                }
-
-                return FlipOrbitVector(body.orbit.getTruePositionAtUT(universalTime));
             }
 
             private static Vector3d FlipOrbitVector(Vector3d value)
@@ -1206,13 +1713,38 @@ namespace KspWebMap
                         continue;
                     }
 
+                    Vector3Snapshot displayPosition = CaptureBodyRootPosition(body, rootBody, universalTime);
+                    Vector3d livePosition = RootRelativePositionResolver.GetLiveRootRelative(body, rootBody);
+                    Vector3d truePosition;
+                    bool hasTruePosition = RootRelativePositionResolver.TryGetTrueRootRelative(
+                        body,
+                        rootBody,
+                        universalTime,
+                        out truePosition);
+                    double liveVsTrueDelta = hasTruePosition
+                        ? (livePosition - truePosition).magnitude
+                        : double.NaN;
+                    double eclipticLongitude = double.NaN;
+
+                    if (displayPosition != null)
+                    {
+                        eclipticLongitude = Math.Atan2(displayPosition.X, displayPosition.Z)
+                            * (180d / Math.PI);
+                    }
+
                     snapshots.Add(new CelestialBodySnapshot
                     {
                         Name = body.bodyName,
-                        ParentBody = body.referenceBody != null ? body.referenceBody.bodyName : null,
+                        ParentBody = body.orbit != null && body.orbit.referenceBody != null
+                            ? body.orbit.referenceBody.bodyName
+                            : (body.referenceBody != null ? body.referenceBody.bodyName : null),
                         PositionReferenceFrame = rootBody != null ? RootFrameName : null,
                         PositionSampleUniversalTimeSeconds = universalTime,
-                        PositionRootRelativeMeters = CaptureBodyRootPosition(body, rootBody),
+                        PositionRootRelativeMeters = displayPosition,
+                        PositionLiveRootRelativeMeters = ToSnapshot(livePosition),
+                        PositionTrueRootRelativeMeters = hasTruePosition ? ToSnapshot(truePosition) : null,
+                        LiveVsTrueDeltaMeters = liveVsTrueDelta,
+                        EclipticLongitudeDegrees = eclipticLongitude,
                         VelocityReferenceFrame = rootBody != null ? RootFrameName : null,
                         VelocityRootRelativeMetersPerSecond = CaptureBodyRootVelocity(body, rootBody),
                         OrbitReferenceBody = body.orbit != null && body.orbit.referenceBody != null ? body.orbit.referenceBody.bodyName : null,

@@ -1,90 +1,50 @@
 import { useMemo } from "react";
 import { Line } from "@react-three/drei";
-import type { OrbitPatch, Vector3 } from "../../telemetry/schema-v6";
-import { conicToInertialPath } from "../../math/buildConicGeometry";
-import { finiteOr } from "../../math/util";
+import {
+  buildActivePatchDisplaySegments,
+  resolveVesselOrbitDisplayPatch,
+} from "../../coords/buildPatchConic";
+import { findPatchRootAnchor } from "../../coords/patchAnchor";
 import { useViewStore } from "../../store/viewStore";
-import { applyWorldShift, getFocusPosition } from "../../coords/worldShift";
-import { decimatePath } from "../../perf/lineDecimation";
-
-function findPatchStartPosition(patch: OrbitPatch): Vector3 | null {
-  const samples = patch.placementSamples ?? [];
-  for (const sample of samples) {
-    if (sample.sampleRole === "patchStart" && sample.positionRootRelativeMeters) {
-      return sample.positionRootRelativeMeters;
-    }
-  }
-  return patch.referenceBodyPositionRootRelativeMeters ?? null;
-}
-
-function translateInertialToRoot(
-  inertialPoints: Vector3[],
-  anchor: Vector3 | null,
-): Vector3[] {
-  if (!anchor) {
-    return inertialPoints;
-  }
-  return inertialPoints.map((p) => ({
-    x: anchor.x + p.x,
-    y: anchor.y + p.y,
-    z: anchor.z + p.z,
-  }));
-}
+import { applyWorldShift } from "../../coords/worldShift";
+import { isDegenerateRouteAnchor } from "../../coords/routeOverlay";
+import { useTrajectoryFocus } from "./useTrajectoryFocus";
 
 export function OrbitsLayer() {
   const telemetry = useViewStore((s) => s.telemetry);
   const model = useViewStore((s) => s.model);
   const displayScale = useViewStore((s) => s.displayScale);
-  const focusBodyName = useViewStore((s) => s.focusBodyName);
-  const maxPoints = useViewStore((s) => s.getQuality().maxOrbitPointsPerPatch);
-
-  const focus = useMemo(() => {
-    if (!model || !focusBodyName) {
-      return null;
-    }
-    return getFocusPosition(model.bodies, focusBodyName);
-  }, [model, focusBodyName]);
+  const focus = useTrajectoryFocus();
 
   const patchLines = useMemo(() => {
     const patches = telemetry?.orbitPatches ?? [];
-    const bodyByName = new Map(
-      (telemetry?.bodies ?? []).map((b) => [b.name, b]),
-    );
-    return patches
-      .map((patch, index) => {
-        if (!patch) {
-          return null;
-        }
-        const refName = patch.referenceBody;
-        const refBody = refName ? bodyByName.get(refName) : undefined;
-        const bodyRadius = finiteOr(
-          patch.referenceBodyRadiusMeters ?? refBody?.radiusMeters,
-          1000,
-        );
-        const inertial = conicToInertialPath(patch, bodyRadius, maxPoints * 2);
-        if (inertial.length < 2) {
-          return null;
-        }
-        const mode = patch.patchPlacementMode ?? "";
-        const useSampled =
-          mode === "multiSampleEphemeris" || mode === "multiSampleEphemerisPartial";
-        const anchor = useSampled ? findPatchStartPosition(patch) : null;
-        const rootPath = decimatePath(
-          translateInertialToRoot(inertial, anchor),
-          maxPoints,
-        );
-        const threePoints = rootPath.map((p) => {
-          const shifted = applyWorldShift(p, focus, displayScale);
-          return shifted as [number, number, number];
-        });
-        return {
-          key: `patch-${index}`,
-          points: threePoints,
-          active: !!patch.isActivePatch,
-        };
-      })
-      .filter(Boolean) as { key: string; points: [number, number, number][]; active: boolean }[];
-  }, [telemetry, focus, displayScale, maxPoints]);
+    const bodyModels = model?.bodies ?? [];
+    const rootBodyName = telemetry?.rootBody ?? null;
+    const vesselRoot =
+      model?.vesselPosition ?? telemetry?.activeVessel?.positionRootRelativeMeters ?? null;
+    const vesselPathPoints = model?.vesselPathPoints ?? [];
+
+    const displayPatch = resolveVesselOrbitDisplayPatch(patches, vesselRoot);
+    const anchor = displayPatch
+      ? findPatchRootAnchor(displayPatch, bodyModels, rootBodyName)
+      : null;
+    const segments = displayPatch
+      ? buildActivePatchDisplaySegments(
+          displayPatch,
+          anchor,
+          vesselRoot,
+          vesselPathPoints,
+        )
+      : [];
+
+    return segments.map((segment, segmentIndex) => ({
+      key: `trajectory-seg-${segmentIndex}`,
+      points: segment.map(
+        (p) => applyWorldShift(p, focus, displayScale) as [number, number, number],
+      ),
+      active: true,
+    }));
+  }, [telemetry, model, focus, displayScale]);
 
   return (
     <group>
@@ -106,22 +66,20 @@ export function OrbitsLayer() {
 export function PlacementMarkersLayer() {
   const model = useViewStore((s) => s.model);
   const displayScale = useViewStore((s) => s.displayScale);
-  const focusBodyName = useViewStore((s) => s.focusBodyName);
-
-  const focus = useMemo(() => {
-    if (!model || !focusBodyName) {
-      return null;
-    }
-    return getFocusPosition(model.bodies, focusBodyName);
-  }, [model, focusBodyName]);
+  const focus = useTrajectoryFocus();
 
   if (!model?.canDraw) {
     return null;
   }
 
+  const rootBodyName = model.telemetry?.rootBody ?? null;
+
   return (
     <group>
       {model.placementMarkers.map((marker, index) => {
+        if (isDegenerateRouteAnchor(marker, rootBodyName)) {
+          return null;
+        }
         const [x, y, z] = applyWorldShift(marker.position, focus, displayScale);
         const isEncounter = marker.role === "encounter";
         return (

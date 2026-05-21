@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 8,
+  "valid": true,
+  "rootBody": "Sun",
+  "gameUniversalTimeSeconds": 100000,
+  "frameDiagnostics": {
+    "resolverVersion": "2",
+    "orbitOffsetMode": "flipRelative",
+    "pluginBuildUtc": "2026-05-18T00:00:00.000Z",
+    "captureDurationMs": 1.2,
+    "bodiesCaptured": 3,
+    "bodyPathsCaptured": 1
+  },
+  "bodies": [
+    {
+      "name": "Sun",
+      "positionRootRelativeMeters": { "x": 0, "y": 0, "z": 0 }
+    },
+    {
+      "name": "Kerbin",
+      "positionRootRelativeMeters": { "x": 1.35e11, "y": 0, "z": 0 }
+    }
+  ],
+  "bodyOrbitPaths": [
+    {
+      "bodyName": "Kerbin",
+      "referenceBody": "Sun",
+      "classification": "Elliptic",
+      "orbitElements": {
+        "referenceBody": "Sun",
+        "classification": "Elliptic",
+        "referenceBodyRadiusMeters": 600000,
+        "semiMajorAxisMeters": 1.35e11,
+        "semiLatusRectumMeters": 1.35e11,
+        "eccentricity": 0.05,
+        "inclinationDegrees": 0,
+        "longitudeOfAscendingNodeDegrees": 0,
+        "argumentOfPeriapsisDegrees": 0,
+        "epochUniversalTimeSeconds": 0,
+        "periodSeconds": 9e6,
+        "trueAnomalyDegreesAtCapture": 0,
+        "meanAnomalyRadiansAtCapture": 0
+      },
+      "samples": [
+        {
+          "sampleUniversalTimeSeconds": 100000,
+          "positionRootRelativeMeters": { "x": 1.35e11, "y": 0, "z": 0 },
+          "parentPositionRootRelativeMeters": { "x": 0, "y": 0, "z": 0 }
+        },
+        {
+          "sampleUniversalTimeSeconds": 100187.5,
+          "positionRootRelativeMeters": { "x": 1.349e11, "y": 1.76e9, "z": 0 },
+          "parentPositionRootRelativeMeters": { "x": 0, "y": 0, "z": 0 }
+        }
+      ],
+      "validation": {
+        "liveToSample0Meters": 0,
+        "liveToAnalyticMeters": 1200,
+        "maxSampleToRecomputedMeters": 0.5,
+        "maxSampleToTrailFrameMeters": 0.5,
+        "periodClosureMeters": 800,
+        "planeNormalRootRelative": { "x": 0, "y": 0, "z": 1 },
+        "planeAngleToAnalyticDegrees": 0.01,
+        "trailRenderMode": "analytic",
+        "trailWarning": null
+      }
+    }
+  ],
+  "bodyOrbitSampleResidualMeters": 0.5,
+  "bodyOrbitAnalyticResidualMeters": 1200,
+  "bodyOrbitPeriodClosureResidualMeters": 800,
+  "bodyOrbitPropagationResidualMeters": 1200
+}

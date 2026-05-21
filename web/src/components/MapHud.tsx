@@ -1,6 +1,8 @@
+import { useState } from "react";
 import type { CameraMode } from "../store/viewStore";
 import { useViewStore } from "../store/viewStore";
 import type { QualityPreset } from "../settings/qualityStore";
+import { formatTrailValidation } from "../coords/buildBodyOrbitTrail";
 
 const CAMERA_MODES: { id: CameraMode; label: string }[] = [
   { id: "fullSystem", label: "Full system" },
@@ -30,12 +32,23 @@ export function MapHud() {
   const setScrubUniversalTime = useViewStore((s) => s.setScrubUniversalTime);
   const setSolarRenderMode = useViewStore((s) => s.setSolarRenderMode);
   const setQualityPreset = useViewStore((s) => s.setQualityPreset);
+  const solarFullscreen = useViewStore((s) => s.solarFullscreen);
+  const toggleSolarFullscreen = useViewStore((s) => s.toggleSolarFullscreen);
   const recenter = useViewStore((s) => s.recenter);
   const resetView = useViewStore((s) => s.resetView);
+  const focusBodyName = useViewStore((s) => s.focusBodyName);
+  const unfocusBody = useViewStore((s) => s.unfocusBody);
+  const isBodyFocus = cameraMode === "bodyFocus";
 
   const utMin = model?.telemetry?.gameUniversalTimeSeconds ?? 0;
   const utMax = utMin + 86400 * 30;
   const classification = model?.telemetry?.orbit?.classification;
+  const [showBodyOrbitQa, setShowBodyOrbitQa] = useState(false);
+  const [showMoonLodDebug, setShowMoonLodDebug] = useState(true);
+  const bodyOrbitPaths = model?.bodyOrbitPaths ?? [];
+  const moonLodDebug = useViewStore((s) => s.moonLodDebug);
+  const frameDiagnostics = model?.telemetry?.frameDiagnostics;
+  const hierarchy = model?.hierarchy;
 
   return (
     <div className="ksp-solar-hud">
@@ -97,6 +110,24 @@ export function MapHud() {
         <button type="button" onClick={() => resetView()}>
           Reset view
         </button>
+        {isBodyFocus && focusBodyName ? (
+          <button
+            type="button"
+            className="active ksp-solar-unfocus"
+            onClick={() => unfocusBody()}
+            title="Return to normal solar-system camera"
+          >
+            Unfocus {focusBodyName}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className={solarFullscreen ? "active" : ""}
+          onClick={() => toggleSolarFullscreen()}
+          title={solarFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen solar map"}
+        >
+          {solarFullscreen ? "Exit fullscreen" : "Fullscreen"}
+        </button>
       </div>
       <div className="ksp-solar-hud-row">
         <label>
@@ -124,10 +155,97 @@ export function MapHud() {
           : ""}
         Ephemeris: {model?.ephemerisStatus ?? "N/A"}. Placement:{" "}
         {model?.placementMode ?? "N/A"}. Patch chain: {model?.patchChainStatus ?? "N/A"}.
+        {model?.iconTrailSample0ResidualMeters != null && (
+          <> Icon↔trail₀: {model.iconTrailSample0ResidualMeters.toFixed(1)} m.</>
+        )}
         {model?.ephemerisValidationResidualMeters != null && (
-          <> Validation residual: {model.ephemerisValidationResidualMeters.toFixed(1)} m.</>
+          <> Validation (same-UT): {model.ephemerisValidationResidualMeters.toFixed(1)} m.</>
+        )}
+        {model?.telemetry?.bodyOrbitSampleResidualMeters != null && (
+          <> Trail sample: {model.telemetry.bodyOrbitSampleResidualMeters.toFixed(1)} m.</>
+        )}
+        {model?.ephemerisLivePropagationResidualMeters != null &&
+          model.ephemerisLivePropagationResidualMeters > 0 && (
+            <>
+              {" "}
+              60s orbital sep (diag):{" "}
+              {model.ephemerisLivePropagationResidualMeters.toExponential(2)} m.
+            </>
+          )}
+        {model?.positionValidation?.worstBodyName &&
+          model.positionValidation.worstResidualMeters != null && (
+            <>
+              {" "}
+              Worst: {model.positionValidation.worstBodyName}{" "}
+              {model.positionValidation.worstCheck}{" "}
+              {model.positionValidation.worstResidualMeters.toExponential(2)} m.
+            </>
+          )}
+        {frameDiagnostics?.orbitOffsetMode && (
+          <>
+            {" "}
+            Resolver: body {frameDiagnostics.orbitOffsetMode}
+            {frameDiagnostics.vesselOffsetMode
+              ? `, vessel ${frameDiagnostics.vesselOffsetMode}`
+              : ""}{" "}
+            (v{frameDiagnostics.resolverVersion ?? "?"}).
+          </>
         )}
       </div>
+      {moonLodDebug && showMoonLodDebug && (
+        <div className="ksp-solar-truth-banner">{moonLodDebug.label}</div>
+      )}
+      <div className="ksp-solar-hud-row">
+        <label>
+          <input
+            type="checkbox"
+            checked={showMoonLodDebug}
+            onChange={(e) => setShowMoonLodDebug(e.target.checked)}
+          />
+          Moon LOD debug
+        </label>
+      </div>
+      {bodyOrbitPaths.length > 0 && (
+        <div className="ksp-solar-hud-row">
+          <button
+            type="button"
+            onClick={() => setShowBodyOrbitQa((v) => !v)}
+          >
+            {showBodyOrbitQa ? "Hide" : "Show"} body orbit QA
+          </button>
+        </div>
+      )}
+      {showBodyOrbitQa && bodyOrbitPaths.length > 0 && (
+        <div className="ksp-solar-body-orbit-qa">
+          <table>
+            <thead>
+              <tr>
+                <th>Body</th>
+                <th>Type</th>
+                <th>Mode</th>
+                <th>Metrics</th>
+                <th>Warning</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bodyOrbitPaths.map((path) => {
+                const name = path.bodyName ?? "";
+                const isMoonRow =
+                  hierarchy != null && hierarchy.allMoonNames.includes(name);
+                return (
+                  <tr key={path.bodyName ?? "unknown"}>
+                    <td>{path.bodyName ?? "—"}</td>
+                    <td>{isMoonRow ? "moon" : "planet"}</td>
+                    <td>{path.validation?.trailRenderMode ?? "—"}</td>
+                    <td>{formatTrailValidation(path.validation)}</td>
+                    <td>{path.validation?.trailWarning ?? "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
       {(classification === "Suborbital" || classification === "Landed") && (
         <div className="ksp-solar-warning">
           Trajectory display may be limited ({classification}).

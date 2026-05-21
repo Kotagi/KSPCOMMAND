@@ -231,6 +231,12 @@ namespace KspWebMap
                 return;
             }
 
+            if (path == "/api/diagnostics")
+            {
+                WriteJsonResponse(stream, TelemetryJsonWriter.WriteDiagnostics(_telemetryStore.GetLatest()), isHead);
+                return;
+            }
+
             if (path == "/" || path == "/index.html")
             {
                 ServeStaticFile(stream, "index.html", isHead);

@@ -1,8 +1,8 @@
 import type { TelemetrySnapshot, Vector3 } from "../telemetry/schema-v6";
 import type { CameraMode } from "../store/viewStore";
 import type { SolarSystemModel } from "../model/buildSolarSystemModel";
-import { applyWorldShift } from "../coords/worldShift";
-import { getFocusPosition } from "../coords/worldShift";
+import { moonsOf } from "../model/bodyHierarchy";
+import { applyWorldShift, getFocusPosition } from "../coords/worldShift";
 
 export interface Bounds3 {
   minX: number;
@@ -56,6 +56,7 @@ export function getSolarCameraBounds3D(
   cameraMode: CameraMode,
   displayScale: number,
   focusBodyName: string | null,
+  displayFocus: Vector3 | null = null,
 ): Bounds3 {
   const bounds = createBounds();
   if (!model.canDraw) {
@@ -63,9 +64,10 @@ export function getSolarCameraBounds3D(
   }
 
   const focus =
-    focusBodyName != null
+    displayFocus ??
+    (focusBodyName != null && cameraMode === "bodyFocus"
       ? getFocusPosition(model.bodies, focusBodyName)
-      : getFocusPosition(model.bodies, telemetry?.rootBody ?? null);
+      : getFocusPosition(model.bodies, telemetry?.rootBody ?? null));
 
   function includeBodyByName(name: string) {
     model.bodies.forEach((entry) => {
@@ -109,6 +111,28 @@ export function getSolarCameraBounds3D(
       const [x, y, z] = toScene(model.vesselPosition, focus, displayScale);
       includePoint(bounds, x, y, z);
     }
+  } else if (cameraMode === "bodyFocus" && focusBodyName) {
+    const entry = model.bodies.find((b) => b.body.name === focusBodyName);
+    const soi = entry?.body.sphereOfInfluenceMeters ?? 0;
+    const bodyRadius = Math.max(entry?.body.radiusMeters ?? 1000, 1000);
+    const frameRadius = Math.max(
+      soi > 0 ? soi * displayScale * 0.45 : bodyRadius * displayScale * 80,
+      bodyRadius * displayScale * 4,
+      focusBodyName === "Sun" ? 8 : 0.02,
+    );
+    includeSphere(bounds, 0, 0, 0, frameRadius);
+
+    const host = model.hierarchy?.planetForBody[focusBodyName];
+    if (host && model.hierarchy) {
+      includeBodyByName(host);
+      moonsOf(model.hierarchy, host).forEach((moon) => includeBodyByName(moon));
+    }
+
+    if (model.vesselPosition) {
+      const [x, y, z] = toScene(model.vesselPosition, focus, displayScale);
+      includePoint(bounds, x, y, z);
+      includeSphere(bounds, x, y, z, 1.2);
+    }
   } else {
     model.bodies.forEach((entry) => {
       const [x, y, z] = toScene(entry.position, focus, displayScale);
@@ -143,4 +167,19 @@ export function getBoundsCenterAndRadius(bounds: Bounds3): {
   const dz = bounds.maxZ - bounds.minZ;
   const radius = Math.max(dx, dy, dz) / 2;
   return { center: [cx, cy, cz], radius: Math.max(radius, 1) };
+}
+
+/** Face-on solar ecliptic view (ecliptic in XY, camera along −Z). */
+export function getEclipticLevelCameraPose(
+  center: [number, number, number],
+  radius: number,
+): {
+  position: [number, number, number];
+  up: [number, number, number];
+} {
+  const dist = Math.max(radius * 2.8, 4);
+  return {
+    position: [center[0], center[1], center[2] + dist],
+    up: [0, 1, 0],
+  };
 }

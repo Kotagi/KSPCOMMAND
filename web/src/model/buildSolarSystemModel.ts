@@ -1,6 +1,8 @@
 import type { TelemetrySnapshot, Vector3 } from "../telemetry/schema-v6";
 import { isSupportedSchemaVersion } from "../telemetry/constants";
 import { finiteOr, valueOrNA } from "../math/util";
+import { resolveVesselPathPoints } from "./resolveVesselPathPoints";
+import { buildBodyHierarchy, type BodyHierarchy } from "./bodyHierarchy";
 
 export type ProjectionMode = "rootXZ" | "rootXY";
 
@@ -33,8 +35,11 @@ export interface PatchAnchor {
   role: string;
 }
 
+export type { BodyHierarchy } from "./bodyHierarchy";
+
 export interface SolarSystemModel {
   telemetry: TelemetrySnapshot | null;
+  hierarchy: BodyHierarchy | null;
   bodies: BodyModel[];
   patches: PatchAnchor[];
   placementMarkers: RouteAnchor[];
@@ -52,6 +57,11 @@ export interface SolarSystemModel {
   reason: string;
   patchChainStatus: string;
   ephemerisValidationResidualMeters: number | null;
+  iconTrailSample0ResidualMeters: number | null;
+  ephemerisLivePropagationResidualMeters: number | null;
+  bodyOrbitPropagationResidualMeters: number | null;
+  bodyOrbitFlipPropagationResidualMeters: number | null;
+  positionValidation: TelemetrySnapshot["positionValidation"] | null;
   bodyOrbitPaths: NonNullable<TelemetrySnapshot["bodyOrbitPaths"]>;
 }
 
@@ -122,7 +132,6 @@ export function buildSolarSystemModel(
   const patchAnchors: PatchAnchor[] = [];
   const routeAnchors: RouteAnchor[] = [];
   const placementMarkers: RouteAnchor[] = [];
-  const vesselPathPoints: Vector3[] = [];
 
   let placementMode = "currentReferenceBodyPosition";
   let routeOverlayMode = "none";
@@ -218,11 +227,7 @@ export function buildSolarSystemModel(
     routeOverlayMode = "current-frame approximate route";
   }
 
-  vessel?.rootPathSamples?.forEach((sample) => {
-    if (sample?.positionRootRelativeMeters) {
-      vesselPathPoints.push(sample.positionRootRelativeMeters);
-    }
-  });
+  const vesselPathPoints = resolveVesselPathPoints(telemetry, vessel, bodyModels);
 
   let reason = "ok";
   let canDraw = false;
@@ -243,8 +248,18 @@ export function buildSolarSystemModel(
     }
   });
 
+  const rootBody = telemetry?.rootBody ?? "Sun";
+  const hierarchy =
+    telemetry && bodyModels.length > 0
+      ? buildBodyHierarchy(
+          bodyModels.map((m) => m.body),
+          rootBody,
+        )
+      : null;
+
   return {
     telemetry,
+    hierarchy,
     bodies: bodyModels,
     patches: patchAnchors,
     placementMarkers,
@@ -262,6 +277,14 @@ export function buildSolarSystemModel(
     reason,
     patchChainStatus: valueOrNA(telemetry?.patchChainStatus),
     ephemerisValidationResidualMeters: telemetry?.ephemerisValidationResidualMeters ?? null,
+    iconTrailSample0ResidualMeters: telemetry?.iconTrailSample0ResidualMeters ?? null,
+    ephemerisLivePropagationResidualMeters:
+      telemetry?.ephemerisLivePropagationResidualMeters ?? null,
+    bodyOrbitPropagationResidualMeters:
+      telemetry?.bodyOrbitPropagationResidualMeters ?? null,
+    bodyOrbitFlipPropagationResidualMeters:
+      telemetry?.bodyOrbitFlipPropagationResidualMeters ?? null,
+    positionValidation: telemetry?.positionValidation ?? null,
     bodyOrbitPaths: telemetry?.bodyOrbitPaths ?? [],
   };
 }

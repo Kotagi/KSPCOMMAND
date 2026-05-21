@@ -1,5 +1,5 @@
 export const MIN_SCHEMA_VERSION = 6;
-export const EXPECTED_SCHEMA_VERSION = 7;
+export const EXPECTED_SCHEMA_VERSION = 8;
 
 export function isSupportedSchemaVersion(version: unknown): boolean {
   const n = typeof version === "number" ? version : Number(version);

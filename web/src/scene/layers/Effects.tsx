@@ -1,9 +1,15 @@
+import { useMemo } from "react";
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { Stars } from "@react-three/drei";
 import { useViewStore } from "../../store/viewStore";
+import { getQualitySettings } from "../../settings/qualityStore";
 
 export function SceneEffects() {
-  const quality = useViewStore((s) => s.getQuality());
+  const qualityPreset = useViewStore((s) => s.qualityPreset);
+  const quality = useMemo(
+    () => getQualitySettings(qualityPreset),
+    [qualityPreset],
+  );
 
   return (
     <>

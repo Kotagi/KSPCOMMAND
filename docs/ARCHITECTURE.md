@@ -114,9 +114,11 @@ activeVessel.rootPathSamples[]
 activeVessel.rootPathSamples[].sampleUniversalTimeSeconds
 activeVessel.rootPathSamples[].positionRootRelativeMeters
 bodyOrbitCaptureStatus
+bodyOrbitPropagationResidualMeters
 bodyOrbitPaths[]
 bodyOrbitPaths[].bodyName
 bodyOrbitPaths[].referenceBody
+bodyOrbitPaths[].orbitElements
 bodyOrbitPaths[].samples[]
 bodyOrbitPaths[].samples[].sampleUniversalTimeSeconds
 bodyOrbitPaths[].samples[].positionRootRelativeMeters
@@ -225,11 +227,15 @@ Phase 6 adds route diagnostics from `orbitPatches[]`. Phase 7 adds root-frame pl
 
 ## Shared Solar-System Frame
 
-The root frame is named `solarSystemRootCenteredInertial`. The capture service identifies a root body, normally `Sun`, then stores body positions as `body.position - rootBody.position` and active-vessel position as `vessel.GetWorldPos3D() - rootBody.position`. Body and vessel velocities are captured relative to the same root where KSP exposes frame velocity data.
+The root frame is named `solarSystemRootCenteredInertial`. The capture service identifies a root body, normally `Sun`, then stores **display** body positions via `RootRelativePositionResolver.GetBodyDisplayRootRelative` (trail/true authority: live at `T_now`, heliocentric `getTruePositionAtUT` for Sun-children at other UTs). Diagnostic fields also record `positionLiveRootRelativeMeters` (`body.position - root`) and `positionTrueRootRelativeMeters` (`getTruePositionAtUT` difference). Active-vessel position uses `vessel.GetWorldPos3D() - rootBody.position`. Body and vessel velocities are captured relative to the same root where KSP exposes frame velocity data.
 
 Patch placement uses schema v6 ephemeris samples when capture succeeds. `orbitPatches[].placementSamples[]` records reference and encounter body root-frame positions at patch start, end, and closest-encounter universal times. `referenceBodyPositionRootRelativeMeters` defaults to the patch-start sample for route anchoring. When sampling fails, the service falls back to `patchPlacementMode: currentReferenceBodyPosition` with an explicit warning.
 
-Body propagation uses `Orbit.getTruePositionAtUT` with KSP's documented Y/Z flip applied in one helper. A validation pass at capture time compares propagated positions to current `body.position` and reports `ephemerisValidationResidualMeters`.
+Body propagation at arbitrary universal time uses **hierarchical root-relative resolution**: for each body, `rootRel(UT) = rootRel(parent, UT) + FlipOrbitVector(orbit.getRelativePositionAtUT(UT))`, recursing up the parent chain until the root body (`rootRel = 0`). At the current universal time, live `body.position - rootBody.position` is used instead. Do not sum `getTruePositionAtUT` with a separately propagated parent world position — that double-counts and produces multi‑Gm residuals. Vessel root-relative position uses the same parent chain via `orbit.referenceBody`. Body-orbit trail samples use fractions `i/N` (never `UT + period` exactly) to avoid period-wrap API edge cases.
+
+`ephemerisValidationResidualMeters` is the max **same-UT** residual: icon↔trail sample 0 and trail self-consistency (`maxSampleToRecomputedMeters`). It does **not** include the 60s orbital-separation diagnostic (`ephemerisLivePropagationResidualMeters`) or flip-propagation vs trail (`bodyOrbitFlipPropagationResidualMeters`). `GET /api/diagnostics` exposes `positionValidation` (worst body + check type).
+
+Schema v7 `bodyOrbitPaths[].orbitElements` enables analytic Keplerian trails in the web renderer (same conic sampler as patch arcs), anchored at the reference body's root-relative position.
 
 ## Interactive Solar Map (Phases 8–10)
 
@@ -255,6 +261,16 @@ Truth rules (NASA-aligned patched-conic context; not SPICE/N-body):
 References: [NASA Basics of Space Flight — Trajectories](https://science.nasa.gov/learn/basics-of-space-flight/chapter4-1/), [NASA PatCon SOI patching (AAS 07-160)](https://ntrs.nasa.gov/api/citations/20070010447/downloads/20070010447.pdf).
 
 Schema v7 adds `bodyOrbitPaths[]` — root-frame samples of major celestial orbits for faint planet trail lines in 3D.
+
+Schema v8 unifies body icon and trail geometry under `RootRelativePositionResolver` (resolver v2):
+
+- `frameDiagnostics` — resolver version, calibrated `orbitOffsetMode` (`flipRelative` / `noFlipRelative`), capture stats.
+- `bodyOrbitPaths[].validation` — per-body residuals, coplanarity, and `trailRenderMode` (`samples` | `analytic` | `hidden`).
+- `bodyOrbitPaths[].samples[].parentPositionRootRelativeMeters` — parent anchor at each sample UT (moons).
+- Extended `orbitElements` — `trueAnomalyDegreesAtCapture`, `meanAnomalyRadiansAtCapture` for phase-aware analytic trails.
+- `GET /api/diagnostics` — lightweight validation-only payload for scripts and HUD polling.
+
+Web contract: `BodyOrbitsLayer` draws only trails allowed by `validation.trailRenderMode`; icons always use resolver output at `UT ≈ now` via `bodies[].positionRootRelativeMeters`.
 
 Rendering rules:
 

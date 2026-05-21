@@ -68,6 +68,39 @@ export function perifocalToInertial(point: Vector3, orbit: OrbitElements | null 
   };
 }
 
+/** Inverse of {@link perifocalToInertial} for the same rotation sequence. */
+export function inertialToPerifocal(
+  point: Vector3,
+  orbit: OrbitElements | null | undefined,
+): Vector3 {
+  const lan = degreesToRadians(finiteOr(orbit?.longitudeOfAscendingNodeDegrees, 0));
+  const inclination = degreesToRadians(finiteOr(orbit?.inclinationDegrees, 0));
+  const argumentOfPeriapsis = degreesToRadians(finiteOr(orbit?.argumentOfPeriapsisDegrees, 0));
+  const cosW = Math.cos(argumentOfPeriapsis);
+  const sinW = Math.sin(argumentOfPeriapsis);
+  const cosI = Math.cos(inclination);
+  const sinI = Math.sin(inclination);
+  const cosO = Math.cos(lan);
+  const sinO = Math.sin(lan);
+
+  const x = point.x;
+  const y = point.y;
+  const z = point.z;
+
+  const x2 = cosO * x + sinO * y;
+  const y2 = -sinO * x + cosO * y;
+  const z2 = z;
+
+  const x1 = x2;
+  const y1 = cosI * y2 + sinI * z2;
+  const z1 = -sinI * y2 + cosI * z2;
+
+  const px = cosW * x1 + sinW * y1;
+  const py = -sinW * x1 + cosW * y1;
+
+  return { x: px, y: py, z: z1 };
+}
+
 export function projectPoint(
   perifocal: Vector3 | null,
   inertial: Vector3,
@@ -154,6 +187,7 @@ function sampleEllipsePoints(
   eccentricity: number,
   sampleCount: number,
   projectionMode: ProjectionMode,
+  startTrueAnomalyRadians = 0,
 ): ConicPoint[] {
   const points: ConicPoint[] = [];
   for (let i = 0; i <= sampleCount; i++) {
@@ -161,7 +195,7 @@ function sampleEllipsePoints(
       orbit,
       semiLatusRectum,
       eccentricity,
-      (Math.PI * 2 * i) / sampleCount,
+      startTrueAnomalyRadians + (Math.PI * 2 * i) / sampleCount,
       projectionMode,
     );
     if (point) {
@@ -227,6 +261,7 @@ export function buildConicGeometry(
   bodyRadius: number,
   projectionMode: ProjectionMode = "orbitPlane",
   splitAtBodySurface = true,
+  segmentOptions: ConicSegmentOptions = {},
 ): ConicGeometry {
   const eccentricity = finiteOr(orbit?.eccentricity, NaN);
   const semiMajorAxis = finiteOr(orbit?.semiMajorAxisMeters, NaN);
@@ -234,7 +269,8 @@ export function buildConicGeometry(
     orbit?.semiLatusRectumMeters,
     calculateSemiLatusRectum(semiMajorAxis, eccentricity),
   );
-  const sampleCount = eccentricity > 1 ? 180 : 240;
+  const sampleCount =
+    segmentOptions.sampleCount ?? (eccentricity > 1 ? 180 : 240);
 
   if (!isFiniteNumber(eccentricity) || eccentricity < 0) {
     return emptyGeometry("Orbit eccentricity is unavailable.");
@@ -245,7 +281,14 @@ export function buildConicGeometry(
 
   let points: ConicPoint[];
   if (eccentricity < 1) {
-    points = sampleEllipsePoints(orbit!, semiLatusRectum, eccentricity, sampleCount, projectionMode);
+    points = sampleEllipsePoints(
+      orbit!,
+      semiLatusRectum,
+      eccentricity,
+      sampleCount,
+      projectionMode,
+      segmentOptions.startTrueAnomalyRadians ?? 0,
+    );
   } else if (eccentricity > 1) {
     points = sampleHyperbolaPoints(
       orbit!,
@@ -281,29 +324,61 @@ export function buildConicGeometry(
   };
 }
 
-/** 3D positions in reference-body inertial frame (meters). */
+/** Split policy aligned with 2D canvas: only clip suborbital arcs at the body surface. */
+export function shouldSplitConicAtBodySurface(
+  classification: string | undefined,
+): boolean {
+  return classification === "Suborbital";
+}
+
+export interface ConicSegmentOptions {
+  /** Phase offset for closed ellipses (radians). */
+  startTrueAnomalyRadians?: number;
+  /** Ellipse/hyperbola sample count (default 240 / 180). */
+  sampleCount?: number;
+}
+
+/** 3D arc segments in reference-body inertial frame (meters); never bridges across gaps. */
+export function conicToInertialSegments(
+  orbit: OrbitElements | null | undefined,
+  bodyRadius: number,
+  splitAtBodySurface = false,
+  options: ConicSegmentOptions = {},
+): Vector3[][] {
+  const geometry = buildConicGeometry(
+    orbit,
+    bodyRadius,
+    "orbitPlane",
+    splitAtBodySurface,
+    options,
+  );
+  if (!geometry.canDraw) {
+    return [];
+  }
+  return geometry.segments
+    .filter((segment) => segment.length >= 2)
+    .map((segment) => segment.map((point) => ({ ...point.inertial })));
+}
+
+/** Single flattened path (legacy); prefer conicToInertialSegments for rendering. */
 export function conicToInertialPath(
   orbit: OrbitElements | null | undefined,
   bodyRadius: number,
   maxPoints = 256,
+  splitAtBodySurface = false,
 ): Vector3[] {
-  const geometry = buildConicGeometry(orbit, bodyRadius, "orbitPlane", true);
-  if (!geometry.canDraw) {
-    return [];
-  }
+  const segments = conicToInertialSegments(orbit, bodyRadius, splitAtBodySurface);
   const path: Vector3[] = [];
-  geometry.segments.forEach((segment) => {
-    segment.forEach((point) => {
-      path.push({ ...point.inertial });
-    });
+  segments.forEach((segment) => {
+    segment.forEach((point) => path.push(point));
   });
-  if (path.length > maxPoints) {
-    const step = path.length / maxPoints;
-    const reduced: Vector3[] = [];
-    for (let i = 0; i < maxPoints; i++) {
-      reduced.push(path[Math.floor(i * step)]);
-    }
-    return reduced;
+  if (path.length <= maxPoints) {
+    return path;
   }
-  return path;
+  const step = (path.length - 1) / (maxPoints - 1);
+  const reduced: Vector3[] = [];
+  for (let i = 0; i < maxPoints; i++) {
+    reduced.push(path[Math.floor(i * step)]);
+  }
+  return reduced;
 }
