@@ -67,6 +67,7 @@ const api: KspSolarMapApi = {
     containerEl = container;
     root = createRoot(container);
     root.render(<MountApp />);
+    syncDashboardSolarView(useViewStore.getState().solarRenderMode);
   },
   unmount() {
     if (root) {
@@ -149,7 +150,7 @@ declare global {
 }
 
 /** Bumped when web UI changes; check in devtools if map looks stale. */
-export const KSP_WEB_MAP_UI_VERSION = "49-v3-shell-controls";
+export const KSP_WEB_MAP_UI_VERSION = "50-v3-default-view";
 
 window.KspSolarMap = api;
 window.KspSolarMapUiVersion = KSP_WEB_MAP_UI_VERSION;

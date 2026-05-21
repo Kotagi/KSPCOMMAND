@@ -120,7 +120,7 @@ export const useViewStore = create<ViewState>((set, get) => ({
   cameraModeBeforeBodyFocus: null,
   scrubEnabled: false,
   scrubUniversalTime: null,
-  solarRenderMode: "3d",
+  solarRenderMode: "3d-v3",
   selectedObjectId: null,
   selectionDetail: null,
   hoverObjectId: null,

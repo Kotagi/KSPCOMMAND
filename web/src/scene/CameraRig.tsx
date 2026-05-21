@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { MOUSE } from "three";
 import { useViewStore } from "../store/viewStore";
 import {
   getBoundsCenterAndRadius,
@@ -115,6 +116,11 @@ export function CameraRig() {
       dampingFactor={0.08}
       minDistance={isBodyFocus ? 0.4 : 0.01}
       maxDistance={isBodyFocus ? 5000 : 100000}
+      mouseButtons={{
+        LEFT: MOUSE.PAN,
+        MIDDLE: MOUSE.DOLLY,
+        RIGHT: MOUSE.ROTATE,
+      }}
       onStart={() => setUserInteracted(true)}
     />
   );
