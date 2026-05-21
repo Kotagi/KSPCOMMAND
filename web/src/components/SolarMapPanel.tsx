@@ -1,9 +1,12 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Map3D } from "../scene/Map3D";
+import { Map3DV2 } from "../scene/v2/Map3DV2";
+import { Map3DV3 } from "../scene/v3/Map3DV3";
 import { MapErrorBoundary } from "./MapErrorBoundary";
 import { MapHud } from "./MapHud";
 import { useViewStore } from "../store/viewStore";
+import { syncDashboardSolarView } from "../shell/syncDashboardView";
 import "./solar-map.css";
 
 export function SolarMapPanel() {
@@ -13,7 +16,7 @@ export function SolarMapPanel() {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    document.body.dataset.solarView = solarRenderMode;
+    syncDashboardSolarView(solarRenderMode);
   }, [solarRenderMode]);
 
   useEffect(() => {
@@ -76,7 +79,15 @@ export function SolarMapPanel() {
     >
       <MapHud />
       <div className="ksp-solar-viewport">
-        {solarRenderMode === "3d" ? (
+        {solarRenderMode === "3d-v3" ? (
+          <MapErrorBoundary>
+            <Map3DV3 />
+          </MapErrorBoundary>
+        ) : solarRenderMode === "3d-v2" ? (
+          <MapErrorBoundary>
+            <Map3DV2 />
+          </MapErrorBoundary>
+        ) : solarRenderMode === "3d" ? (
           <MapErrorBoundary>
             <Map3D />
           </MapErrorBoundary>

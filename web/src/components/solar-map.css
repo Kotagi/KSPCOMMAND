@@ -30,6 +30,50 @@
   margin-bottom: 0;
 }
 
+.ksp-solar-hud-v2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #284156;
+  font-size: 11px;
+  color: #8ecae6;
+}
+
+.ksp-solar-hud-v2-phase {
+  font-weight: 600;
+  color: #ffd166;
+}
+
+.ksp-solar-hud-v2-hint {
+  color: #6a8a9e;
+  font-style: italic;
+}
+
+.ksp-solar-hud-v3 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #284156;
+  font-size: 11px;
+  color: #a8dadc;
+}
+
+.ksp-solar-hud-v3-phase {
+  font-weight: 600;
+  color: #90be6d;
+}
+
+.ksp-solar-hud-v3-hint {
+  color: #6a8a9e;
+  font-style: italic;
+}
+
 .ksp-solar-hud button {
   background: #142536;
   border: 1px solid #284156;

@@ -4,6 +4,7 @@ import { useViewStore, type CameraMode, type SolarRenderMode } from "./store/vie
 import type { TelemetrySnapshot } from "./telemetry/schema-v6";
 import type { SolarSystemModel } from "./model/buildSolarSystemModel";
 import type { SelectionDetail } from "./selection/types";
+import { syncDashboardSolarView } from "./shell/syncDashboardView";
 
 export interface KspSolarMapApi {
   mount: (container: HTMLElement) => void;
@@ -23,6 +24,7 @@ export interface KspSolarMapApi {
   getSolarFullscreen: () => boolean;
   setSolarFullscreen: (enabled: boolean) => void;
   toggleSolarFullscreen: () => void;
+  syncDashboardView: () => void;
 }
 
 let root: Root | null = null;
@@ -36,6 +38,9 @@ function notifySelection(detail: SelectionDetail | null) {
 useViewStore.subscribe((state, prev) => {
   if (state.selectionDetail !== prev.selectionDetail) {
     notifySelection(state.selectionDetail);
+  }
+  if (state.solarRenderMode !== prev.solarRenderMode) {
+    syncDashboardSolarView(state.solarRenderMode);
   }
 });
 
@@ -131,6 +136,9 @@ const api: KspSolarMapApi = {
     ensureMounted();
     useViewStore.getState().toggleSolarFullscreen();
   },
+  syncDashboardView() {
+    syncDashboardSolarView(useViewStore.getState().solarRenderMode);
+  },
 };
 
 declare global {
@@ -141,7 +149,7 @@ declare global {
 }
 
 /** Bumped when web UI changes; check in devtools if map looks stale. */
-export const KSP_WEB_MAP_UI_VERSION = "48-restore-moon-lod";
+export const KSP_WEB_MAP_UI_VERSION = "49-v3-shell-controls";
 
 window.KspSolarMap = api;
 window.KspSolarMapUiVersion = KSP_WEB_MAP_UI_VERSION;

@@ -2,7 +2,10 @@ import { useMemo } from "react";
 import { Line } from "@react-three/drei";
 import { useViewStore } from "../../store/viewStore";
 import { applyWorldShift } from "../../coords/worldShift";
-import { buildTrajectoryPreviewSegments } from "../../coords/buildPatchConic";
+import {
+  buildFutureRoutePreviewSegments,
+  resolveVesselOrbitDisplayPatch,
+} from "../../coords/buildPatchConic";
 import { buildRouteChordSegments } from "../../coords/routeOverlay";
 import { useTrajectoryFocus } from "./useTrajectoryFocus";
 
@@ -24,13 +27,15 @@ export function RouteLayer() {
       telemetry?.activeVessel?.positionRootRelativeMeters ??
       null;
 
+    const patches = telemetry?.orbitPatches ?? [];
+    const displayPatch = resolveVesselOrbitDisplayPatch(patches, vesselRoot);
+
     const rootSegments = isPrediction
-      ? buildTrajectoryPreviewSegments(
-          telemetry?.orbitPatches ?? [],
+      ? buildFutureRoutePreviewSegments(
+          displayPatch,
+          patches,
           model.bodies,
           rootBodyName,
-          vesselRoot,
-          model.vesselPathPoints,
         )
       : buildRouteChordSegments(model.routeAnchors, rootBodyName);
 

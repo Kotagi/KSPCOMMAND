@@ -8,11 +8,27 @@ import {
   getSolarCameraBounds3D,
 } from "../camera/solarCameraBounds";
 import { useMoonVisibilityContext } from "./MoonVisibilityContext";
+import { buildMapContext } from "../map-v2/MapContext";
+import { getStarMarkerCameraBounds } from "../map-v3/camera/starCameraBounds";
+import { composeMapV3Layers } from "../map-v3/MapComposer";
+import { MAP_V3_LAYERS_PHASE1 } from "../map-v3/layerFlags";
+
+function isMapV3StarOnlyView(
+  solarRenderMode: string,
+  activeLayerIds: string[],
+): boolean {
+  return (
+    solarRenderMode === "3d-v3" &&
+    activeLayerIds.length === 1 &&
+    activeLayerIds[0] === "StarMarkerLayer"
+  );
+}
 
 export function CameraRig() {
   const controlsRef = useRef<React.ComponentRef<typeof OrbitControls>>(null);
   const model = useViewStore((s) => s.model);
   const telemetry = useViewStore((s) => s.telemetry);
+  const solarRenderMode = useViewStore((s) => s.solarRenderMode);
   const cameraMode = useViewStore((s) => s.cameraMode);
   const displayScale = useViewStore((s) => s.displayScale);
   const focusBodyName = useViewStore((s) => s.focusBodyName);
@@ -27,22 +43,39 @@ export function CameraRig() {
     if (userInteracted && lastFitNonce.current === cameraFitNonce) {
       return;
     }
-    if (!model?.canDraw || !controlsRef.current) {
+    if (!controlsRef.current) {
       return;
     }
-    lastFitNonce.current = cameraFitNonce;
 
-    const bounds = getSolarCameraBounds3D(
-      model,
-      telemetry,
-      cameraMode,
-      displayScale,
-      focusBodyName,
-      displayFocus,
+    const v3StarOnly = isMapV3StarOnlyView(
+      solarRenderMode,
+      composeMapV3Layers(MAP_V3_LAYERS_PHASE1),
     );
+
+    if (v3StarOnly) {
+      if (!buildMapContext(telemetry)?.canDraw) {
+        return;
+      }
+    } else if (!model?.canDraw) {
+      return;
+    }
+
+    lastFitNonce.current = cameraFitNonce;
+    const bounds = v3StarOnly
+      ? getStarMarkerCameraBounds(buildMapContext(telemetry), displayScale)
+      : getSolarCameraBounds3D(
+          model!,
+          telemetry,
+          cameraMode,
+          displayScale,
+          focusBodyName,
+          displayFocus,
+        );
     const { center, radius } = getBoundsCenterAndRadius(bounds);
     const hostCentered =
-      cameraMode === "bodyFocus" || moonLodReason === "soiZoom";
+      v3StarOnly ||
+      cameraMode === "bodyFocus" ||
+      moonLodReason === "soiZoom";
     const orbitCenter: [number, number, number] = hostCentered ? [0, 0, 0] : center;
     const { position, up } = getEclipticLevelCameraPose(
       orbitCenter,
@@ -56,6 +89,7 @@ export function CameraRig() {
     cameraMode,
     model,
     telemetry,
+    solarRenderMode,
     displayScale,
     focusBodyName,
     displayFocus,

@@ -199,7 +199,18 @@ function placementPosition(
   return sample?.positionRootRelativeMeters ?? null;
 }
 
-/** Prograde sweep from nu0 to nu1 (KSP map shows forward along the orbit). */
+function encounterPlacement(patch: OrbitPatch): Vector3 | null {
+  return (
+    placementPosition(patch, "encounter") ?? placementPosition(patch, "patchEnd")
+  );
+}
+
+export interface ArcTimeContext {
+  fromUniversalTimeSeconds?: number;
+  toUniversalTimeSeconds?: number;
+}
+
+/** Prograde sweep from nu0 to nu1 when universal times are unavailable. */
 function progradeTrueAnomalyDelta(nu0: number, nu1: number): number {
   let delta = nu1 - nu0;
   while (delta < 0) {
@@ -214,6 +225,61 @@ function progradeTrueAnomalyDelta(nu0: number, nu1: number): number {
   return delta;
 }
 
+/** Forward-in-time sweep along the patch (matches KSP map prograde prediction). */
+function forwardTrueAnomalyDelta(
+  nu0: number,
+  nu1: number,
+  time: ArcTimeContext | undefined,
+): number {
+  const fromUt = time?.fromUniversalTimeSeconds;
+  const toUt = time?.toUniversalTimeSeconds;
+  if (
+    fromUt == null ||
+    toUt == null ||
+    !Number.isFinite(fromUt) ||
+    !Number.isFinite(toUt) ||
+    toUt <= fromUt
+  ) {
+    return progradeTrueAnomalyDelta(nu0, nu1);
+  }
+
+  let delta = nu1 - nu0;
+  while (delta < 0) {
+    delta += 2 * Math.PI;
+  }
+  while (delta >= 2 * Math.PI) {
+    delta -= 2 * Math.PI;
+  }
+  if (Math.abs(delta) < 1e-6) {
+    return Math.PI / 4;
+  }
+  return delta;
+}
+
+/** If the placement search lands on the wrong branch, pick the shorter forward-time arc. */
+function resolveArcTrueAnomalySweep(
+  patch: OrbitPatch,
+  anchor: Vector3,
+  fromRoot: Vector3,
+  toRoot: Vector3,
+  time: ArcTimeContext | undefined,
+): { nu0: number; delta: number } {
+  const nu0 = resolveStartTrueAnomaly(patch, anchor, fromRoot);
+  let nu1 = resolveStartTrueAnomaly(patch, anchor, toRoot);
+  let delta = forwardTrueAnomalyDelta(nu0, nu1, time);
+
+  if (delta > (3 * Math.PI) / 4) {
+    const altNu1 = nu1 + Math.PI;
+    const altDelta = forwardTrueAnomalyDelta(nu0, altNu1, time);
+    if (altDelta < delta) {
+      nu1 = altNu1;
+      delta = altDelta;
+    }
+  }
+
+  return { nu0, delta };
+}
+
 /** Partial ellipse arc between two root points (transfer leg, not a full period). */
 export function buildEllipticArcBetweenRootPoints(
   patch: OrbitPatch,
@@ -221,10 +287,15 @@ export function buildEllipticArcBetweenRootPoints(
   fromRoot: Vector3,
   toRoot: Vector3,
   sampleCount = 120,
+  time?: ArcTimeContext,
 ): Vector3[] {
-  const nu0 = resolveStartTrueAnomaly(patch, anchor, fromRoot);
-  const nu1 = resolveStartTrueAnomaly(patch, anchor, toRoot);
-  const delta = progradeTrueAnomalyDelta(nu0, nu1);
+  const { nu0, delta } = resolveArcTrueAnomalySweep(
+    patch,
+    anchor,
+    fromRoot,
+    toRoot,
+    time,
+  );
 
   const points: Vector3[] = [];
   for (let i = 0; i <= sampleCount; i++) {
@@ -251,78 +322,59 @@ export function patchesForTrajectoryPreview(
   return supported.slice(0, Math.min(2, supported.length));
 }
 
-/**
- * Full patched-conic trajectory in root frame: current leg through encounter,
- * then the next SOI patch (e.g. Duna hyperbolic escape).
- */
-export function buildTrajectoryPreviewSegments(
-  patches: OrbitPatch[],
-  bodyModels: BodyModel[],
-  rootBodyName: string | null,
-  vesselRoot: Vector3 | null,
-  vesselPathPoints: Vector3[],
-): Vector3[][] {
-  const previewPatches = patchesForTrajectoryPreview(patches);
-  const segments: Vector3[][] = [];
-
-  previewPatches.forEach((patch, index) => {
-    const anchor = findPatchRootAnchor(patch, bodyModels, rootBodyName);
-
-    if (index === 0) {
-      const encounter =
-        placementPosition(patch, "encounter") ??
-        placementPosition(patch, "patchEnd");
-
-      if (vesselRoot && anchor && encounter) {
-        segments.push(
-          buildEllipticArcBetweenRootPoints(
-            patch,
-            anchor,
-            vesselRoot,
-            encounter,
-            240,
-          ),
-        );
-      } else if (
-        vesselPathPoints.length >= 2 &&
-        isRenderableVesselRootPath(vesselPathPoints)
-      ) {
-        segments.push(vesselPathPoints);
-      } else if (vesselRoot && anchor) {
-        segments.push(
-          ...buildActivePatchConicRootSegments(
-            patch,
-            anchor,
-            vesselRoot,
-            "open",
-          ),
-        );
-      }
-      return;
-    }
-
-    const patchStart = placementPosition(patch, "patchStart");
-    segments.push(
-      ...buildActivePatchConicRootSegments(
-        patch,
-        anchor,
-        patchStart,
-        "open",
-      ),
-    );
-  });
-
-  return segments.filter((segment) => segment.length >= 2);
+function arcTimeContextForPatch(
+  patch: OrbitPatch,
+  gameUniversalTimeSeconds: number | undefined,
+  toRole: "encounter" | "patchEnd" | "patchStart",
+): ArcTimeContext | undefined {
+  const fromUt =
+    gameUniversalTimeSeconds ?? patch.patchStartUniversalTimeSeconds;
+  let toUt: number | undefined;
+  if (toRole === "encounter") {
+    toUt = patch.closestEncounterUniversalTimeSeconds;
+  } else if (toRole === "patchEnd") {
+    toUt = patch.patchEndUniversalTimeSeconds;
+  } else {
+    toUt = patch.patchStartUniversalTimeSeconds;
+  }
+  if (fromUt == null || toUt == null) {
+    return undefined;
+  }
+  return { fromUniversalTimeSeconds: fromUt, toUniversalTimeSeconds: toUt };
 }
 
-/** Prefer closed analytic ellipse; otherwise KSP samples or open conic fallback. */
+/**
+ * Active-vessel orbit overlay (cyan): KSP stops at encounter on the current leg;
+ * only draw a full period when there is no predicted encounter.
+ */
 export function buildActivePatchDisplaySegments(
   patch: OrbitPatch,
   anchor: Vector3 | null,
   vesselRoot: Vector3 | null,
   vesselPathPoints: Vector3[],
+  gameUniversalTimeSeconds?: number,
 ): Vector3[][] {
-  if (patch.classification === "Elliptic" && vesselRoot) {
+  const anchorVec = anchor ?? { x: 0, y: 0, z: 0 };
+  const encounter = patch.encounterBody ? encounterPlacement(patch) : null;
+
+  if (
+    patch.classification === "Elliptic" &&
+    vesselRoot &&
+    encounter &&
+    patch.encounterBody
+  ) {
+    const arc = buildEllipticArcBetweenRootPoints(
+      patch,
+      anchorVec,
+      vesselRoot,
+      encounter,
+      240,
+      arcTimeContextForPatch(patch, gameUniversalTimeSeconds, "encounter"),
+    );
+    return [arc];
+  }
+
+  if (patch.classification === "Elliptic" && vesselRoot && !patch.encounterBody) {
     return [buildEllipticRingThroughVessel(patch, anchor, vesselRoot)];
   }
 
@@ -338,6 +390,90 @@ export function buildActivePatchDisplaySegments(
   }
 
   return buildActivePatchConicRootSegments(patch, anchor, vesselRoot, "open");
+}
+
+/**
+ * Yellow route overlay: only legs AFTER the displayed vessel patch.
+ * Avoids Kerbin SOI arcs and full-period Sun ellipses on the current leg.
+ */
+export function buildFutureRoutePreviewSegments(
+  displayPatch: OrbitPatch | null,
+  patches: OrbitPatch[],
+  bodyModels: BodyModel[],
+  rootBodyName: string | null,
+): Vector3[][] {
+  if (!displayPatch) {
+    return [];
+  }
+
+  const displayIndex = finiteOr(displayPatch.patchIndex, 0);
+  const segments: Vector3[][] = [];
+
+  [...patches]
+    .filter((p) => isSupportedPatch(p))
+    .filter((p) => finiteOr(p.patchIndex, 0) > displayIndex)
+    .sort((a, b) => finiteOr(a.patchIndex, 0) - finiteOr(b.patchIndex, 0))
+    .forEach((patch) => {
+      const anchor = findPatchRootAnchor(patch, bodyModels, rootBodyName);
+      if (!anchor) {
+        return;
+      }
+
+      const patchStart = placementPosition(patch, "patchStart");
+      const patchEnd = placementPosition(patch, "patchEnd");
+      const time = arcTimeContextForPatch(patch, patch.patchStartUniversalTimeSeconds, "patchEnd");
+
+      if (
+        patch.classification === "Elliptic" &&
+        patchStart &&
+        patchEnd
+      ) {
+        segments.push(
+          buildEllipticArcBetweenRootPoints(
+            patch,
+            anchor,
+            patchStart,
+            patchEnd,
+            120,
+            time,
+          ),
+        );
+        return;
+      }
+
+      if (patchStart && patch.classification === "HyperbolicEscape") {
+        const hyperbola = buildActivePatchConicRootSegments(
+          patch,
+          anchor,
+          patchStart,
+          "open",
+        );
+        segments.push(...hyperbola);
+      }
+    });
+
+  return segments.filter((segment) => segment.length >= 2);
+}
+
+/** @deprecated Use buildActivePatchDisplaySegments + buildFutureRoutePreviewSegments */
+export function buildTrajectoryPreviewSegments(
+  patches: OrbitPatch[],
+  bodyModels: BodyModel[],
+  rootBodyName: string | null,
+  vesselRoot: Vector3 | null,
+  _vesselPathPoints: Vector3[],
+): Vector3[][] {
+  const displayPatch = resolveVesselOrbitDisplayPatch(patches, vesselRoot);
+  const current = displayPatch
+    ? buildActivePatchDisplaySegments(displayPatch, findPatchRootAnchor(displayPatch, bodyModels, rootBodyName), vesselRoot, [])
+    : [];
+  const future = buildFutureRoutePreviewSegments(
+    displayPatch,
+    patches,
+    bodyModels,
+    rootBodyName,
+  );
+  return [...current, ...future];
 }
 
 /** Hyperbolic / fallback analytic segments. */

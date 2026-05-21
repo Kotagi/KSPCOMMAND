@@ -23,7 +23,7 @@ export type CameraMode =
   | "route"
   | "bodyFocus";
 
-export type SolarRenderMode = "3d" | "2d";
+export type SolarRenderMode = "3d" | "2d" | "3d-v2" | "3d-v3";
 
 interface ViewState {
   telemetry: TelemetrySnapshot | null;

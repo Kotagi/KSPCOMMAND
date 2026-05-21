@@ -3,6 +3,8 @@ import type { CameraMode } from "../store/viewStore";
 import { useViewStore } from "../store/viewStore";
 import type { QualityPreset } from "../settings/qualityStore";
 import { formatTrailValidation } from "../coords/buildBodyOrbitTrail";
+import { MapHudV2 } from "./MapHudV2";
+import { MapHudV3 } from "./MapHudV3";
 
 const CAMERA_MODES: { id: CameraMode; label: string }[] = [
   { id: "fullSystem", label: "Full system" },
@@ -52,18 +54,21 @@ export function MapHud() {
 
   return (
     <div className="ksp-solar-hud">
+      {solarRenderMode === "3d-v2" ? <MapHudV2 /> : null}
+      {solarRenderMode === "3d-v3" ? <MapHudV3 /> : null}
       <div className="ksp-solar-hud-row">
         <label>
           View{" "}
           <select
             value={solarRenderMode}
             onChange={(e) => {
-              const mode = e.target.value as "3d" | "2d";
+              const mode = e.target.value as "3d" | "2d" | "3d-v2" | "3d-v3";
               setSolarRenderMode(mode);
-              document.body.dataset.solarView = mode;
             }}
           >
-            <option value="3d">3D WebGL</option>
+            <option value="3d">3D WebGL (v1)</option>
+            <option value="3d-v2">3D Map V2</option>
+            <option value="3d-v3">3D Map V3</option>
             <option value="2d">2D Canvas (legacy)</option>
           </select>
         </label>

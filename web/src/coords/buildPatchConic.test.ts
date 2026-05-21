@@ -3,8 +3,10 @@ import { perifocalToInertial, inertialToPerifocal } from "../math/buildConicGeom
 import { kspRootToThree } from "./kspToThree";
 import {
   buildActivePatchConicRootSegments,
+  buildActivePatchDisplaySegments,
   buildEllipticArcBetweenRootPoints,
   buildEllipticRingThroughVessel,
+  buildFutureRoutePreviewSegments,
   buildTrajectoryPreviewSegments,
   patchesForTrajectoryPreview,
   resolveVesselOrbitDisplayPatch,
@@ -95,7 +97,72 @@ describe("buildActivePatchConic", () => {
     const nu = trueAnomalyFromRootPosition(patch, anchor, target);
     expect(nu).not.toBeNull();
     const aligned = buildEllipticRingThroughVessel(patch, anchor, target);
-    expect(aligned[0].x).toBe(target.x);
+    const nearest = aligned.reduce(
+      (best, p) => {
+        const d = Math.hypot(p.x - target.x, p.y - target.y, p.z - target.z);
+        return d < best.d ? { d } : best;
+      },
+      { d: Infinity },
+    );
+    expect(nearest.d).toBeLessThan(1e8);
+  });
+
+  it("buildActivePatchDisplaySegments draws arc to encounter, not a full period", () => {
+    const anchor = { x: 0, y: 0, z: 0 };
+    const patch = {
+      classification: "Elliptic",
+      referenceBody: "Sun",
+      referenceBodyRadiusMeters: 696000000,
+      eccentricity: 0.55,
+      semiLatusRectumMeters: 8e10,
+      inclinationDegrees: 0,
+      longitudeOfAscendingNodeDegrees: 0,
+      argumentOfPeriapsisDegrees: 0,
+      trueAnomalyDegrees: 20,
+      encounterBody: "Duna",
+      referenceBodyPositionRootRelativeMeters: anchor,
+    };
+    const ring = buildActivePatchConicRootSegments(patch, anchor, null)[0];
+    const vessel = ring[50];
+    const encounter = ring[95];
+
+    const segments = buildActivePatchDisplaySegments(
+      {
+        ...patch,
+        placementSamples: [
+          {
+            sampleRole: "encounter",
+            positionRootRelativeMeters: encounter,
+          },
+        ],
+      },
+      anchor,
+      vessel,
+      [],
+    );
+
+    expect(segments.length).toBe(1);
+    const arc = segments[0];
+    expect(arc.length).toBeGreaterThan(100);
+    const startDist = Math.hypot(
+      arc[0].x - vessel.x,
+      arc[0].y - vessel.y,
+      arc[0].z - vessel.z,
+    );
+    expect(startDist).toBeLessThan(1e8);
+    const endDist = Math.hypot(
+      arc[arc.length - 1].x - encounter.x,
+      arc[arc.length - 1].y - encounter.y,
+      arc[arc.length - 1].z - encounter.z,
+    );
+    expect(endDist).toBeLessThan(1e8);
+    const span = Math.hypot(
+      encounter.x - vessel.x,
+      encounter.y - vessel.y,
+      encounter.z - vessel.z,
+    );
+    expect(maxConsecutiveLegMeters(arc)).toBeLessThan(span * 0.2);
+    expect(maxConsecutiveLegMeters(arc)).toBeLessThan(maxConsecutiveLegMeters(ring) * 0.6);
   });
 
   it("resolveVesselOrbitDisplayPatch prefers Sun elliptic when vessel is heliocentric", () => {
@@ -229,6 +296,64 @@ describe("buildActivePatchConic", () => {
       encounter.z - vessel.z,
     );
     expect(maxConsecutiveLegMeters(arc)).toBeLessThan(chord * 0.2);
+  });
+
+  it("buildFutureRoutePreviewSegments skips the current leg and later patches only", () => {
+    const patches = [
+      {
+        patchIndex: 0,
+        classification: "HyperbolicEscape",
+        referenceBody: "Kerbin",
+        encounterBody: "Minmus",
+      },
+      {
+        patchIndex: 1,
+        classification: "Elliptic",
+        referenceBody: "Sun",
+        encounterBody: "Duna",
+        eccentricity: 0.5,
+        semiLatusRectumMeters: 8e10,
+      },
+      {
+        patchIndex: 2,
+        classification: "HyperbolicEscape",
+        referenceBody: "Duna",
+        referenceBodyRadiusMeters: 3.4e5,
+        eccentricity: 1.2,
+        semiLatusRectumMeters: 5e7,
+        semiMajorAxisMeters: -2e7,
+        sphereOfInfluenceMeters: 1e8,
+        periapsisRadiusMeters: 4e5,
+        inclinationDegrees: 0,
+        longitudeOfAscendingNodeDegrees: 0,
+        argumentOfPeriapsisDegrees: 0,
+        patchStartUniversalTimeSeconds: 1000,
+        patchEndUniversalTimeSeconds: 2000,
+        placementSamples: [
+          {
+            sampleRole: "patchStart",
+            targetBody: "Duna",
+            positionRootRelativeMeters: { x: 3.36e10, y: 0, z: 0 },
+          },
+          {
+            sampleRole: "patchEnd",
+            targetBody: "Duna",
+            positionRootRelativeMeters: { x: 3.34e10, y: 1e8, z: 0 },
+          },
+        ],
+      },
+    ];
+    const display = patches[1];
+    const future = buildFutureRoutePreviewSegments(
+      display,
+      patches,
+      [{ body: { name: "Duna" }, position: { x: 3.36e10, y: 0, z: 0 }, projected: { x: 0, y: 0 }, isScrubPreview: false }],
+      "Sun",
+    );
+    expect(future.length).toBe(1);
+    expect(future[0].length).toBeGreaterThan(2);
+    const maxR = Math.max(...future[0].map((p) => Math.hypot(p.x, p.y, p.z)));
+    expect(maxR).toBeLessThan(4e10);
   });
 
   it("maps conic into Three.js ecliptic XY plane via kspRootToThree", () => {

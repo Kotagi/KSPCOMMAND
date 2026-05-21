@@ -34,6 +34,7 @@ export function OrbitsLayer() {
           anchor,
           vesselRoot,
           vesselPathPoints,
+          telemetry?.gameUniversalTimeSeconds,
         )
       : [];
 
