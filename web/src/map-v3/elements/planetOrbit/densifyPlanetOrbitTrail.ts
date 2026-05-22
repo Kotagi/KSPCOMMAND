@@ -3,7 +3,10 @@ import {
   canUseAnalyticBodyOrbit,
   findBodyOrbitAnchor,
 } from "../../../coords/buildBodyOrbitTrail";
-import { densifyOrbitTrailPoints } from "../../../scene/densifyOrbitTrail";
+import {
+  densifyOrbitTrailPoints,
+  densifySampleUniversalTimes,
+} from "../../../scene/densifyOrbitTrail";
 import type { BodyOrbitPath, Vector3 } from "../../../telemetry/schema-v6";
 import type { MapContext } from "../../MapContext";
 import type { ScenePoint3 } from "../../types";
@@ -29,6 +32,40 @@ function stripDuplicateClosingVertex(points: Vector3[]): Vector3[] {
     return points.slice(0, -1);
   }
   return points;
+}
+
+/** UT aligned with telemetry samples (one per sample position). */
+export function sampleUniversalTimesFromPath(
+  path: BodyOrbitPath,
+): number[] | undefined {
+  const times: number[] = [];
+  for (const s of path.samples ?? []) {
+    if (!s.positionRootRelativeMeters) {
+      continue;
+    }
+    const t = s.sampleUniversalTimeSeconds;
+    if (typeof t !== "number" || !Number.isFinite(t)) {
+      return undefined;
+    }
+    times.push(t);
+  }
+  return times.length >= 2 ? times : undefined;
+}
+
+/** Resample UT to match `densifyPlanetOrbitRootPoints` vertex count. */
+export function densifyPlanetOrbitSampleUniversalTimes(
+  sampleUniversalTimes: number[],
+): number[] {
+  if (sampleUniversalTimes.length < 2) {
+    return sampleUniversalTimes;
+  }
+  if (sampleUniversalTimes.length >= PLANET_ORBIT_STYLE.trailVertices) {
+    return [...sampleUniversalTimes];
+  }
+  return densifySampleUniversalTimes(
+    sampleUniversalTimes,
+    PLANET_ORBIT_STYLE.trailVertices,
+  );
 }
 
 /** Heliocentric planet periods are always closed rings (not the 1 km planner heuristic). */

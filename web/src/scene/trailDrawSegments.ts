@@ -1,3 +1,4 @@
+/** Open-trail / per-chord prototype — not wired in V3. See docs/ORBIT_TRAIL_DRAWING_GUIDE.md */
 import {
   opacityForTrailSegmentDirected,
   projectOntoSegment,

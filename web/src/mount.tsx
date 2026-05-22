@@ -150,7 +150,7 @@ declare global {
 }
 
 /** Bumped when web UI changes; check in devtools if map looks stale. */
-export const KSP_WEB_MAP_UI_VERSION = "72-ksp-v1-plus-prograde-gradient";
+export const KSP_WEB_MAP_UI_VERSION = "73-v3-orbit-trail-foundation";
 
 window.KspSolarMap = api;
 window.KspSolarMapUiVersion = KSP_WEB_MAP_UI_VERSION;

@@ -35,6 +35,8 @@ export interface TrajectorySegment {
   parentBody?: string;
   closed?: boolean;
   anchorIndex?: number;
+  /** Per-vertex UT when trail uses telemetry samples (omitted for analytic rings). */
+  sampleUniversalTimes?: number[];
   closedWithDuplicateEndpoint?: boolean;
   lineWidth?: number;
   color?: string;

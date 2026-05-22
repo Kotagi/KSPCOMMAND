@@ -35,14 +35,16 @@ V3 delegates geometry to v2 `buildSegments(ctx, "BodyOrbit", { planetOnly: true 
 2. **Planner** — `bodyOrbitSegmentsForPath` / analytic fallback (shared with v2).
 3. **Quality** — `resolveTrailRenderMode` may skip low-quality trails.
 4. **Densify** — `buildPlanetOrbitSegments` arc-length resamples to **512** vertices per period (`PLANET_ORBIT_STYLE.trailVertices`; telemetry ships ~48).
-5. **Segment** — `TrajectorySegment` with `points`, `anchorIndex`, `closed`, `bodyName`, `referenceBody`.
+5. **Segment** — `TrajectorySegment` with `points`, `anchorIndex`, optional `sampleUniversalTimes` (sample paths only), `closed`, `bodyName`, `referenceBody`.
 
 ## Rendering pipeline
 
 1. `PlanetOrbitLayer` → `useV3RootSegments(ctx, "planetOrbit")` → filter `visibleBodyNames` + `planetNames`.
 2. `useV3SceneTrails` → `toScenePoints` with normal `sceneFrame` (moon LOD focus).
-3. `OrbitTrailV3` → `splitOrbitTrailHalves` → two `@react-three/drei` `Line` primitives per trail.
+3. `OrbitTrailV3` → `GradientDirectionalOrbitTrail` (`splitOrbitTrailHalves` + prograde `vertexColors` fade).
 4. **Depth / order** — Lines in scene group after star; no pick ids (Phase 12).
+
+**Trail manual:** [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md)
 
 ## Color and style customization
 
@@ -50,7 +52,7 @@ V3 delegates geometry to v2 `buildSegments(ctx, "BodyOrbit", { planetOnly: true 
 |------|------|--------|
 | Per-body hex color | `web/src/scene/bodyMapColors.ts` `KSP_BODY_MAP_COLORS` | Orbit line hue |
 | Default fallback color | `DEFAULT_BODY_COLOR` in same file | Unknown bodies |
-| Retro/prograde split | `web/src/scene/splitOrbitTrailHalves.ts` | Opacity curve along trail |
+| Retro/prograde split + prograde fade | `GradientDirectionalOrbitTrail.tsx`, `splitOrbitTrailHalves.ts`, `orbitTrailDirectionStyle.ts` | See orbit guide |
 | Line widths | `web/src/map-v3/elements/planetOrbit/planetOrbitStyle.ts` | `retrogradeLineWidth`, `progradeLineWidthFactor` |
 | Trail vertex count | `planetOrbitStyle.ts` `trailVertices` (default **512**) | Smooth closed rings vs performance |
 | Hidden paths | `resolveTrailRenderMode` in `web/src/coords/buildBodyOrbitTrail.ts` | Skip low-quality trails |

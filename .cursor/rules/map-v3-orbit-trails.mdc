@@ -1,0 +1,22 @@
+---
+description: Map V3 orbit trail drawing — read the orbit guide before editing trail code
+globs:
+  - web/src/scene/**/*Orbit*
+  - web/src/scene/GradientDirectionalOrbitTrail.tsx
+  - web/src/scene/splitOrbitTrailHalves.ts
+  - web/src/scene/orbitTrailDirectionStyle.ts
+  - web/src/scene/trailDrawSegments.ts
+  - web/src/map-v3/elements/**/*Orbit*
+alwaysApply: false
+---
+
+# Map V3 orbit trails
+
+Before changing orbit trail rendering or planet/moon orbit builders:
+
+1. Read **`docs/ORBIT_TRAIL_DRAWING_GUIDE.md`** (module catalog, failed approaches, decision tree).
+2. Prefer extending **`GradientDirectionalOrbitTrail`** for KSP-style closed rings; do not reintroduce full-ring vertex opacity helpers (`trailVertexOpacitiesKspRing`).
+3. Default new solar-map features to **Map V3** (`3d-v3`, `web/src/scene/v3/`, `web/src/map-v3/`). Keep v1/v2 changes minimal (regression only).
+4. Update **`docs/MAP_V3_RENDERING_GUIDE.md`** and run **`npm test`** when behavior changes.
+
+Program state: **`docs/MAP_V3_PROGRAM_STATE.md`**.

@@ -12,12 +12,14 @@ export const OrbitTrailV3 = memo(function OrbitTrailV3({
   bodyName,
   points,
   anchorIndex = 0,
+  sampleUniversalTimes,
   lineWidth = PLANET_ORBIT_STYLE.retrogradeLineWidth,
 }: {
   lineKey: string;
   bodyName?: string;
   points: ScenePoint3[];
   anchorIndex?: number;
+  sampleUniversalTimes?: number[];
   closedWithDuplicateEndpoint?: boolean;
   lineWidth?: number;
 }) {
@@ -40,6 +42,7 @@ export const OrbitTrailV3 = memo(function OrbitTrailV3({
       lineColor={resolvePlanetOrbitColor(bodyName)}
       points={ring}
       anchorIndex={anchorIndex}
+      sampleUniversalTimes={sampleUniversalTimes}
       lineWidth={lineWidth}
       progradeLineWidthFactor={PLANET_ORBIT_STYLE.progradeLineWidthFactor}
     />

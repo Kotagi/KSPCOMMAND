@@ -24,6 +24,8 @@ describe("buildPlanetOrbitSegments", () => {
       if (s.referenceBody) {
         expect(s.referenceBody).toBe(ctx.rootBody);
       }
+      // Kerbin-stable fixture uses smooth analytic rings — no per-vertex UT
+      expect(s.sampleUniversalTimes).toBeUndefined();
     });
   });
 });

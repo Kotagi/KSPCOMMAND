@@ -35,6 +35,7 @@ export interface SceneTrail {
   bodyName?: string;
   points: ReturnType<typeof toScenePoints>;
   anchorIndex: number;
+  sampleUniversalTimes?: number[];
   closed: boolean;
   closedWithDuplicateEndpoint?: boolean;
   lineWidth?: number;
@@ -53,6 +54,7 @@ export function useV3SceneTrails(
         bodyName: seg.bodyName,
         points: toScenePoints(seg.points, sceneFrame),
         anchorIndex: seg.anchorIndex ?? 0,
+        sampleUniversalTimes: seg.sampleUniversalTimes,
         closed: seg.closed ?? false,
         closedWithDuplicateEndpoint: seg.closedWithDuplicateEndpoint,
         lineWidth: seg.lineWidth,

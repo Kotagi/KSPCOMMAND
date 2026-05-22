@@ -72,14 +72,17 @@ Shared rules (from V2):
 |-------|-------|
 | Data source | `telemetry.bodyOrbitPaths` → v2 `BodyOrbit` planner → densify to **512** verts |
 | Segment builder | `buildPlanetOrbitSegments` → `kind: planetOrbit` |
-| Primitive | `@react-three/drei` `Line` ×2 (retrograde + prograde halves) |
+| Primitive | `GradientDirectionalOrbitTrail` → `@react-three/drei` `Line` ×2 |
 | Color | `resolvePlanetOrbitColor` → `getKspBodyMapColor(bodyName)` |
-| Line width | Retro: `1.0`; prograde: `0.7×` width, reduced opacity via `splitOrbitTrailHalves` |
+| Opacity | Retro: solid `color` + `ORBIT_TRAIL_OPACITY_TRAILING`; prograde: `vertexColors` via `progradeHalfVertexOpacities` |
+| Line width | Retro: `1.0`; prograde: `0.7×` (`progradeLineWidthFactor`) |
+| Prograde direction | `sampleUniversalTimes` on segment when telemetry samples used (omitted for analytic rings) |
+| Tone mapping | `Map3DV3` `NoToneMapping` — see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) |
 | Frame | `useV3SceneTrails` → `toScenePoints` with normal `sceneFrame` |
 | Visibility | `visibleBodyNames` ∩ `hierarchy.planetNames` |
 | Flags | `MAP_V3_LAYERS_PHASE2.planetOrbit` |
 
-**Files:** `map-v3/elements/planetOrbit/*`, `map-v3/useMapV3Trails.ts`, `scene/v3/layers/PlanetOrbitLayer.tsx`, `OrbitTrailV3.tsx`
+**Files:** `map-v3/elements/planetOrbit/*`, `map-v3/useMapV3Trails.ts`, `scene/v3/layers/PlanetOrbitLayer.tsx`, `OrbitTrailV3.tsx`, `scene/GradientDirectionalOrbitTrail.tsx`
 
 ---
 

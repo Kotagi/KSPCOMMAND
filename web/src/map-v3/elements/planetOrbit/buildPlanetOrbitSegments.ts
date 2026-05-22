@@ -4,7 +4,10 @@ import { isPlanetBody } from "../../MapContext";
 import type { TrajectorySegment } from "../../types";
 import {
   densifyPlanetOrbitRootPoints,
+  densifyPlanetOrbitSampleUniversalTimes,
+  resolvePlanetOrbitPointsFromPath,
   resolvePlanetOrbitSourcePoints,
+  sampleUniversalTimesFromPath,
 } from "./densifyPlanetOrbitTrail";
 
 function nearestIndex(
@@ -51,6 +54,32 @@ export function buildPlanetOrbitSegments(ctx: MapContext): TrajectorySegment[] {
         ? nearestIndex(points, bodyEntry.position)
         : (seg.anchorIndex ?? 0);
 
+      let sampleUniversalTimes: number[] | undefined;
+      if (seg.bodyName) {
+        const path = (ctx.telemetry.bodyOrbitPaths ?? []).find(
+          (p) => p.bodyName === seg.bodyName,
+        );
+        if (path) {
+          const bodies = ctx.bodies.map((b) => ({
+            body: { name: b.name },
+            position: b.position,
+          }));
+          const analytic = resolvePlanetOrbitPointsFromPath(
+            path,
+            bodies,
+            ctx.rootBody,
+            seg.points,
+          );
+          const usesAnalytic = analytic != null && analytic.length >= 3;
+          if (!usesAnalytic) {
+            const raw = sampleUniversalTimesFromPath(path);
+            if (raw) {
+              sampleUniversalTimes = densifyPlanetOrbitSampleUniversalTimes(raw);
+            }
+          }
+        }
+      }
+
       return {
         kind: "planetOrbit" as const,
         key: seg.key,
@@ -60,6 +89,7 @@ export function buildPlanetOrbitSegments(ctx: MapContext): TrajectorySegment[] {
         parentBody: seg.parentBody,
         closed: true,
         anchorIndex,
+        sampleUniversalTimes,
         closedWithDuplicateEndpoint: false,
         lineWidth: seg.lineWidth,
         color: seg.color,

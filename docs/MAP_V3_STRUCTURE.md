@@ -1,9 +1,9 @@
 # Map V3 — Structure specification (Phase 0 baseline)
 
 **Document ID:** MAP-V3-STRUCT-001  
-**Status:** Phase 1 — primary star (`starMarker`) implemented; other elements not drawn  
-**Scope:** Repository layout, module boundaries, and rollout gates for the modular 3D solar map (`solarRenderMode: 3d-v3`).  
-**Reference:** Stock KSP in-game map (acceptance), Map V2 lessons (`docs/MAP_V2_MODULES.md`).
+**Status:** Phase 2 — `starMarker` + `planetOrbit` shipped; V3 is the **canonical** map for new work  
+**Scope:** Repository layout, module boundaries, and rollout gates for the modular 3D solar map (`solarRenderMode: 3d-v3`, default).  
+**Reference:** Stock KSP in-game map (acceptance), Map V2 lessons (`docs/MAP_V2_MODULES.md`), orbit trails ([`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md)).
 
 ---
 
@@ -61,13 +61,21 @@ web/src/
 │   ├── MapHud.tsx                   # View selector includes 3d-v3
 │   └── SolarMapPanel.tsx            # Mounts Map3DV3 when mode = 3d-v3
 │
-└── store/viewStore.ts               # SolarRenderMode includes "3d-v3"
+└── store/viewStore.ts               # Default solarRenderMode "3d-v3"
+
+web/src/scene/                       # Shared presentation (orbit drawer used by v3)
+├── GradientDirectionalOrbitTrail.tsx
+├── splitOrbitTrailHalves.ts
+└── orbitTrailDirectionStyle.ts
 
 docs/
+├── README.md                        # Documentation index
 ├── MAP_V3_STRUCTURE.md              # This file
+├── MAP_V3_PROGRAM_STATE.md          # As-built program state
+├── ORBIT_TRAIL_DRAWING_GUIDE.md     # Orbit trail manual (read before editing trails)
 ├── MAP_V3_PHASE0_PLAN.md            # Phase 0 scope and test plan
 ├── MAP_V3_MODULES.md                # Module I/O contracts (living)
-├── MAP_V3_RENDERING_GUIDE.md          # How each object type is drawn (living)
+├── MAP_V3_RENDERING_GUIDE.md        # How each object type is drawn (living)
 └── MAP_V3_ACCEPTANCE.md             # Per-phase pass criteria
 ```
 
@@ -122,11 +130,10 @@ Phase 0 stops after `MapV3Context` (no segments, no layers).
 - Boolean per `MapElementKind`
 - **Phase 0:** `MAP_V3_LAYERS_PHASE0` — all `false`
 
-### 6.4 `MapComposer`
+### 6.4 `MapComposer` vs `MapV3LayerStack`
 
-- **Inputs:** `MapV3LayerFlags`
-- **Outputs:** ordered list of active layer component ids (for documentation and tests)
-- **Phase 0:** Returns empty array
+- **`composeMapV3Layers(flags)`** — **Inputs:** `MapV3LayerFlags`; **Outputs:** ordered layer component ids (Vitest + docs).
+- **`MapV3LayerStack.tsx`** — manually mounts layers for the active phase constant; not yet driven by `composeMapV3Layers` at runtime (intentional in phase 2).
 
 ---
 

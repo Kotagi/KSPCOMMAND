@@ -11,9 +11,9 @@ type Point3 = [number, number, number];
 const LINE_COLOR_FOR_VERTEX_COLORS = "#ffffff";
 
 /**
- * KSP map trails (v1 look + smooth prograde fade):
- * - Retrograde half: full body color, fully opaque
- * - Prograde half: same color, smooth opacity gradient bold at body → faint ahead
+ * KspSplitTrailWithProgradeGradient — shared closed-ring drawer (V3 planet orbits).
+ * - Retrograde half: solid body color via `color` + uniform opacity
+ * - Prograde half: `vertexColors` smooth fade bold at body → faint at far end
  */
 export function GradientDirectionalOrbitTrail({
   lineKey,

@@ -67,6 +67,7 @@ export function PlanetOrbitLayer() {
           bodyName={t.bodyName}
           points={t.points}
           anchorIndex={t.anchorIndex}
+          sampleUniversalTimes={t.sampleUniversalTimes}
           lineWidth={t.lineWidth}
         />
       ))}
