@@ -5,7 +5,7 @@ import type { TrajectorySegment } from "../../types";
 import {
   densifyPlanetOrbitRootPoints,
   densifyPlanetOrbitSampleUniversalTimes,
-  resolvePlanetOrbitPointsFromPath,
+  planetOrbitTrailUsesAnalyticSource,
   resolvePlanetOrbitSourcePoints,
   sampleUniversalTimesFromPath,
 } from "./densifyPlanetOrbitTrail";
@@ -59,23 +59,10 @@ export function buildPlanetOrbitSegments(ctx: MapContext): TrajectorySegment[] {
         const path = (ctx.telemetry.bodyOrbitPaths ?? []).find(
           (p) => p.bodyName === seg.bodyName,
         );
-        if (path) {
-          const bodies = ctx.bodies.map((b) => ({
-            body: { name: b.name },
-            position: b.position,
-          }));
-          const analytic = resolvePlanetOrbitPointsFromPath(
-            path,
-            bodies,
-            ctx.rootBody,
-            seg.points,
-          );
-          const usesAnalytic = analytic != null && analytic.length >= 3;
-          if (!usesAnalytic) {
-            const raw = sampleUniversalTimesFromPath(path);
-            if (raw) {
-              sampleUniversalTimes = densifyPlanetOrbitSampleUniversalTimes(raw);
-            }
+        if (path && !planetOrbitTrailUsesAnalyticSource(path)) {
+          const raw = sampleUniversalTimesFromPath(path);
+          if (raw) {
+            sampleUniversalTimes = densifyPlanetOrbitSampleUniversalTimes(raw);
           }
         }
       }

@@ -19,13 +19,14 @@ describe("buildPlanetOrbitSegments", () => {
       expect(isMoonBody(ctx, s.bodyName!)).toBe(false);
       expect(s.points.length).toBeGreaterThanOrEqual(512);
       expect(s.closed).toBe(true);
-      // Must be smooth conic, not 48 telemetry chords re-sampled
       expect(s.points.length).not.toBe(48);
       if (s.referenceBody) {
         expect(s.referenceBody).toBe(ctx.rootBody);
       }
-      // Kerbin-stable fixture uses smooth analytic rings — no per-vertex UT
-      expect(s.sampleUniversalTimes).toBeUndefined();
+      // Samples-first (v2 policy): fixture has sample points → UT for prograde direction
+      if (s.bodyName === "Kerbin") {
+        expect(s.sampleUniversalTimes?.length).toBeGreaterThanOrEqual(2);
+      }
     });
   });
 });

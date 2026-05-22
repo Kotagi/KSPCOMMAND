@@ -51,6 +51,11 @@
           "sampleUniversalTimeSeconds": 100187.5,
           "positionRootRelativeMeters": { "x": 1.349e11, "y": 1.76e9, "z": 0 },
           "parentPositionRootRelativeMeters": { "x": 0, "y": 0, "z": 0 }
+        },
+        {
+          "sampleUniversalTimeSeconds": 100375,
+          "positionRootRelativeMeters": { "x": 1.346e11, "y": 3.5e9, "z": 0 },
+          "parentPositionRootRelativeMeters": { "x": 0, "y": 0, "z": 0 }
         }
       ],
       "validation": {

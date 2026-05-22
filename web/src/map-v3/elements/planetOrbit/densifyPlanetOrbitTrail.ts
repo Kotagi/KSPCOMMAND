@@ -2,6 +2,7 @@ import {
   buildBodyOrbitTrailSegments,
   canUseAnalyticBodyOrbit,
   findBodyOrbitAnchor,
+  resolveTrailRenderMode,
 } from "../../../coords/buildBodyOrbitTrail";
 import {
   densifyOrbitTrailPoints,
@@ -85,6 +86,22 @@ export function densifyPlanetOrbitRootPoints(points: Vector3[]): Vector3[] {
   ).map(fromPoint3);
 }
 
+function samplePositionsFromPath(path: BodyOrbitPath): Vector3[] {
+  const points: Vector3[] = [];
+  for (const s of path.samples ?? []) {
+    const p = s.positionRootRelativeMeters;
+    if (
+      p
+      && Number.isFinite(p.x)
+      && Number.isFinite(p.y)
+      && Number.isFinite(p.z)
+    ) {
+      points.push(p);
+    }
+  }
+  return points;
+}
+
 function analyticOrbitPoints(
   path: BodyOrbitPath,
   bodies: { body: { name?: string }; position: Vector3 }[],
@@ -103,10 +120,39 @@ function analyticOrbitPoints(
   return analytic.length >= 3 ? analytic : null;
 }
 
+/** True when the drawn trail uses Keplerian analytic geometry (no sample polyline). */
+export function planetOrbitTrailUsesAnalyticSource(path: BodyOrbitPath): boolean {
+  if (resolveTrailRenderMode(path) === "hidden") {
+    return false;
+  }
+  if (samplePositionsFromPath(path).length >= 2) {
+    return false;
+  }
+  return canUseAnalyticBodyOrbit(path);
+}
+
 /**
- * Prefer smooth Keplerian conic samples (~512). Telemetry ships ~48 straight chords;
- * arc-length densify on that polyline stays a 48-gon visually.
+ * Match v2 `bodyOrbitSegmentsForPath`: telemetry samples first, analytic fallback only
+ * when fewer than two sample points. Respects `validation.trailRenderMode` (hidden).
  */
+export function resolvePlanetOrbitPointsFromPath(
+  path: BodyOrbitPath,
+  bodies: { body: { name?: string }; position: Vector3 }[],
+  rootBody: string | null | undefined,
+  fallbackPoints: Vector3[],
+): Vector3[] {
+  if (resolveTrailRenderMode(path) === "hidden") {
+    return fallbackPoints;
+  }
+
+  const samples = samplePositionsFromPath(path);
+  if (samples.length >= 2) {
+    return samples;
+  }
+
+  return analyticOrbitPoints(path, bodies, rootBody) ?? fallbackPoints;
+}
+
 export function resolvePlanetOrbitSourcePoints(
   ctx: MapContext,
   bodyName: string | undefined,
@@ -125,18 +171,12 @@ export function resolvePlanetOrbitSourcePoints(
     body: { name: b.name },
     position: b.position,
   }));
-  return (
-    analyticOrbitPoints(path, bodies, ctx.rootBody) ?? fallbackPoints
+  return resolvePlanetOrbitPointsFromPath(
+    path,
+    bodies,
+    ctx.rootBody,
+    fallbackPoints,
   );
-}
-
-export function resolvePlanetOrbitPointsFromPath(
-  path: BodyOrbitPath,
-  bodies: { body: { name?: string }; position: Vector3 }[],
-  rootBody: string | null | undefined,
-  fallbackPoints: Vector3[],
-): Vector3[] {
-  return analyticOrbitPoints(path, bodies, rootBody) ?? fallbackPoints;
 }
 
 /** Scene-space safety net when sparse trails slip through. */
