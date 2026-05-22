@@ -1,9 +1,10 @@
 # Orbit trail drawing guide
 
 **Document ID:** MAP-ORBIT-TRAIL-001  
+**Revision:** 1.1 (2026-05-21) — §12 vertex/sample tuning; samples-first geometry; 128/512 defaults  
 **Audience:** Operators and developers extending KspWebMap solar-map trails  
 **Canonical map:** Map V3 (`solarRenderMode: "3d-v3"`, default in `viewStore.ts`)  
-**UI reference build:** `81-orbit-motion-tail` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`)
+**UI reference build:** `85-orbit-128-samples` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`)
 
 ---
 
@@ -75,7 +76,7 @@ Compare side-by-side with in-game map and **3D WebGL (v1)** on the same flight.
 | `splitOrbitTrailHalves.ts` | points, anchor, closed flag, optional UT | `{ retrograde, prograde }` polylines | Fallback when `closedWithDuplicateEndpoint` or &lt;3 points |
 | `bodyMapColors.ts` | `bodyName` | hex string | Stock KSP palette (`getKspBodyMapColor`) |
 | `densifyOrbitTrail.ts` | sparse polyline | 512-vertex ring | Arc-length resample; `densifySampleUniversalTimes` for UT |
-| `densifyPlanetOrbitTrail.ts` | `MapContext`, path | 512 planet ring + optional UT | V3 planet-specific analytic preference |
+| `densifyPlanetOrbitTrail.ts` | `MapContext`, path | 512 planet ring + optional UT | V3 planet geometry: **telemetry samples first**, analytic fallback, densify |
 | `coords/buildBodyOrbitTrail.ts` | `BodyOrbitPath` | analytic segments | Keplerian fallback when samples sparse |
 | `trailDrawSegments.ts` | open trail + icon | per-chord opacity segments | **Prototype** for open paths; see file header |
 | `DirectionalOrbitTrail.tsx` | same props | delegates to `GradientDirectionalOrbitTrail` | v1 compatibility wrapper |
@@ -120,8 +121,11 @@ flowchart LR
 | `closedRingHalfGradientOpacities` | same | Per-vertex opacities on closed ring using prograde `ahead` |
 | `resolveProgradeIndexStep` | same | +1 / −1 along ring from UT or default |
 | `progradeLineWidthFactor` | `planetOrbitStyle.ts` / drawer prop | Prograde line width on **split** fallback only (0.7) |
-| `PLANET_ORBIT_STYLE.trailVertices` | `planetOrbitStyle.ts` | Densify target (512) |
+| `PLANET_ORBIT_STYLE.trailVertices` | `planetOrbitStyle.ts` | Web densify target (**512** draw vertices) |
+| `BodyOrbitPathSampleCount` | `TelemetrySnapshotService.cs` | DLL samples per period (**128**; was 48) |
 | `getKspBodyMapColor` | `bodyMapColors.ts` | Per-body hue |
+
+**Changing sample or vertex counts:** see **§12** (full procedure).
 
 Aliases for tests/legacy: `ORBIT_TRAIL_HALF_RETRO_BODY` = `TAIL_ATTACH`, `ORBIT_TRAIL_HALF_PROGRADE_FAR` = `TAIL_LEAD`.
 
@@ -136,7 +140,7 @@ Aliases for tests/legacy: `ORBIT_TRAIL_HALF_RETRO_BODY` = `TAIL_ATTACH`, `ORBIT_
 | `findTrailAnchorOnPeriod` | Nearest vertex to icon for open/duplicate-endpoint trails |
 | Analytic rings | No per-vertex UT; prograde step defaults from geometry (+1) |
 
-V3 planet pipeline: `buildPlanetOrbitSegments` sets `sampleUniversalTimes` only when `resolvePlanetOrbitPointsFromPath` is **not** used (see `densifyPlanetOrbitTrail.ts`).
+V3 planet pipeline: `buildPlanetOrbitSegments` sets `sampleUniversalTimes` when `planetOrbitTrailUsesAnalyticSource(path)` is **false** (≥2 telemetry samples and `trailRenderMode` ≠ `hidden`). Analytic-only rings omit UT; prograde step defaults to +1 along the ring.
 
 **If the faint streak appears on the wrong side:** check anchor index and UT order first; invert is controlled by `resolveProgradeIndexStep`, not by mirroring opacity around the ring.
 
@@ -203,16 +207,98 @@ flowchart TD
 
 | Check | How |
 |-------|-----|
-| Unit | `npm test` — `orbitTrailDirectionStyle.test.ts`, `splitOrbitTrailHalves.test.ts`, `buildPlanetOrbitSegments.test.ts` |
+| Unit | `npm test` — `orbitTrailDirectionStyle.test.ts`, `splitOrbitTrailHalves.test.ts`, `buildPlanetOrbitSegments.test.ts`, `densifyPlanetOrbitTrail.test.ts` |
 | Build | `npm run build` |
 | Visual | In-game vs **3D Map V3** — faint prograde lead, bold trailing attach, direction obvious without time warp |
+| Geometry | `scripts/verify-telemetry.ps1` — `trailRenderMode: samples`, `liveToSample0` ≈ 0; icons on rings ([`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md)) |
 | Deploy | `scripts/build.ps1` + `scripts/install.ps1`; confirm `window.KspSolarMapUiVersion` |
 | Cache | `index.html` `?v=` matches bundle generation |
 
 ---
 
+## 12. Orbit vertex and sample counts (tuning guide)
+
+Planet orbit smoothness and KSP alignment depend on **two independent counts**. Do not confuse them.
+
+| Stage | What it controls | Default | Where |
+|-------|------------------|---------|--------|
+| **A — DLL capture** | Points KSP propagates per orbit period in `bodyOrbitPaths[].samples` | **128** | `TelemetrySnapshotService.cs` → `BodyOrbitPathSampleCount` |
+| **B — Web densify** | Vertices sent to the GPU after arc-length resample | **512** | `planetOrbitStyle.ts` → `PLANET_ORBIT_STYLE.trailVertices` (also `BODY_ORBIT_TRAIL_PERIOD_VERTICES` in `densifyOrbitTrail.ts` for shared helpers) |
+
+```text
+KSP flight scene
+  └─ TelemetrySnapshotService: N samples (fraction i/N, never i=N)
+       └─ JSON bodyOrbitPaths[].samples  (N ≈ 128)
+            └─ resolvePlanetOrbitPointsFromPath: samples if ≥2 else analytic
+                 └─ densifyPlanetOrbitRootPoints → 512 verts
+                      └─ GradientDirectionalOrbitTrail (motion tail on 512)
+```
+
+### When to change which knob
+
+| Symptom | Likely fix |
+|---------|------------|
+| Orbit looks like a **visible polygon** (faceted ring) but icons sit on the trail | Raise **A** (DLL samples). Web densify cannot invent curvature between sparse samples. |
+| Ring is smooth but **jagged at extreme zoom** | Raise **B** (`trailVertices`) only. |
+| Trail **offset from planet** (hundreds of Mm) with `trailRenderMode: samples` | **Geometry**, not vertex count — ensure V3 uses **samples first** (`densifyPlanetOrbitTrail.ts`); do not prefer analytic when samples exist. |
+| Motion tail on wrong side | **§7** anchor / UT — not sample count. |
+
+**Tuning history (phase 2):** 48 DLL samples looked blocky after geometry was fixed; **128** DLL samples + **512** web densify is the current shipped pair (`85-orbit-128-samples`). Try **192** DLL before pushing DLL to 512.
+
+### Procedure — change DLL sample count (stage A)
+
+Requires a **new plugin DLL**; refreshing the browser alone is not enough.
+
+1. Quit KSP.
+2. Edit `src/KspWebMap/Telemetry/TelemetrySnapshotService.cs`:
+   - `private const int BodyOrbitPathSampleCount = 128;` → your value (e.g. `192`).
+   - Do **not** change `MaxBodyOrbitPathCount` (max **bodies** with paths, unrelated).
+3. Optional: update comments in `web/src/map-v3/elements/planetOrbit/planetOrbitStyle.ts` and `web/src/scene/densifyOrbitTrail.ts` (`~128`) so docs match code.
+4. `.\scripts\build.ps1` then `.\scripts\install.ps1` (see [`BUILD_AND_INSTALL.md`](BUILD_AND_INSTALL.md)).
+5. Bump UI cache: `KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`, `?v=` in `GameData/KspWebMap/Web/index.html`, `npm run build`, copy web assets into `GameData/KspWebMap/Web` (build script / install path you normally use).
+6. Start KSP → flight save → map `http://127.0.0.1:8750/?v=…` → hard refresh.
+7. Verify: `GET /api/telemetry` → pick Kerbin (or any planet) → `bodyOrbitPaths[].samples.length` ≈ your count; `validation.trailRenderMode` should be `samples` on a stable save.
+
+**Capture rule (do not remove):** samples use `fraction = i / BodyOrbitPathSampleCount` for `i = 0 … N-1`. The loop **never** uses `fraction = 1.0` (exact `UT + period`) because KSP orbit APIs misbehave at period wrap.
+
+### Procedure — change web draw vertex count (stage B)
+
+Web-only; no DLL rebuild if geometry source is unchanged.
+
+1. Edit `web/src/map-v3/elements/planetOrbit/planetOrbitStyle.ts` → `trailVertices` (default **512**).
+2. If other map modes should match, also set `BODY_ORBIT_TRAIL_PERIOD_VERTICES` in `web/src/scene/densifyOrbitTrail.ts` (used by v1/v2 densify helpers).
+3. `cd web && npm test && npm run build`; stage/copy into `GameData/KspWebMap/Web`; bump `KSP_WEB_MAP_UI_VERSION` and `index.html` `?v=`.
+4. Hard refresh map (KSP can stay running).
+
+`densifyPlanetOrbitRootPoints` arc-length-resamples the closed ring to `trailVertices`. If input already has ≥ `trailVertices` points, it passes through without upsampling.
+
+### Geometry source (must stay samples-first for planets)
+
+V3 planet rings use `resolvePlanetOrbitPointsFromPath` / `resolvePlanetOrbitSourcePoints` in `densifyPlanetOrbitTrail.ts`:
+
+1. If `validation.trailRenderMode === "hidden"` → skip (planner fallback).
+2. If ≥ **2** sample positions in telemetry → use **samples** (matches v2 `bodyOrbitSegmentsForPath`).
+3. Else if analytic elements valid → Kepler ring from `buildBodyOrbitTrailSegments`.
+4. Else planner fallback points.
+
+`planetOrbitTrailUsesAnalyticSource` mirrors (2) vs (3) for UT wiring in `buildPlanetOrbitSegments.ts`. **Do not** invert this order for “smoother” analytic rings when live telemetry disagrees by tens or hundreds of Mm.
+
+### Quick reference — files touched by orbit density work
+
+| Change type | Files |
+|-------------|--------|
+| DLL sample count | `TelemetrySnapshotService.cs` |
+| Web densify target | `planetOrbitStyle.ts`, `densifyPlanetOrbitTrail.ts`, `densifyOrbitTrail.ts` |
+| Geometry source | `densifyPlanetOrbitTrail.ts`, `coords/buildBodyOrbitTrail.ts` (`resolveTrailRenderMode`) |
+| Segment assembly | `buildPlanetOrbitSegments.ts` |
+| Draw | `GradientDirectionalOrbitTrail.tsx`, `orbitTrailDirectionStyle.ts` |
+| Deploy / version | `mount.tsx`, `GameData/KspWebMap/Web/index.html` |
+
+---
+
 ## Cross-links
 
-- [`MAP_V3_PLANET_ORBIT_SPEC.md`](MAP_V3_PLANET_ORBIT_SPEC.md)
+- [`MAP_V3_PLANET_ORBIT_SPEC.md`](MAP_V3_PLANET_ORBIT_SPEC.md) — inclusion, geometry source, acceptance
 - [`MAP_V3_RENDERING_GUIDE.md`](MAP_V3_RENDERING_GUIDE.md) § Planet orbit
 - [`MAP_V3_PROGRAM_STATE.md`](MAP_V3_PROGRAM_STATE.md)
+- [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) — alignment QA and `verify-telemetry.ps1`

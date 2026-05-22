@@ -1,6 +1,6 @@
 # Map V3 — Program state (as-built)
 
-**Revision:** 2026-05-21 (post phase 2 + motion-tail orbit opacity)
+**Revision:** 2026-05-21 (phase 2 complete: motion tail, samples-first geometry, 128→512 orbit density)
 
 ---
 
@@ -10,7 +10,7 @@
 |-------|--------|
 | 0 — Blank canvas | Complete |
 | 1 — Star marker | Complete |
-| 2 — Planet orbits | Complete (KSP motion tail on single closed ring, `81-orbit-motion-tail`) |
+| 2 — Planet orbits | Complete — motion tail, KSP-aligned sample geometry, 128 DLL / 512 web verts (`85-orbit-128-samples`) |
 | 3–12 | Not started (see [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md)) |
 
 - **Default view:** `solarRenderMode: "3d-v3"` in `web/src/store/viewStore.ts`.
@@ -69,9 +69,9 @@ flowchart TB
 | V2 module | V3 usage |
 |-----------|----------|
 | `map-v2/MapContext.ts` | `buildMapContext` (phase 0–2) |
-| `map-v2/TrajectoryPlanner` `BodyOrbit` | Planet path geometry before v3 densify |
+| `map-v2/TrajectoryPlanner` `BodyOrbit` | Planner segments; v3 replaces points via `resolvePlanetOrbitSourcePoints` |
 | `map-v2/SceneFrame` | Re-exported / reused for `toScenePoints` |
-| `coords/buildBodyOrbitTrail.ts` | Analytic planet rings |
+| `coords/buildBodyOrbitTrail.ts` | Analytic fallback, `resolveTrailRenderMode` |
 | `scene/GradientDirectionalOrbitTrail.tsx` | Shared trail drawer (not v3-exclusive) |
 
 ---
@@ -81,20 +81,24 @@ flowchart TB
 | Item | Notes |
 |------|-------|
 | `MapV3LayerStack.tsx` | Manual layer list; `composeMapV3Layers` used in tests/docs only — dynamic registry deferred |
-| `planetBody` | Spec’d but not rendered |
+| `planetBody` | Spec’d but not rendered (phase 3 blocked on orbit acceptance — orbits now aligned) |
 | Vessel orbits | Documented in orbit guide; not wired to drawer |
 | `trailDrawSegments.ts` | Open-trail prototype, unused in production |
-| Analytic planet rings | No `sampleUniversalTimes`; UT wiring applies to sample-only paths |
+| Analytic planet rings | Used only when &lt;2 samples; no `sampleUniversalTimes` on analytic paths |
 
 ---
 
 ## Orbit trail stack (phase 2 detail)
 
-- Drawer: `GradientDirectionalOrbitTrail` — one closed `Line` for planet rings.
-- Style: `orbitTrailDirectionStyle.ts` — `opacityForOrbitTailAhead`, `closedRingHalfGradientOpacities` (attach **1.0**, lead **0.25**, linear ramp in prograde order).
-- Split fallback: `splitOrbitTrailHalves.ts` (open / duplicate-endpoint paths only).
-- Colors: stock `bodyMapColors.ts` palette; alpha-only fade, fixed hue.
-- Visual spec: [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2 (motion tail).
+| Layer | Detail |
+|-------|--------|
+| Capture | DLL **128** samples/period; fraction `i/N`, no wrap at 1.0 |
+| Geometry | Samples-first in `densifyPlanetOrbitTrail.ts` |
+| Densify | Web **512** vertices (`planetOrbitStyle.trailVertices`) |
+| Drawer | `GradientDirectionalOrbitTrail` — one closed `Line` for planet rings |
+| Style | `opacityForOrbitTailAhead` — attach **1.0**, lead **0.25**, linear prograde ramp |
+| Colors | `bodyMapColors.ts`; alpha-only fade |
+| Docs | [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2 motion tail, **§12** vertex tuning |
 
 ---
 
@@ -107,5 +111,6 @@ Phases 3–12 follow [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md) and phase plans (`
 ## Verification baseline
 
 - `npm test` / `npm run build` green.
-- UI version: `KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx` (bumped on each install pass).
+- UI version: `KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx` (currently `85-orbit-128-samples`).
 - Manual: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) phase 2 rows P2-01–P2-10.
+- Flight scripts: [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md).

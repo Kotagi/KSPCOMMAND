@@ -4,7 +4,7 @@ Read in this order when onboarding to the modular solar map:
 
 1. **[MAP_V3_STRUCTURE.md](MAP_V3_STRUCTURE.md)** — Repository layout, principles, data flow.
 2. **[MAP_V3_PROGRAM_STATE.md](MAP_V3_PROGRAM_STATE.md)** — As-built phases, element matrix, debt.
-3. **[ORBIT_TRAIL_DRAWING_GUIDE.md](ORBIT_TRAIL_DRAWING_GUIDE.md)** — KSP trail rendering (required before editing orbit draw code).
+3. **[ORBIT_TRAIL_DRAWING_GUIDE.md](ORBIT_TRAIL_DRAWING_GUIDE.md)** — KSP trail rendering (motion tail §2; **orbit sample/vertex tuning §12**).
 4. **[MAP_V3_RENDERING_GUIDE.md](MAP_V3_RENDERING_GUIDE.md)** — Per-element draw contracts (living).
 5. **[MAP_V3_MODULES.md](MAP_V3_MODULES.md)** — Module I/O and phase flags.
 6. **[MAP_V3_ACCEPTANCE.md](MAP_V3_ACCEPTANCE.md)** — Manual + automated pass criteria.

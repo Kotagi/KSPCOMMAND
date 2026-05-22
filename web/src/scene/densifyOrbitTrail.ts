@@ -1,4 +1,4 @@
-/** Closed body orbit period vertices (telemetry ships ~48). */
+/** Closed body orbit period vertices (telemetry ships ~128). */
 export const BODY_ORBIT_TRAIL_PERIOD_VERTICES = 512;
 
 type Point3 = [number, number, number];
@@ -16,7 +16,7 @@ function lerp3(a: Point3, b: Point3, t: number): Point3 {
 }
 
 /**
- * Uniform arc-length resample so zoomed orbits are smooth circles, not ~48-gons.
+ * Uniform arc-length resample so zoomed orbits are smooth circles, not sparse telemetry gons.
  */
 export function densifyOrbitTrailPoints(
   points: Point3[],

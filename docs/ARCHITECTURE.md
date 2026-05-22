@@ -260,7 +260,7 @@ Truth rules (NASA-aligned patched-conic context; not SPICE/N-body):
 
 References: [NASA Basics of Space Flight — Trajectories](https://science.nasa.gov/learn/basics-of-space-flight/chapter4-1/), [NASA PatCon SOI patching (AAS 07-160)](https://ntrs.nasa.gov/api/citations/20070010447/downloads/20070010447.pdf).
 
-Schema v7 adds `bodyOrbitPaths[]` — root-frame samples of major celestial orbits for faint planet trail lines in 3D.
+Schema v7 adds `bodyOrbitPaths[]` — root-frame samples of major celestial orbits for faint planet trail lines in 3D. The plugin captures **128** samples per orbit period (`BodyOrbitPathSampleCount`); the web map densifies to **512** draw vertices and prefers **telemetry samples** over analytic Kepler rings when both exist (see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12).
 
 Schema v8 unifies body icon and trail geometry under `RootRelativePositionResolver` (resolver v2):
 

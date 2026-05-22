@@ -43161,7 +43161,7 @@ function $R(n) {
 const ru = {
   retrogradeLineWidth: 1,
   progradeLineWidthFactor: 1,
-  /** Arc-length resample target (telemetry ships ~48 samples per period). */
+  /** Arc-length resample target (telemetry ships ~128 samples per period). */
   trailVertices: 512
 };
 function UF(n) {
@@ -49368,7 +49368,7 @@ const zM = {
   syncDashboardView() {
     n_(ke.getState().solarRenderMode);
   }
-}, TC = "84-orbit-samples-first";
+}, TC = "85-orbit-128-samples";
 window.KspSolarMap = zM;
 window.KspSolarMapUiVersion = TC;
 console.log("[KspWebMap] UI", TC);

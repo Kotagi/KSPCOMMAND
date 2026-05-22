@@ -72,7 +72,7 @@ docs/
 ├── README.md                        # Documentation index
 ├── MAP_V3_STRUCTURE.md              # This file
 ├── MAP_V3_PROGRAM_STATE.md          # As-built program state
-├── ORBIT_TRAIL_DRAWING_GUIDE.md     # Orbit trail manual (read before editing trails)
+├── ORBIT_TRAIL_DRAWING_GUIDE.md     # Orbit trails: motion tail §2, sample/vertex tuning §12
 ├── MAP_V3_PHASE0_PLAN.md            # Phase 0 scope and test plan
 ├── MAP_V3_MODULES.md                # Module I/O contracts (living)
 ├── MAP_V3_RENDERING_GUIDE.md        # How each object type is drawn (living)

@@ -36,13 +36,14 @@ This document supports body icon / orbit trail alignment and Phase 11 frame trut
 ## Flight QA checklist (operator)
 
 1. Quit KSP → run `scripts/build.ps1` → `scripts/install.ps1` (see [INSTALL_DLL.md](INSTALL_DLL.md)) → restart KSP.
-2. Open `http://127.0.0.1:8750/?v=45` (hard refresh).
-3. Stable Kerbin orbit: run `scripts/verify-telemetry.ps1` and `scripts/verify-body-positions.ps1` — expect **VERIFY PASS**.
-4. **Full system** camera: Sun at origin, Kerbin on grey ring, icon on ring.
-5. Open HUD → **Show body orbit QA** — confirm `live↔s0` ≈ 0 m; primary banner shows same-UT validation (not Gm-scale).
-6. Optional: `node scripts/diagnose-planet-positions.mjs` — clock table vs KSP neutral map.
-7. Kerbin escape / high eccentricity: trails **hidden** or **samples**; use patch conic checks (not Kerbin trail angle from `verify-vessel-frame`).
-8. If warnings appear in `Player.log` (`[KspWebMap]`), attach excerpt with snapshot id.
+2. Open `http://127.0.0.1:8750/?v=85` (hard refresh; match `index.html` and `KSP_WEB_MAP_UI_VERSION`).
+3. Optional sample density: in telemetry JSON, `bodyOrbitPaths[].samples.length` should be **128** per planet (DLL `BodyOrbitPathSampleCount`). Tuning: [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12.
+4. Stable Kerbin orbit: run `scripts/verify-telemetry.ps1` and `scripts/verify-body-positions.ps1` — expect **VERIFY PASS**.
+5. **Full system** camera: Sun at origin, Kerbin on grey ring, icon on ring.
+6. Open HUD → **Show body orbit QA** — confirm `live↔s0` ≈ 0 m; primary banner shows same-UT validation (not Gm-scale).
+7. Optional: `node scripts/diagnose-planet-positions.mjs` — clock table vs KSP neutral map.
+8. Kerbin escape / high eccentricity: trails **hidden** or **samples**; use patch conic checks (not Kerbin trail angle from `verify-vessel-frame`).
+9. If warnings appear in `Player.log` (`[KspWebMap]`), attach excerpt with snapshot id.
 
 ## Automated tests
 

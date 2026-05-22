@@ -70,7 +70,9 @@ Shared rules (from V2):
 
 | Field | Value |
 |-------|-------|
-| Data source | `telemetry.bodyOrbitPaths` → v2 `BodyOrbit` planner → densify to **512** verts |
+| Geometry | `resolvePlanetOrbitSourcePoints` — **telemetry samples first** (≥2), else analytic; see planet spec |
+| DLL samples | **128** per period (`BodyOrbitPathSampleCount`) |
+| Web densify | Arc-length to **512** verts (`PLANET_ORBIT_STYLE.trailVertices`) |
 | Segment builder | `buildPlanetOrbitSegments` → `kind: planetOrbit` |
 | Primitive | `GradientDirectionalOrbitTrail` → one closed `Line` (512 verts + close duplicate) |
 | Color | `resolvePlanetOrbitColor` → `getKspBodyMapColor(bodyName)` |
@@ -155,3 +157,5 @@ Shared rules (from V2):
 | 2026-05-21 | Phase 1 camera | V3 star-only view must frame the star, not full-system bounds; star uses `focus: null` (not moon LOD `displayFocus`). |
 | 2026-05-21 | Phase 2 | Planet orbits reuse v2 BodyOrbit geometry; v3 adds modular kind + `OrbitTrailV3`; phase 2 enables full solar camera bounds. |
 | 2026-05-21 | Phase 2 | Motion-tail opacity on single closed ring (`81-orbit-motion-tail`); see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2. |
+| 2026-05-21 | Phase 2 | Samples-first planet geometry (`84-orbit-samples-first`); aligns icons with KSP trails. |
+| 2026-05-21 | Phase 2 | **128** DLL orbit samples + **512** web densify (`85-orbit-128-samples`); tuning [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12. |

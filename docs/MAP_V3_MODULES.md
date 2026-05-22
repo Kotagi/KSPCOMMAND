@@ -19,7 +19,8 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). V1 (`3d`) and V2 (`3d-
 
 | Module | Inputs | Outputs | Consumer |
 |--------|--------|---------|----------|
-| `planetOrbitStyle.ts` | `bodyName` | color + width constants | `OrbitTrailV3` |
+| `planetOrbitStyle.ts` | `bodyName` | color, widths, `trailVertices` (**512**) | `buildPlanetOrbitSegments` |
+| `densifyPlanetOrbitTrail.ts` | `BodyOrbitPath`, `MapContext` | samples-first points, densify, UT helpers | `buildPlanetOrbitSegments` |
 | `buildPlanetOrbitSegments.ts` | `MapContext` | `TrajectorySegment[]` kind `planetOrbit` | Planner, layer |
 
 ## Element — `starMarker` (`web/src/map-v3/elements/starMarker/`)

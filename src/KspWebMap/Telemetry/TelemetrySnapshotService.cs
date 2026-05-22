@@ -45,7 +45,7 @@ namespace KspWebMap
             private const string LogPrefix = "[KspWebMap]";
             private const int MaxOrbitPatchCount = 8;
             private const int VesselRootPathSampleCount = 32;
-            private const int BodyOrbitPathSampleCount = 48;
+            private const int BodyOrbitPathSampleCount = 128;
             private const int MaxBodyOrbitPathCount = 48;
             private const double EphemerisValidationToleranceSeconds = 1d;
             private const double VesselPathLiveToleranceMeters = 1000d;

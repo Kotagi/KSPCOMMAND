@@ -14,9 +14,10 @@ alwaysApply: false
 
 Before changing orbit trail rendering or planet/moon orbit builders:
 
-1. Read **`docs/ORBIT_TRAIL_DRAWING_GUIDE.md`** — especially **§2 Motion tail** (faint prograde lead 0.25, bold trailing attach 1.0, linear ramp in prograde order on one closed ring).
-2. Prefer **`opacityForOrbitTailAhead`** / **`closedRingHalfGradientOpacities`** for closed rings; do not reintroduce full-ring symmetric opacity (`trailVertexOpacitiesKspRing`) or retro-only flat dimming mid-orbit.
+1. Read **`docs/ORBIT_TRAIL_DRAWING_GUIDE.md`** — **§2 Motion tail**; **§12** to change DLL sample count (128) or web densify (512); samples-first geometry in `densifyPlanetOrbitTrail.ts`.
+2. Prefer **`opacityForOrbitTailAhead`** / **`closedRingHalfGradientOpacities`** for closed rings; do not reintroduce full-ring symmetric opacity (`trailVertexOpacitiesKspRing`) or analytic-first planet paths when ≥2 telemetry samples exist.
 3. Default new solar-map features to **Map V3** (`3d-v3`, `web/src/scene/v3/`, `web/src/map-v3/`). Keep v1/v2 changes minimal (regression only).
-4. Update **`docs/MAP_V3_RENDERING_GUIDE.md`** and run **`npm test`** when behavior changes.
+4. DLL sample changes require **`scripts/build.ps1`** + **`scripts/install.ps1`**; bump `KSP_WEB_MAP_UI_VERSION` and `index.html` `?v=`.
+5. Update **`docs/MAP_V3_RENDERING_GUIDE.md`**, **`MAP_V3_PLANET_ORBIT_SPEC.md`**, and run **`npm test`** when behavior changes.
 
 Program state: **`docs/MAP_V3_PROGRAM_STATE.md`**.

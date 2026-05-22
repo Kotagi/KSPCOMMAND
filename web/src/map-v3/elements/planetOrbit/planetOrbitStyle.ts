@@ -4,7 +4,7 @@ import { getKspBodyMapColor } from "../../../scene/bodyMapColors";
 export const PLANET_ORBIT_STYLE = {
   retrogradeLineWidth: 1,
   progradeLineWidthFactor: 1,
-  /** Arc-length resample target (telemetry ships ~48 samples per period). */
+  /** Arc-length resample target (telemetry ships ~128 samples per period). */
   trailVertices: 512,
 } as const;
 

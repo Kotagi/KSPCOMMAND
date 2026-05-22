@@ -1,6 +1,8 @@
 # Map V3 — Phase 2 plan
 
-**Goal:** Heliocentric planet orbit polylines on **3D Map V3**, matching v1/v2 KSP colors and retrograde/prograde split styling. No moons, bodies, or vessel.
+**Goal:** Heliocentric planet orbit polylines on **3D Map V3**, matching v1/v2 KSP colors and KSP motion-tail styling on one closed ring. No moons, bodies, or vessel.
+
+**Status (2026-05-21):** Shipped — samples-first geometry, **128** DLL samples / **512** web densify, motion tail (`85-orbit-128-samples`). Tuning: [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12.
 
 ## Deliverables
 
@@ -22,9 +24,11 @@
 - [x] `planner/buildSegments` for `planetOrbit`
 - [x] `OrbitTrailV3` + `PlanetOrbitLayer` + `MapV3LayerStack`
 - [x] `MAP_V3_LAYERS_PHASE2` wired in `Map3DV3` + `CameraRig` star-only guard
-- [x] Documentation updates
+- [x] Documentation updates (incl. orbit guide §12 vertex tuning)
 - [x] `npm test` / `npm run build`
-- [ ] Manual in-game compare with KSP map / v1 (see acceptance)
+- [x] Samples-first planet geometry (`densifyPlanetOrbitTrail.ts`)
+- [x] DLL `BodyOrbitPathSampleCount` = 128
+- [ ] Manual in-game compare with KSP map / v1 (see acceptance P2-05, P2-05a–c)
 
 ## Test plan
 
