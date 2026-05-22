@@ -1,6 +1,6 @@
 # Map V3 — Program state (as-built)
 
-**Revision:** 2026-05-21 (post phase 2 + orbit-trail alignment)
+**Revision:** 2026-05-21 (post phase 2 + motion-tail orbit opacity)
 
 ---
 
@@ -10,7 +10,7 @@
 |-------|--------|
 | 0 — Blank canvas | Complete |
 | 1 — Star marker | Complete |
-| 2 — Planet orbits | Complete (KSP split-trail + prograde vertex gradient) |
+| 2 — Planet orbits | Complete (KSP motion tail on single closed ring, `81-orbit-motion-tail`) |
 | 3–12 | Not started (see [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md)) |
 
 - **Default view:** `solarRenderMode: "3d-v3"` in `web/src/store/viewStore.ts`.
@@ -90,11 +90,11 @@ flowchart TB
 
 ## Orbit trail stack (phase 2 detail)
 
-- Drawer: `GradientDirectionalOrbitTrail` (KspSplitTrailWithProgradeGradient).
-- Split: `splitOrbitTrailHalves.ts`.
-- Style: `orbitTrailDirectionStyle.ts` (`progradeHalfVertexOpacities`).
-- Colors: stock `bodyMapColors.ts` palette.
-- Full manual: [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md).
+- Drawer: `GradientDirectionalOrbitTrail` — one closed `Line` for planet rings.
+- Style: `orbitTrailDirectionStyle.ts` — `opacityForOrbitTailAhead`, `closedRingHalfGradientOpacities` (attach **1.0**, lead **0.25**, linear ramp in prograde order).
+- Split fallback: `splitOrbitTrailHalves.ts` (open / duplicate-endpoint paths only).
+- Colors: stock `bodyMapColors.ts` palette; alpha-only fade, fixed hue.
+- Visual spec: [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2 (motion tail).
 
 ---
 

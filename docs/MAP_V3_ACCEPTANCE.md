@@ -37,7 +37,7 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 | P2-03 | No planet mesh markers, vessel, labels, or SOI rings |
 | P2-04 | Star still visible at center |
 | P2-05 | Side-by-side **3D WebGL (v1)** — trail colors comparable on same flight |
-| P2-05a | Retrograde half **bold** at planet; prograde half **fades** (not uniform ring opacity) |
+| P2-05a | **Motion tail:** bold (**1.0**) where orbit meets planet from behind; faint (**0.25**) prograde lead; linear ramp around ring so orbital direction is obvious without time warp (see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2) |
 | P2-06 | `MapHudV3` shows **v3 phase 2 — planet orbits** |
 | P2-07 | `buildPlanetOrbitSegments` Vitest: ≥1 segment, planets only, no moons |
 | P2-08 | `composeMapV3Layers(PHASE2)` === `["StarMarkerLayer", "PlanetOrbitLayer"]` |

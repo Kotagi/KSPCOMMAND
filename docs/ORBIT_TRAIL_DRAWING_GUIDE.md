@@ -2,43 +2,77 @@
 
 **Document ID:** MAP-ORBIT-TRAIL-001  
 **Audience:** Operators and developers extending KspWebMap solar-map trails  
-**Canonical map:** Map V3 (`solarRenderMode: "3d-v3"`, default in `viewStore.ts`)
+**Canonical map:** Map V3 (`solarRenderMode: "3d-v3"`, default in `viewStore.ts`)  
+**UI reference build:** `81-orbit-motion-tail` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`)
 
 ---
 
 ## 1. Purpose and scope
 
-Orbit trails on the KSP in-game map use **body-anchored directional styling**: bold color at the planet (retrograde), faint color along the prograde half. This project centralizes that look in shared scene modules; V3 element builders only supply geometry, anchor index, optional per-vertex universal time (UT), and color.
+Orbit trails on the KSP in-game map use **body-anchored directional styling** so you can read orbital motion without time warp: a **motion tail** on one closed ring (faint ahead, bold where the trail meets the body from behind). This project centralizes that look in shared scene modules; V3 element builders only supply geometry, anchor index, optional per-vertex universal time (UT), and color.
 
 | Responsibility | Location |
 |----------------|----------|
 | Telemetry → root polylines | `map-v3/elements/*Orbit*/build*Segments.ts` (+ v2 `TrajectoryPlanner` where reused) |
 | Densify / analytic source | `densifyPlanetOrbitTrail.ts`, `coords/buildBodyOrbitTrail.ts` |
 | Draw contract | `web/src/scene/GradientDirectionalOrbitTrail.tsx` |
+| Opacity curve | `web/src/scene/orbitTrailDirectionStyle.ts` (`opacityForOrbitTailAhead`, `closedRingHalfGradientOpacities`) |
 | V3 wiring | `PlanetOrbitLayer` → `OrbitTrailV3` |
 
-**Do not** add a second closed-ring drawer without following the decision tree in §8.
+**Do not** add a second closed-ring drawer without following the decision tree in §9.
 
 ---
 
-## 2. KSP reference behavior
+## 2. Motion tail — how the gradient should look
 
-- **Retrograde half** (from body backward along the trail): full stock body color, **uniform** opacity (`ORBIT_TRAIL_OPACITY_TRAILING` = 1.0).
-- **Prograde half** (from body forward): same hue, **vertex alpha fade** from bold at the body to `ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON` (0.2) at the far end of the half-orbit.
-- **Anchor** at the body icon on the ring (nearest vertex or UT-monotonic step).
-- **Closed heliocentric planet rings** vs **open vessel patches** (future): same split logic; open arcs use `closedWithDuplicateEndpoint: false` and may use `trailDrawSegments` (prototype, not wired).
+This is the **intended visual** (matches stock KSP map direction cues and phase 2 acceptance). Think of a planet on its orbit as you watch it from the map:
+
+1. **At the planet (anchor)** the line is **fully strong** — opacity **1.0**, same hue as the stock body color. This is the **trailing / retrograde attach** point: the “thick end” of the tail where the streak meets the body from behind.
+
+2. **Immediately ahead in the direction of travel (prograde)** the line is **faint** — opacity **0.25** (`ORBIT_TRAIL_TAIL_LEAD`). A thin streak appears to **come out in front** of the planet.
+
+3. **Following the orbit forward** (same direction the planet is moving), opacity **increases linearly** from **0.25** all the way around the ring until the path meets the **rear of the planet** again at **1.0**.
+
+4. **Reading direction:** you can tell which way the body is orbiting **without fast-forwarding** — bold at the back of the motion, faint leading edge ahead, like a comet tail wrapped around the orbit.
+
+**What this is not:**
+
+- Not symmetric “bright at body, dim in the middle, bright at body” on both sides.
+- Not two flat halves (retro all 1.0, prograde all 0.25) with a cliff at the antipode.
+- Not a full-ring cosine wave (washes out to uniform gray).
+- Not RGB dimming — hue stays fixed; only **alpha** changes (`hexToRgbaVertexColors`).
+
+```text
+        prograde (faint 0.25)
+              ╭─────── rising opacity ───────╮
+              ▼                               │
+    [planet] ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+         1.0 attach              linear ramp → 1.0 at rear
+```
+
+**Implementation:** one `@react-three/drei` `Line` on closed planet rings; per-vertex alpha from `opacityForOrbitTailAhead(ahead, n)` where `ahead` is arc steps **in prograde order** from the anchor (`resolveProgradeIndexStep` + UT when available).
+
+---
+
+## 3. KSP reference behavior
+
+- **Trailing side (retrograde, at/just behind the body):** full stock body color, opacity **1.0**.
+- **Leading side (prograde, ahead of the body):** same hue, opacity **0.25** at the first step forward, then **linear** increase along the orbit in the direction of motion until back to **1.0** at the body.
+- **Anchor** at the body icon on the ring (nearest vertex; UT monotonicity picks prograde index step when samples exist).
+- **Closed heliocentric planet rings:** single closed `Line` with vertex colors (not two separate arcs in production).
+- **Open vessel patches** (future): split-trail fallback (`splitOrbitTrailHalves`) — retro half flat **1.0**, prograde half uses the same ramp on an estimated period.
 
 Compare side-by-side with in-game map and **3D WebGL (v1)** on the same flight.
 
 ---
 
-## 3. Module catalog
+## 4. Module catalog
 
 | Module | Inputs | Outputs | When to use |
 |--------|--------|---------|-------------|
-| `GradientDirectionalOrbitTrail.tsx` | `points`, `anchorIndex`, `lineColor`, optional `sampleUniversalTimes` | Two `@react-three/drei` `Line`s | **Default** closed/open trails with KSP split + prograde gradient |
-| `splitOrbitTrailHalves.ts` | points, anchor, closed flag, optional UT | `{ retrograde, prograde }` polylines | Used by drawer only; extend if half boundary logic changes |
-| `orbitTrailDirectionStyle.ts` | counts, UT arrays | opacities, `resolveProgradeIndexStep`, `hexToRgbaVertexColors` | Tuning constants and UT-based prograde direction |
+| `GradientDirectionalOrbitTrail.tsx` | `points`, `anchorIndex`, `lineColor`, optional `sampleUniversalTimes` | One closed `Line` (planets) or two `Line`s (fallback) | **Default** KSP motion tail |
+| `orbitTrailDirectionStyle.ts` | counts, anchor, optional UT | `opacityForOrbitTailAhead`, `closedRingHalfGradientOpacities`, `hexToRgbaVertexColors` | Tuning tail attach/lead and prograde direction |
+| `splitOrbitTrailHalves.ts` | points, anchor, closed flag, optional UT | `{ retrograde, prograde }` polylines | Fallback when `closedWithDuplicateEndpoint` or &lt;3 points |
 | `bodyMapColors.ts` | `bodyName` | hex string | Stock KSP palette (`getKspBodyMapColor`) |
 | `densifyOrbitTrail.ts` | sparse polyline | 512-vertex ring | Arc-length resample; `densifySampleUniversalTimes` for UT |
 | `densifyPlanetOrbitTrail.ts` | `MapContext`, path | 512 planet ring + optional UT | V3 planet-specific analytic preference |
@@ -46,11 +80,11 @@ Compare side-by-side with in-game map and **3D WebGL (v1)** on the same flight.
 | `trailDrawSegments.ts` | open trail + icon | per-chord opacity segments | **Prototype** for open paths; see file header |
 | `DirectionalOrbitTrail.tsx` | same props | delegates to `GradientDirectionalOrbitTrail` | v1 compatibility wrapper |
 
-**Removed (do not resurrect):** `planetOrbitRingHalves.ts`, `opacityForOrbitAheadKspRing`, `trailVertexOpacitiesKspRing` — full-ring vertex gradients washed out to a uniform ring.
+**Removed (do not resurrect):** `planetOrbitRingHalves.ts`, `opacityForOrbitAheadKspRing`, `trailVertexOpacitiesKspRing` — full-ring symmetric vertex gradients washed out to a uniform ring.
 
 ---
 
-## 4. Rendering pipeline
+## 5. Rendering pipeline
 
 ```mermaid
 flowchart LR
@@ -58,78 +92,92 @@ flowchart LR
   trails --> layer[PlanetOrbitLayer]
   layer --> v3[OrbitTrailV3]
   v3 --> drawer[GradientDirectionalOrbitTrail]
-  drawer --> split[splitOrbitTrailHalves]
-  split --> retro[Line retro color]
-  split --> pro[Line pro vertexColors]
+  drawer --> ring[Single Line closed ring]
+  ring --> colors[vertexColors from closedRingHalfGradientOpacities]
 ```
 
-- **Primitive:** `@react-three/drei` `Line` (Line2 under the hood).
-- **Retrograde:** `color={lineColor}`, `opacity={ORBIT_TRAIL_OPACITY_TRAILING}`, `transparent`, `toneMapped={false}`.
-- **Prograde:** `color="#ffffff"`, `vertexColors` from `hexToRgbaVertexColors(lineColor, progradeHalfVertexOpacities(n))`, narrower `lineWidth`.
-- **Canvas:** `Map3DV3` sets `THREE.NoToneMapping` on the renderer — prevents dimmed lines in the KSP CEF host.
+**Closed planet rings** (`closedWithDuplicateEndpoint: false`, ≥3 points):
+
+- One `Line` with `closeRingPoints` (duplicate first vertex for Line2).
+- `vertexColors` from `hexToRgbaVertexColors(lineColor, closedRingHalfGradientOpacities(n, anchor, UT))`.
+- `color="#ffffff"`, `transparent`, `toneMapped={false}`.
+
+**Fallback** (moons with duplicate endpoint, degenerate paths):
+
+- Two `Line`s via `splitOrbitTrailHalves`: retro `retrogradeHalfVertexOpacities` (all **1.0**), prograde `progradeHalfVertexOpacities` (tail ramp).
+
+**Canvas:** `Map3DV3` sets `THREE.NoToneMapping` on the renderer — prevents dimmed lines blowing out or washing in the KSP CEF host.
 
 ---
 
-## 5. Tuning knobs
+## 6. Tuning knobs
 
-| Constant / knob | File | Effect |
-|-----------------|------|--------|
-| `ORBIT_TRAIL_OPACITY_TRAILING` | `orbitTrailDirectionStyle.ts` | Retrograde line opacity (1.0) |
-| `ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON` | same | Prograde far-end target (0.2) |
-| `progradeHalfVertexOpacities(n)` | same | Smooth fade along prograde half only |
-| `progradeLineWidthFactor` | `planetOrbitStyle.ts` / drawer prop | Prograde line width multiplier (0.7) |
+| Constant / function | File | Effect |
+|---------------------|------|--------|
+| `ORBIT_TRAIL_TAIL_ATTACH` | `orbitTrailDirectionStyle.ts` | Opacity at body / trailing attach (**1.0**) |
+| `ORBIT_TRAIL_TAIL_LEAD` | same | Opacity one prograde step ahead of body (**0.25**) |
+| `opacityForOrbitTailAhead(ahead, n)` | same | Linear ramp: `ahead=0` → 1.0, `ahead=1` → 0.25, `ahead=n-1` → 1.0 |
+| `closedRingHalfGradientOpacities` | same | Per-vertex opacities on closed ring using prograde `ahead` |
+| `resolveProgradeIndexStep` | same | +1 / −1 along ring from UT or default |
+| `progradeLineWidthFactor` | `planetOrbitStyle.ts` / drawer prop | Prograde line width on **split** fallback only (0.7) |
 | `PLANET_ORBIT_STYLE.trailVertices` | `planetOrbitStyle.ts` | Densify target (512) |
 | `getKspBodyMapColor` | `bodyMapColors.ts` | Per-body hue |
 
+Aliases for tests/legacy: `ORBIT_TRAIL_HALF_RETRO_BODY` = `TAIL_ATTACH`, `ORBIT_TRAIL_HALF_PROGRADE_FAR` = `TAIL_LEAD`.
+
 ---
 
-## 6. Anchor and prograde direction
+## 7. Anchor and prograde direction
 
 | Mechanism | Role |
 |-----------|------|
 | `anchorIndex` | Vertex nearest live body position on the closed ring |
 | `sampleUniversalTimes` | When present (telemetry **samples** path, not analytic), `resolveProgradeIndexStep` uses UT monotonicity to pick +1 vs −1 index step |
 | `findTrailAnchorOnPeriod` | Nearest vertex to icon for open/duplicate-endpoint trails |
-| Analytic rings | No per-vertex UT; prograde step defaults from geometry |
+| Analytic rings | No per-vertex UT; prograde step defaults from geometry (+1) |
 
 V3 planet pipeline: `buildPlanetOrbitSegments` sets `sampleUniversalTimes` only when `resolvePlanetOrbitPointsFromPath` is **not** used (see `densifyPlanetOrbitTrail.ts`).
 
+**If the faint streak appears on the wrong side:** check anchor index and UT order first; invert is controlled by `resolveProgradeIndexStep`, not by mirroring opacity around the ring.
+
 ---
 
-## 7. Failed approaches (appendix)
+## 8. Failed approaches (appendix)
 
 | Approach | Symptom | Why rejected |
 |----------|---------|--------------|
-| Full-ring cosine vertex opacity (`trailVertexOpacitiesKspRing`) | Entire ring looked one middling opacity | KSP uses **two halves**, not one wave around 360° |
-| Brightness-only fade, alpha = 1 | Washed, no depth cue | KSP fades **alpha** on prograde half |
-| Uniform half-opacity without vertex gradient | Visible seam, flat prograde | Prograde needs smooth vertex fade |
+| Full-ring cosine vertex opacity (`trailVertexOpacitiesKspRing`) | Entire ring one middling opacity | Symmetric wave; not a directional tail |
+| Brightness-only fade, alpha = 1 | Washed, milky | KSP fades **alpha**, fixed hue |
+| Symmetric 1.0 → faint → 1.0 with smoothstep at antipode | Looked like two zones, weak direction cue | Tail must stay **faint only ahead**, bold on trailing arc |
+| Retro half flat 1.0 + prograde half flat dim | Obvious seam at antipode | Replaced by single-ring linear tail ramp |
+| Retro arc ramping 0.34 → 1.0 (v77–v80 experiments) | Retro looked dim mid-orbit | User intent: retro = **no dimming** except via shared ramp back to attach |
 | `planetOrbitRingHalves` dense slices | Redundant with `splitOrbitTrailHalves` | Deleted |
 
 ---
 
-## 8. Decision tree: extend drawer vs new module
+## 9. Decision tree: extend drawer vs new module
 
 ```mermaid
 flowchart TD
   start[New trail visual] --> closed{Closed ring?}
-  closed -->|yes| ksp{KSP retro bold + prograde fade?}
+  closed -->|yes| tail{KSP motion tail?}
   closed -->|no| open{Open arc / patch?}
-  ksp -->|yes| extend[Extend GradientDirectionalOrbitTrail props]
-  ksp -->|no| new[New drawer module + doc section here]
+  tail -->|yes| extend[Extend GradientDirectionalOrbitTrail / opacityForOrbitTailAhead]
+  tail -->|no| new[New drawer module + doc section here]
   open --> chord{Per-chord opacity OK?}
   chord -->|yes| trailSeg[Prototype trailDrawSegments or extend split]
   chord -->|no| new
   extend --> test[Regression: planet orbits + v1 DirectionalOrbitTrail]
 ```
 
-**Extend** when: same two-half model, same Line/material rules, only data plumbing differs.  
-**New module** when: different color model (dashed SOI, multi-band heatmap), non-polyline primitives, or pick/interaction tied to custom geometry.
+**Extend** when: same motion-tail model, same Line/material rules, only data plumbing differs.  
+**New module** when: different color model (dashed SOI, heatmap), non-polyline primitives, or pick tied to custom geometry.
 
 ---
 
-## 9. Recipes
+## 10. Recipes
 
-### 9.1 New closed body orbit (planet / moon)
+### 10.1 New closed body orbit (planet / moon)
 
 1. Add `build*OrbitSegments` under `map-v3/elements/<kind>/`.
 2. Densify to `PLANET_ORBIT_STYLE.trailVertices` (or moon style when added).
@@ -138,11 +186,11 @@ flowchart TD
 5. Layer: map trails → `<OrbitTrailV3 ... />` or pass props to `GradientDirectionalOrbitTrail`.
 6. Update `MAP_V3_RENDERING_GUIDE.md` and acceptance IDs.
 
-### 9.2 Wire existing drawer (already done for V3 planets)
+### 10.2 Wire existing drawer (V3 planets)
 
-`PlanetOrbitLayer` → `useV3RootSegments("planetOrbit")` → `useV3SceneTrails` → `OrbitTrailV3` → `GradientDirectionalOrbitTrail`.
+`PlanetOrbitLayer` → `useV3RootSegments("planetOrbit")` → `useV3SceneTrails` → `OrbitTrailV3` → `GradientDirectionalOrbitTrail` (single ring).
 
-### 9.3 Future vessel open arc (stub)
+### 10.3 Future vessel open arc (stub)
 
 1. Build open `TrajectorySegment` (`closed: false`).
 2. Pass `sampleUniversalTimes` from vessel root path samples.
@@ -151,13 +199,13 @@ flowchart TD
 
 ---
 
-## 10. Verification
+## 11. Verification
 
 | Check | How |
 |-------|-----|
 | Unit | `npm test` — `orbitTrailDirectionStyle.test.ts`, `splitOrbitTrailHalves.test.ts`, `buildPlanetOrbitSegments.test.ts` |
 | Build | `npm run build` |
-| Visual | In-game vs **3D Map V3** — retro bold at planet, prograde fade visible |
+| Visual | In-game vs **3D Map V3** — faint prograde lead, bold trailing attach, direction obvious without time warp |
 | Deploy | `scripts/build.ps1` + `scripts/install.ps1`; confirm `window.KspSolarMapUiVersion` |
 | Cache | `index.html` `?v=` matches bundle generation |
 

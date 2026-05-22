@@ -38,9 +38,9 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). V1 (`3d`) and V2 (`3d-
 | `layers/StarMarkerLayer.tsx` | Emissive textured sphere per segment |
 | `layers/PlanetOrbitLayer.tsx` | Planet orbit polylines via `OrbitTrailV3` |
 | `layers/OrbitTrailV3.tsx` | Planet trails → `GradientDirectionalOrbitTrail` |
-| `scene/GradientDirectionalOrbitTrail.tsx` | Shared KSP split-trail drawer (v1/v2/v3) |
+| `scene/GradientDirectionalOrbitTrail.tsx` | Shared motion-tail drawer (single closed ring; split fallback) |
 | `scene/splitOrbitTrailHalves.ts` | Half-orbit polyline split at anchor |
-| `scene/orbitTrailDirectionStyle.ts` | Opacity constants + prograde vertex curve |
+| `scene/orbitTrailDirectionStyle.ts` | Motion-tail opacity (`opacityForOrbitTailAhead`, attach 1.0 / lead 0.25) |
 
 ## Element kinds
 

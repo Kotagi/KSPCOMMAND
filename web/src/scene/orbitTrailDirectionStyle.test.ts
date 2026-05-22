@@ -3,14 +3,15 @@ import {
   findTrailAnchorIndex,
   findTrailAnchorOnPeriod,
   opacityAlongTrailIndex,
+  opacityForOrbitTailAhead,
   opacityForTrailSegmentDirected,
   rotateTrailToAnchorIndex,
   trailVertexOpacities,
   progradeHalfVertexOpacities,
   retrogradeHalfVertexOpacities,
   closedRingHalfGradientOpacities,
-  ORBIT_TRAIL_HALF_PROGRADE_BODY,
-  ORBIT_TRAIL_HALF_PROGRADE_FAR,
+  ORBIT_TRAIL_TAIL_ATTACH,
+  ORBIT_TRAIL_TAIL_LEAD,
   ORBIT_TRAIL_HALF_RETRO_BODY,
   ORBIT_TRAIL_HALF_RETRO_FAR,
   ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON,
@@ -69,28 +70,42 @@ describe("orbitTrailDirectionStyle", () => {
     );
   });
 
-  it("retrograde half fades 1.0 at body to 0.7 at far end", () => {
+  it("retrograde half is solid 1.0 on every vertex", () => {
     const ops = retrogradeHalfVertexOpacities(64);
-    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_HALF_RETRO_BODY, 5);
+    expect(ops.every((a) => a === ORBIT_TRAIL_HALF_RETRO_BODY)).toBe(true);
     expect(ops[ops.length - 1]).toBeCloseTo(ORBIT_TRAIL_HALF_RETRO_FAR, 5);
   });
 
-  it("closed ring: bold at body, 0.4 at prograde antipode, returns to 1.0 on retro arc", () => {
+  it("motion tail: attach 1.0 at body, lead 0.25 one step prograde, linear to 1.0", () => {
     const n = 64;
-    const half = Math.floor((n - 1) / 2);
-    const ops = closedRingHalfGradientOpacities(n, 0);
-    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_HALF_RETRO_BODY, 5);
-    expect(ops[half]).toBeCloseTo(ORBIT_TRAIL_HALF_PROGRADE_FAR, 5);
-    expect(ops[half + 1]).toBeGreaterThan(ORBIT_TRAIL_HALF_PROGRADE_FAR);
-    expect(ops[n - 1]).toBeGreaterThan(ORBIT_TRAIL_HALF_RETRO_FAR);
+    expect(opacityForOrbitTailAhead(0, n)).toBeCloseTo(ORBIT_TRAIL_TAIL_ATTACH, 5);
+    expect(opacityForOrbitTailAhead(1, n)).toBeCloseTo(ORBIT_TRAIL_TAIL_LEAD, 5);
+    expect(opacityForOrbitTailAhead(n - 1, n)).toBeCloseTo(
+      ORBIT_TRAIL_TAIL_ATTACH,
+      5,
+    );
+    const mid = opacityForOrbitTailAhead(32, n);
+    expect(mid).toBeGreaterThan(ORBIT_TRAIL_TAIL_LEAD);
+    expect(mid).toBeLessThan(ORBIT_TRAIL_TAIL_ATTACH);
   });
 
-  it("prograde half fades 0.7 at body to 0.4 at far end", () => {
+  it("closed ring uses monotonic tail ramp in prograde order", () => {
+    const n = 64;
+    const times = Array.from({ length: n }, (_, i) => 1000 + i);
+    const ops = closedRingHalfGradientOpacities(n, 0, times);
+    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_TAIL_ATTACH, 5);
+    expect(ops[1]).toBeCloseTo(ORBIT_TRAIL_TAIL_LEAD, 5);
+    expect(ops[n - 1]).toBeCloseTo(ORBIT_TRAIL_TAIL_ATTACH, 5);
+    for (let i = 2; i < n - 1; i += 1) {
+      expect(ops[i]).toBeGreaterThanOrEqual(ops[i - 1] - 1e-9);
+    }
+  });
+
+  it("prograde half starts at tail lead and rises toward attach", () => {
     const ops = progradeHalfVertexOpacities(64);
-    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_HALF_PROGRADE_BODY, 5);
-    expect(ops[ops.length - 1]).toBeCloseTo(ORBIT_TRAIL_HALF_PROGRADE_FAR, 5);
-    expect(ops[32]).toBeGreaterThan(ORBIT_TRAIL_HALF_PROGRADE_FAR);
-    expect(ops[32]).toBeLessThan(ORBIT_TRAIL_HALF_PROGRADE_BODY);
+    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_TAIL_ATTACH, 5);
+    expect(ops[1]).toBeCloseTo(ORBIT_TRAIL_TAIL_LEAD, 5);
+    expect(ops[ops.length - 1]).toBeGreaterThan(ORBIT_TRAIL_TAIL_LEAD);
   });
 
   it("rotates closed trail so anchor vertex is first", () => {

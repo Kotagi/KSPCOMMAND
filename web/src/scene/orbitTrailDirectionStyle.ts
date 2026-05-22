@@ -8,11 +8,18 @@ export const ORBIT_TRAIL_OPACITY_TRAILING = 1;
 /** Prograde arc ahead of the icon (step-style planners / legacy). */
 export const ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON = 0.2;
 
-/** Split-trail half gradients (body → far end of each half). */
-export const ORBIT_TRAIL_HALF_RETRO_BODY = 1;
-export const ORBIT_TRAIL_HALF_RETRO_FAR = 0.7;
-export const ORBIT_TRAIL_HALF_PROGRADE_BODY = 0.7;
-export const ORBIT_TRAIL_HALF_PROGRADE_FAR = 0.4;
+/** Motion tail: bold where orbit meets the body from behind (retrograde attach). */
+export const ORBIT_TRAIL_TAIL_ATTACH = 1;
+/** Motion tail: faint leading edge in prograde direction (ahead of the body). */
+export const ORBIT_TRAIL_TAIL_LEAD = 0.25;
+
+/** Retrograde arc — full strength, no fade (split-trail fallback). */
+export const ORBIT_TRAIL_HALF_RETRO_BODY = ORBIT_TRAIL_TAIL_ATTACH;
+export const ORBIT_TRAIL_HALF_RETRO_FAR = ORBIT_TRAIL_TAIL_ATTACH;
+/** @deprecated Use {@link ORBIT_TRAIL_TAIL_LEAD}. */
+export const ORBIT_TRAIL_HALF_PROGRADE_BODY = ORBIT_TRAIL_TAIL_LEAD;
+/** @deprecated Use {@link ORBIT_TRAIL_TAIL_LEAD}. */
+export const ORBIT_TRAIL_HALF_PROGRADE_FAR = ORBIT_TRAIL_TAIL_LEAD;
 
 /**
  * Opacity for a vertex on a body orbit trail (anchored at sample 0 = body at capture UT).
@@ -357,53 +364,65 @@ export function halfOrbitVertexOpacities(
 }
 
 /**
- * One closed ring: bold at body (1.0), prograde arc 0.7→0.4, retro arc 0.4→0.7→1.0.
- * Avoids two-Line seam and wash-out from a symmetric cosine around 360°.
+ * Opacity along orbit in prograde order from the body: 1.0 at anchor (trailing attach),
+ * 0.25 one step ahead (leading edge), then linear rise back to 1.0 before the rear meets the body.
+ */
+export function opacityForOrbitTailAhead(
+  ahead: number,
+  periodVertices: number,
+): number {
+  const n = Math.max(2, periodVertices);
+  if (ahead <= 0) {
+    return ORBIT_TRAIL_TAIL_ATTACH;
+  }
+  const span = Math.max(1, n - 2);
+  const t = Math.min(1, Math.max(0, (ahead - 1) / span));
+  return (
+    ORBIT_TRAIL_TAIL_LEAD
+    + (ORBIT_TRAIL_TAIL_ATTACH - ORBIT_TRAIL_TAIL_LEAD) * t
+  );
+}
+
+/**
+ * One closed ring motion tail (KSP-style direction cue).
  */
 export function closedRingHalfGradientOpacities(
   periodVertices: number,
   anchorIndex: number,
+  sampleUniversalTimes?: number[],
 ): number[] {
   const n = Math.max(2, periodVertices);
-  const half = Math.max(1, Math.floor((n - 1) / 2));
+  const progradeStep = resolveProgradeIndexStep(
+    anchorIndex,
+    n,
+    sampleUniversalTimes,
+  );
+
   return Array.from({ length: n }, (_, periodIndex) => {
-    const ahead = (periodIndex - anchorIndex + n) % n;
-    if (ahead === 0) {
-      return ORBIT_TRAIL_HALF_RETRO_BODY;
-    }
-    if (ahead <= half) {
-      const t = ahead / half;
-      return (
-        ORBIT_TRAIL_HALF_PROGRADE_BODY
-        + (ORBIT_TRAIL_HALF_PROGRADE_FAR - ORBIT_TRAIL_HALF_PROGRADE_BODY) * t
-      );
-    }
-    const retroSteps = ahead - half;
-    const retroSpan = Math.max(1, n - 1 - half);
-    const t = retroSteps / retroSpan;
-    return (
-      ORBIT_TRAIL_HALF_RETRO_FAR
-      + (ORBIT_TRAIL_HALF_RETRO_BODY - ORBIT_TRAIL_HALF_RETRO_FAR) * t
+    const ahead = aheadAlongPrograde(
+      periodIndex,
+      anchorIndex,
+      n,
+      progradeStep,
     );
+    return opacityForOrbitTailAhead(ahead, n);
   });
 }
 
-/** Retrograde half: 1.0 at body → 0.7 at far end. */
+/** Retrograde half: solid 1.0 (no vertex fade). */
 export function retrogradeHalfVertexOpacities(vertexCount: number): number[] {
-  return halfOrbitVertexOpacities(
-    vertexCount,
-    ORBIT_TRAIL_HALF_RETRO_BODY,
-    ORBIT_TRAIL_HALF_RETRO_FAR,
-  );
+  const count = Math.max(1, vertexCount);
+  return Array.from({ length: count }, () => ORBIT_TRAIL_HALF_RETRO_BODY);
 }
 
-/** Prograde half: 0.7 at body → 0.4 at far end. */
+/** Prograde half of split trail: same linear tail ramp on an estimated full period. */
 export function progradeHalfVertexOpacities(vertexCount: number): number[] {
-  return halfOrbitVertexOpacities(
-    vertexCount,
-    ORBIT_TRAIL_HALF_PROGRADE_BODY,
-    ORBIT_TRAIL_HALF_PROGRADE_FAR,
-  );
+  const count = Math.max(1, vertexCount);
+  const estimatedPeriod = Math.max(2, (count - 1) * 2);
+  return Array.from({ length: count }, (_, i) => {
+    const ahead = i === 0 ? 0 : 1 + Math.round(((i - 1) / Math.max(1, count - 1)) * (estimatedPeriod - 2));
+    return opacityForOrbitTailAhead(ahead, estimatedPeriod);
+  });
 }
 
 export function trailVertexOpacities(

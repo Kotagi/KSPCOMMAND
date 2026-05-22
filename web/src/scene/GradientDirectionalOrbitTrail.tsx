@@ -25,8 +25,7 @@ function closeRingPoints(points: Point3[]): Point3[] {
 
 /**
  * KspSplitTrailWithHalfGradients — shared closed-ring drawer (V3 planet orbits).
- * - Retrograde half: vertex alpha 1.0 at body → 0.7 at far end
- * - Prograde half: vertex alpha 0.7 at body → 0.4 at far end (fixed RGB)
+ * - One ring motion tail: 1.0 at body (trailing), 0.25 prograde lead, linear ramp around orbit
  */
 export function GradientDirectionalOrbitTrail({
   lineKey,
@@ -56,6 +55,7 @@ export function GradientDirectionalOrbitTrail({
     const ringOpacities = closedRingHalfGradientOpacities(
       points.length,
       anchorIndex,
+      sampleUniversalTimes,
     );
     const closedPoints = closeRingPoints(points);
     const closedOpacities =

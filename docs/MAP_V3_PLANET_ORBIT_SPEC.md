@@ -52,7 +52,7 @@ V3 delegates geometry to v2 `buildSegments(ctx, "BodyOrbit", { planetOnly: true 
 |------|------|--------|
 | Per-body hex color | `web/src/scene/bodyMapColors.ts` `KSP_BODY_MAP_COLORS` | Orbit line hue |
 | Default fallback color | `DEFAULT_BODY_COLOR` in same file | Unknown bodies |
-| Retro/prograde split + prograde fade | `GradientDirectionalOrbitTrail.tsx`, `splitOrbitTrailHalves.ts`, `orbitTrailDirectionStyle.ts` | See orbit guide |
+| Motion-tail opacity (single closed ring) | `GradientDirectionalOrbitTrail.tsx`, `orbitTrailDirectionStyle.ts` | [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2 — 1.0 at body (trailing), 0.25 prograde lead, linear ramp |
 | Line widths | `web/src/map-v3/elements/planetOrbit/planetOrbitStyle.ts` | `retrogradeLineWidth`, `progradeLineWidthFactor` |
 | Trail vertex count | `planetOrbitStyle.ts` `trailVertices` (default **512**) | Smooth closed rings vs performance |
 | Hidden paths | `resolveTrailRenderMode` in `web/src/coords/buildBodyOrbitTrail.ts` | Skip low-quality trails |

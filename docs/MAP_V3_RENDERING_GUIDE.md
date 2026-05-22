@@ -72,11 +72,11 @@ Shared rules (from V2):
 |-------|-------|
 | Data source | `telemetry.bodyOrbitPaths` → v2 `BodyOrbit` planner → densify to **512** verts |
 | Segment builder | `buildPlanetOrbitSegments` → `kind: planetOrbit` |
-| Primitive | `GradientDirectionalOrbitTrail` → `@react-three/drei` `Line` ×2 |
+| Primitive | `GradientDirectionalOrbitTrail` → one closed `Line` (512 verts + close duplicate) |
 | Color | `resolvePlanetOrbitColor` → `getKspBodyMapColor(bodyName)` |
-| Opacity | Retro: solid `color` + `ORBIT_TRAIL_OPACITY_TRAILING`; prograde: `vertexColors` via `progradeHalfVertexOpacities` |
-| Line width | Retro: `1.0`; prograde: `0.7×` (`progradeLineWidthFactor`) |
-| Prograde direction | `sampleUniversalTimes` on segment when telemetry samples used (omitted for analytic rings) |
+| Opacity | Motion tail: `ORBIT_TRAIL_TAIL_ATTACH` 1.0 at body, `ORBIT_TRAIL_TAIL_LEAD` 0.25 one step prograde, linear ramp to 1.0 via `closedRingHalfGradientOpacities` + `vertexColors` |
+| Line width | `1.0` on single ring (`progradeLineWidthFactor` only on split-trail fallback) |
+| Prograde direction | `sampleUniversalTimes` when telemetry samples used (omitted for analytic rings); see orbit guide §2 |
 | Tone mapping | `Map3DV3` `NoToneMapping` — see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) |
 | Frame | `useV3SceneTrails` → `toScenePoints` with normal `sceneFrame` |
 | Visibility | `visibleBodyNames` ∩ `hierarchy.planetNames` |
@@ -154,3 +154,4 @@ Shared rules (from V2):
 | 2026-05-21 | Phase 1 | Star uses v2 `starBody` + modular `SystemAnchor`; emissive mesh matches V2 `StarLayer` (CEF-safe, no EffectComposer). |
 | 2026-05-21 | Phase 1 camera | V3 star-only view must frame the star, not full-system bounds; star uses `focus: null` (not moon LOD `displayFocus`). |
 | 2026-05-21 | Phase 2 | Planet orbits reuse v2 BodyOrbit geometry; v3 adds modular kind + `OrbitTrailV3`; phase 2 enables full solar camera bounds. |
+| 2026-05-21 | Phase 2 | Motion-tail opacity on single closed ring (`81-orbit-motion-tail`); see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2. |
