@@ -10,7 +10,7 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). **V3 core is canonical
 | `SceneFrame.ts` | focus, `displayScale` | `toScenePoint`, `toScenePoints` | Layers |
 | `rootPointSafety.ts` | `Vector3` | `isFiniteRootPoint` | `SceneFrame` |
 | `types.ts` | — | `MapElementKind`, `SystemAnchor`, `TrajectorySegment` | Planner + layers |
-| `layerFlags.ts` | — | `MAP_V3_LAYERS_PHASE0/1/2` | `Map3DV3`, tests |
+| `layerFlags.ts` | — | `MAP_V3_LAYERS_PHASE0/1/2/3` | `Map3DV3`, tests |
 | `useMapV3Trails.ts` | `MapContext`, kind | root + scene trails | Orbit layers |
 | `MapComposer.ts` | `MapV3LayerFlags` | active layer id list | Docs + tests |
 | `MapV3Context.tsx` | store + moon LOD | React context | All v3 layers |
@@ -25,6 +25,17 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). **V3 core is canonical
 | `densifyPlanetOrbitTrail.ts` | `BodyOrbitPath`, `MapContext` | samples-first points, densify, UT helpers | `buildPlanetOrbitSegments` |
 | `buildPlanetOrbitSegments.ts` | `MapContext` | `TrajectorySegment[]` kind `planetOrbit` (v3-native, no v2 planner) | `planner/buildSegments`, layer |
 
+## Element — `planetBody` (`web/src/map-v3/elements/planetBody/`)
+
+| Module | Inputs | Outputs | Consumer |
+|--------|--------|---------|----------|
+| `buildPlanetBodySegments.ts` | `MapContext` | `TrajectorySegment[]` kind `planetBody` | `planner/buildSegments`, layer |
+| `planetBodyLod.ts` | `meshR`, `cameraDistance` | `mesh` \| `icon` draw mode | `PlanetBodyMesh` |
+
+**Spec:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md)
+
+**Presentation:** `scene/v3/layers/PlanetBodyLayer.tsx` → `PlanetBodyMesh.tsx`
+
 ## Element — `starMarker` (`web/src/map-v3/elements/starMarker/`)
 
 | Module | Inputs | Outputs | Consumer |
@@ -36,10 +47,11 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). **V3 core is canonical
 
 | Module | Role |
 |--------|------|
-| `Map3DV3.tsx` | Canvas; `MAP_V3_LAYERS_PHASE2` |
+| `Map3DV3.tsx` | Canvas; `MAP_V3_LAYERS_PHASE3` |
 | `MapV3LayerStack.tsx` | Mounts layer components |
 | `layers/StarMarkerLayer.tsx` | Emissive textured sphere per segment |
 | `layers/PlanetOrbitLayer.tsx` | Planet orbit polylines via `OrbitTrailV3` |
+| `layers/PlanetBodyLayer.tsx` | Planet mesh/icon LOD per segment |
 | `layers/OrbitTrailV3.tsx` | Planet trails → `GradientDirectionalOrbitTrail` |
 | `scene/GradientDirectionalOrbitTrail.tsx` | Shared motion-tail drawer (single closed ring; split fallback) |
 | `scene/splitOrbitTrailHalves.ts` | Half-orbit polyline split at anchor |
@@ -75,12 +87,18 @@ Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 | `soiRing` | 11 | `SoiRingLayer.tsx` | Planned |
 | `selection` | 12 | `SelectionLayer.tsx` | Planned |
 
-## Phase 2 state
+## Phase 2 state (regression)
 
 - `MAP_V3_LAYERS_PHASE2`: `starMarker` + `planetOrbit` true
 - `composeMapV3Layers(PHASE2)` → `["StarMarkerLayer", "PlanetOrbitLayer"]`
-- Production `Map3DV3` uses phase 2 flags
 - `MAP_V3_LAYERS_PHASE1` retained for regression tests
+
+## Phase 3.1 state (production)
+
+- `MAP_V3_LAYERS_PHASE3`: phase 2 + `planetBody` true
+- `composeMapV3Layers(PHASE3)` → `["StarMarkerLayer", "PlanetOrbitLayer", "PlanetBodyLayer"]`
+- Production `Map3DV3` uses phase 3 flags
+- Element spec: [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md)
 
 ## Multi-star (planned)
 
@@ -98,6 +116,6 @@ Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 4. Register case in `planner/buildSegments.ts`
 5. Add `*Layer.tsx` under `scene/v3/layers/` and mount in `MapV3LayerStack.tsx`
 6. Enable in next `MAP_V3_LAYERS_PHASEn` constant
-7. Fill `MAP_V3_RENDERING_GUIDE.md` + `MAP_V3_ACCEPTANCE.md`
+7. Fill `MAP_V3_RENDERING_GUIDE.md` + `MAP_V3_ACCEPTANCE.md` (+ element spec, e.g. `MAP_V3_PLANET_BODY_SPEC.md`)
 
 Port behavior from v2 layers only as a reference; implement segment data in `map-v3/`.

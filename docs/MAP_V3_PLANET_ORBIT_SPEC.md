@@ -19,6 +19,7 @@
 | [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) | Motion tail §2, vertex/sample tuning **§12** |
 | [`MAP_V3_RENDERING_GUIDE.md`](MAP_V3_RENDERING_GUIDE.md) | Living § Planet orbit summary |
 | [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) | Icon/trail alignment verification |
+| [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md) | Phase 3.1 planet mesh/icon (sister element) |
 | [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) | Sun-child capture frame (inclination / plane) |
 
 ## Inclusion rules
@@ -29,7 +30,7 @@
 | **Moon** | Never |
 | **Root / Sun** | Never as orbit trail (star uses `starMarker`) |
 | **Vessel** | Never |
-| **Planet mesh** | Out of scope (Phase 3 `planetBody`) |
+| **Planet mesh** | See [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md) (Phase 3.1 `planetBody`) |
 
 V3 lists paths with `shouldIncludeHeliocentricPlanetOrbit` (same rules as former v2 `BodyOrbit` + `planetOnly`), then builds geometry via `resolvePlanetOrbitSourcePoints` (samples-first, see below). No `map-v2/TrajectoryPlanner` import in production code ([`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md)).
 

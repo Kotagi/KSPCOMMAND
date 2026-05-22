@@ -28,7 +28,7 @@ Shared rules (from V2):
 |------|-------|-------|--------|-------------|
 | `starMarker` | `StarMarkerLayer` | 1 | **Implemented** | § Star marker |
 | `planetOrbit` | `PlanetOrbitLayer` | 2 | **Implemented** | § Planet orbit |
-| `planetBody` | `PlanetBodyLayer` | 3.1 | **Implemented** | § Planet body |
+| `planetBody` | `PlanetBodyLayer` | 3.1 | **Implemented** | [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md) |
 | `moonOrbit` | `MoonOrbitLayer` | 4 | Not started | § Moon orbit |
 | `moonBody` | `MoonBodyLayer` | 5 | Not started | § Moon body |
 | `vesselMarker` | `VesselMarkerLayer` | 6 | Not started | § Vessel marker |
@@ -53,7 +53,7 @@ Shared rules (from V2):
 | Texture | `getSunTexture()` procedural map |
 | Color | `getKspBodyMapColor(bodyName)` |
 | Emissive | `#ffaa00`, intensity `1.2` |
-| Frame | `toScenePoint(seg.points[0], sceneFrame)` |
+| Frame | `toScenePoint(seg.points[0], starMarkerDrawFrame(sceneFrame))` — world shift when body/SOI focused |
 | LOD | `bodyMeshRadius` with `SUN_MIN_MESH_RADIUS` floor when `bodyName === hierarchy.rootBody` |
 | Render order | `10` |
 | Pick id | Deferred (Phase 12 selection) |
@@ -98,12 +98,14 @@ Shared rules (from V2):
 | Segment builder | `buildPlanetBodySegments` → one point per planet, `kind: planetBody` |
 | LOD | V3 `planetBodyLod.ts` — always on; mesh when `meshR/camDist > 0.12`, else icon radius `0.06` |
 | Scale | `bodyMeshRadius` + `hostPlanetOpen` (solar floor `0.05` when host closed) |
-| Primitive | `sphereGeometry` + `meshBasicMaterial` |
+| Primitive | `sphereGeometry` (mesh **32×32**, icon **24×24**) + `meshBasicMaterial` |
 | Color | `useKspBodyMapColor` (orbit table + Customize Map overrides) |
 | Frame | `toScenePoint(seg.points[0], sceneFrame)` |
 | Visibility | `visibleBodyNames` ∩ `planetNames` (same as `PlanetOrbitLayer`) |
 | Flags | `MAP_V3_LAYERS_PHASE3.planetBody` |
 | Render order | mesh `1`, icon `2` |
+
+**Spec:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md)
 
 **Files:** `map-v3/elements/planetBody/*`, `scene/v3/layers/PlanetBodyLayer.tsx`, `PlanetBodyMesh.tsx`
 

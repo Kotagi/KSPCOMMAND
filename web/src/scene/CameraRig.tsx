@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { MOUSE } from "three";
@@ -13,6 +13,34 @@ import { buildMapContext } from "../map-v2/MapContext";
 import { getStarMarkerCameraBounds } from "../map-v3/camera/starCameraBounds";
 import { composeMapV3Layers } from "../map-v3/MapComposer";
 import { MAP_V3_LAYERS_PHASE3 } from "../map-v3/layerFlags";
+import { bodyMeshRadius } from "./bodyVisualScale";
+import type { SolarSystemModel } from "../model/buildSolarSystemModel";
+
+/** Closest orbit distance ≈ just outside the focused body sphere. */
+const BODY_FOCUS_ZOOM_SURFACE_FACTOR = 1.08;
+
+function resolveOrbitMinDistance(
+  cameraMode: string,
+  focusBodyName: string | null,
+  model: SolarSystemModel | null,
+  displayScale: number,
+  hostPlanetOpen: boolean,
+): number {
+  if (cameraMode === "bodyFocus" && focusBodyName && model?.hierarchy) {
+    const entry = model.bodies.find((b) => b.body.name === focusBodyName);
+    if (entry) {
+      const meshR = bodyMeshRadius({
+        bodyName: focusBodyName,
+        radiusMeters: Math.max(entry.body.radiusMeters ?? 1000, 1000),
+        displayScale,
+        hierarchy: model.hierarchy,
+        hostPlanetOpen,
+      });
+      return Math.max(meshR * BODY_FOCUS_ZOOM_SURFACE_FACTOR, 1e-4);
+    }
+  }
+  return 0.001;
+}
 
 function isMapV3StarOnlyView(
   solarRenderMode: string,
@@ -33,12 +61,27 @@ export function CameraRig() {
   const cameraMode = useViewStore((s) => s.cameraMode);
   const displayScale = useViewStore((s) => s.displayScale);
   const focusBodyName = useViewStore((s) => s.focusBodyName);
-  const { displayFocus, reason: moonLodReason } = useMoonVisibilityContext();
+  const { displayFocus, reason: moonLodReason, hostPlanetOpen } =
+    useMoonVisibilityContext();
   const userInteracted = useViewStore((s) => s.userInteractedCamera);
   const cameraFitNonce = useViewStore((s) => s.cameraFitNonce);
   const setUserInteracted = useViewStore((s) => s.setUserInteractedCamera);
   const { camera } = useThree();
   const lastFitNonce = useRef(-1);
+
+  const minZoomDistance = useMemo(
+    () =>
+      resolveOrbitMinDistance(
+        cameraMode,
+        focusBodyName,
+        model,
+        displayScale,
+        hostPlanetOpen,
+      ),
+    [cameraMode, focusBodyName, model, displayScale, hostPlanetOpen],
+  );
+
+  const isBodyFocus = cameraMode === "bodyFocus";
 
   useEffect(() => {
     if (userInteracted && lastFitNonce.current === cameraFitNonce) {
@@ -102,11 +145,9 @@ export function CameraRig() {
 
   useFrame(() => {
     camera.far = 100000;
-    camera.near = 0.01;
+    camera.near = Math.min(0.01, minZoomDistance * 0.2);
     camera.updateProjectionMatrix();
   });
-
-  const isBodyFocus = cameraMode === "bodyFocus";
 
   return (
     <OrbitControls
@@ -114,7 +155,7 @@ export function CameraRig() {
       makeDefault
       enableDamping
       dampingFactor={0.08}
-      minDistance={isBodyFocus ? 0.4 : 0.01}
+      minDistance={minZoomDistance}
       maxDistance={isBodyFocus ? 5000 : 100000}
       mouseButtons={{
         LEFT: MOUSE.PAN,

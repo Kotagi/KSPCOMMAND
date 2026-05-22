@@ -149,8 +149,8 @@ Phase 0 stops after `MapV3Context` (no segments, no layers).
 |-------|-----------------|----------|-------------|
 | 0 | none | — | Structure + blank scene |
 | 1 | `starMarker` | `StarMarkerLayer` | § Star — **shipped** |
-| 2 | `planetOrbit` | `PlanetOrbitLayer` | § Planet orbit |
-| 3 | `planetBody` | `PlanetBodyLayer` | § Planet body |
+| 2 | `planetOrbit` | `PlanetOrbitLayer` | [`MAP_V3_PLANET_ORBIT_SPEC.md`](MAP_V3_PLANET_ORBIT_SPEC.md) — **shipped** |
+| 3.1 | `planetBody` | `PlanetBodyLayer` | [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md) — **shipped** |
 | … | … | … | … |
 
 Full matrix will mirror V2 roles (`docs/MAP_V2_MODULES.md`) but with V3 element IDs and independent layer files.

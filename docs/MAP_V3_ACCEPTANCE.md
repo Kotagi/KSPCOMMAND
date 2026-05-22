@@ -49,6 +49,29 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 
 **Automated:** P2-07, P2-08 via `npm test`. P2-01–P2-06, P2-09–P2-10 require manual flight check.
 
+## Phase 3.1 — Planet bodies
+
+**Spec:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md)
+
+| ID | Pass criteria |
+|----|----------------|
+| P3-01 | Every visible heliocentric planet has mesh or icon in full-system view |
+| P3-02 | Planet center on Phase 2 ring; AC-009 pass (`iconTrailSample0ResidualMeters` ≤ 1 m) — [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) |
+| P3-03 | No moon body meshes (Mun, Minmus, etc.) |
+| P3-04 | Sun drawn only via `starMarker` (no duplicate root sphere) |
+| P3-05 | Body color matches orbit line per `bodyName` (stock + Customize Map overrides) |
+| P3-06 | Zoom out: planets become fixed-size dots (~0.06 scene radius) |
+| P3-07 | Zoom in: dots become to-scale meshes; physical radius visible when close |
+| P3-08 | Host planet open: physical scale (no `0.05` solar floor on planets) |
+| P3-09 | Phase 2 orbits, motion tail, and inclination unchanged |
+| P3-10 | `MapHudV3` shows **v3 phase 3.1 — planet bodies**; console `95-v3-planet-bodies` |
+| P3-11 | Recenter uses full solar bounds (not star-only) |
+| P3-12 | No console errors on load, orbit, or Recenter |
+| P3-13 | `buildPlanetBodySegments` Vitest: planets only, positions from `bodyByName` |
+| P3-14 | `composeMapV3Layers(PHASE3)` === `["StarMarkerLayer", "PlanetOrbitLayer", "PlanetBodyLayer"]` |
+
+**Automated:** P3-13, P3-14 via `npm test`. P3-01–P3-12 require manual flight check.
+
 ## Future phases
 
 Per-element criteria added when the corresponding flag is enabled (mirror `docs/MAP_V2_ACCEPTANCE.md`).
@@ -56,4 +79,5 @@ Per-element criteria added when the corresponding flag is enabled (mirror `docs/
 ## Automated (shared)
 
 - `web/src/coords/*.test.ts` — shared math
-- `MapComposer.test.ts` — phase 0 and phase 1 composition
+- `MapComposer.test.ts` — phase 0–3 composition
+- `buildPlanetBodySegments.test.ts`, `planetBodyLod.test.ts` — planet body element

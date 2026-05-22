@@ -9,6 +9,10 @@ export const PLANET_BODY_ICON_LOD_SCREEN_RADIUS = 0.12;
 /** Fixed scene-space icon radius for heliocentric planets (not Sun/moons). */
 export const PLANET_BODY_ICON_RADIUS = 0.06;
 
+/** Sphere subdivisions — match star smoothness (8×8 icons look boxy on screen). */
+export const PLANET_BODY_MESH_SPHERE_SEGMENTS = 32;
+export const PLANET_BODY_ICON_SPHERE_SEGMENTS = 24;
+
 export type PlanetBodyDrawMode = "mesh" | "icon";
 
 export interface PlanetBodyLodInput {

@@ -38,6 +38,18 @@ export function starMarkerSceneFrame(
   };
 }
 
+/**
+ * Frame for drawing the star mesh. Full-system view keeps the star unshifted (Phase 1).
+ * When a planet is focused, apply the same world shift as orbits/bodies so the Sun
+ * stays at heliocentric origin relative to the view (not stacked on the focused planet).
+ */
+export function starMarkerDrawFrame(frame: SceneFrameState): SceneFrameState {
+  if (frame.focus == null) {
+    return starMarkerSceneFrame(frame);
+  }
+  return frame;
+}
+
 /** Camera bounds for Map V3 when only the primary star is drawn (Phase 1). */
 export function getStarMarkerCameraBounds(
   ctx: MapContext | null,

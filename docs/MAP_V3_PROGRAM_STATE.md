@@ -106,7 +106,7 @@ flowchart TB
 
 ## Forward path
 
-Phase 3.1 (`planetBody`) shipped — `map-v3/elements/planetBody/` + `planetBodyLod.ts`. Next: `moonOrbit` (phase 4).
+Phase 3.1 (`planetBody`) shipped — `map-v3/elements/planetBody/` + `planetBodyLod.ts`. Spec: [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md). Next: `moonOrbit` (phase 4).
 
 ---
 

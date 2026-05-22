@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useMapV3 } from "../../../map-v3/MapV3Context";
 import { buildSegments } from "../../../map-v3/planner/buildSegments";
 import { toScenePoint } from "../../../map-v3/SceneFrame";
-import { starMarkerSceneFrame } from "../../../map-v3/camera/starCameraBounds";
+import { starMarkerDrawFrame } from "../../../map-v3/camera/starCameraBounds";
 import { getSunTexture } from "../../../assets/proceduralTextures";
 import { bodyMeshRadius } from "../../bodyVisualScale";
 import { getKspBodyMapColor } from "../../bodyMapColors";
@@ -20,7 +20,7 @@ export function StarMarkerLayer() {
     return null;
   }
 
-  const starFrame = starMarkerSceneFrame(sceneFrame);
+  const starFrame = starMarkerDrawFrame(sceneFrame);
 
   return (
     <>

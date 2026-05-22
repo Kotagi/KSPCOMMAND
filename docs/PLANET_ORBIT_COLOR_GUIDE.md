@@ -26,7 +26,9 @@ Runtime wiring:
 - `getKspBodyMapColor` / `useKspBodyMapColor` — `web/src/scene/bodyMapColors.ts`
 - V3 drawer — `OrbitTrailV3` → `GradientDirectionalOrbitTrail` with `lineColor` from `useKspBodyMapColor(bodyName)`
 
-**Scope today:** **Heliocentric planet orbits only** (bodies in `hierarchy.planetNames` with `planetOrbit` layer). Moons, vessels, and SOI rings use other paths and are not editable via Customize Map yet.
+**Scope today:** **Heliocentric planet orbits and bodies** (Phase 3.1 `planetBody` + `planetOrbit` layers; bodies in `hierarchy.planetNames`). Both use `useKspBodyMapColor(bodyName)` so orbit lines and planet meshes/icons stay matched. Moons, vessels, and SOI rings use other paths and are not editable via Customize Map yet.
+
+**Body element spec:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md) § Color.
 
 ---
 

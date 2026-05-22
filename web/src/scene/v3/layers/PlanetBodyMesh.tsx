@@ -4,6 +4,8 @@ import type { Vector3 } from "../../../telemetry/schema-v6";
 import { useMapV3 } from "../../../map-v3/MapV3Context";
 import { toScenePoint } from "../../../map-v3/SceneFrame";
 import {
+  PLANET_BODY_ICON_SPHERE_SEGMENTS,
+  PLANET_BODY_MESH_SPHERE_SEGMENTS,
   planetBodyIconRadius,
   resolvePlanetBodyDrawMode,
 } from "../../../map-v3/elements/planetBody/planetBodyLod";
@@ -46,7 +48,9 @@ export function PlanetBodyMesh({
     const iconR = planetBodyIconRadius();
     return (
       <mesh position={[x, y, z]} renderOrder={2}>
-        <sphereGeometry args={[iconR, 8, 8]} />
+        <sphereGeometry
+          args={[iconR, PLANET_BODY_ICON_SPHERE_SEGMENTS, PLANET_BODY_ICON_SPHERE_SEGMENTS]}
+        />
         <meshBasicMaterial color={color} />
       </mesh>
     );
@@ -54,7 +58,9 @@ export function PlanetBodyMesh({
 
   return (
     <mesh position={[x, y, z]} renderOrder={1}>
-      <sphereGeometry args={[meshR, 24, 24]} />
+      <sphereGeometry
+        args={[meshR, PLANET_BODY_MESH_SPHERE_SEGMENTS, PLANET_BODY_MESH_SPHERE_SEGMENTS]}
+      />
       <meshBasicMaterial color={color} />
     </mesh>
   );
