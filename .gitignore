@@ -9,6 +9,13 @@ GameData/KspWebMap/Plugins/*.pdb
 
 # Frontend (Phase 10+)
 node_modules/
+web/node_modules._trash_*/
 web/dist/
 .env
 .env.local
+
+# Editor / local dev (never commit)
+.vscode/
+
+# Captured telemetry dumps (local debugging only)
+telemetry*.json
