@@ -1,6 +1,5 @@
 /**
  * Body colors aligned with KSP's in-game map orbit lines (stock solar system).
- * Used for planet icons and heliocentric orbit trails.
  */
 export const KSP_BODY_MAP_COLORS: Record<string, string> = {
   Sun: "#e8c85c",

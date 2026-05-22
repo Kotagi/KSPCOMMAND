@@ -1,4 +1,5 @@
 import { Canvas } from "@react-three/fiber";
+import * as THREE from "three";
 import { MapV3Provider } from "../../map-v3/MapV3Context";
 import { MAP_V3_LAYERS_PHASE2 } from "../../map-v3/layerFlags";
 import { MoonVisibilityProvider } from "../MoonVisibilityContext";
@@ -11,7 +12,15 @@ import { MapV3LayerStack } from "./MapV3LayerStack";
 export function Map3DV3() {
   return (
     <Canvas
-      gl={{ logarithmicDepthBuffer: true, antialias: true }}
+      gl={{
+        logarithmicDepthBuffer: true,
+        antialias: true,
+        toneMapping: THREE.NoToneMapping,
+      }}
+      onCreated={({ gl }) => {
+        gl.toneMapping = THREE.NoToneMapping;
+        gl.outputColorSpace = THREE.SRGBColorSpace;
+      }}
       camera={{ position: [25, 18, 25], fov: 50, near: 0.01, far: 100000 }}
       style={{ width: "100%", height: "100%", background: "#071019" }}
     >

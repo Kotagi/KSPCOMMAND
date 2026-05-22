@@ -1,6 +1,5 @@
-import { Line } from "@react-three/drei";
 import { getKspBodyMapColor } from "../bodyMapColors";
-import { splitOrbitTrailHalves } from "../splitOrbitTrailHalves";
+import { GradientDirectionalOrbitTrail } from "../GradientDirectionalOrbitTrail";
 
 type Point3 = [number, number, number];
 
@@ -15,9 +14,7 @@ export interface DirectionalOrbitTrailProps {
   sampleUniversalTimes?: number[];
 }
 
-/**
- * Per-body KSP map color: one smooth polyline per half (retrograde solid, prograde faint).
- */
+/** Per-body KSP map color with retrograde/prograde split trails (meets at body). */
 export function DirectionalOrbitTrail({
   lineKey,
   bodyName,
@@ -31,55 +28,15 @@ export function DirectionalOrbitTrail({
     return null;
   }
 
-  const lineColor = getKspBodyMapColor(bodyName);
-
-  const { retrograde, prograde } = splitOrbitTrailHalves(
-    points,
-    anchorIndex,
-    closedWithDuplicateEndpoint,
-    sampleUniversalTimes,
-  );
-
-  const halves: { points: Point3[]; opacity: number; key: string }[] = [];
-  if (retrograde.points.length >= 2) {
-    halves.push({
-      key: `${lineKey}-retro`,
-      points: retrograde.points,
-      opacity: retrograde.opacity,
-    });
-  }
-  if (prograde.points.length >= 2) {
-    halves.push({
-      key: `${lineKey}-pro`,
-      points: prograde.points,
-      opacity: prograde.opacity,
-    });
-  }
-
-  if (halves.length === 0 && points.length >= 2) {
-    return (
-      <Line
-        points={points}
-        color={lineColor}
-        lineWidth={lineWidth}
-        transparent
-        opacity={0.52}
-      />
-    );
-  }
-
   return (
-    <group>
-      {halves.map((half) => (
-        <Line
-          key={half.key}
-          points={half.points}
-          color={lineColor}
-          lineWidth={lineWidth}
-          transparent
-          opacity={half.opacity}
-        />
-      ))}
-    </group>
+    <GradientDirectionalOrbitTrail
+      lineKey={lineKey}
+      lineColor={getKspBodyMapColor(bodyName)}
+      points={points}
+      anchorIndex={anchorIndex}
+      lineWidth={lineWidth}
+      closedWithDuplicateEndpoint={closedWithDuplicateEndpoint}
+      sampleUniversalTimes={sampleUniversalTimes}
+    />
   );
 }

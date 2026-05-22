@@ -1,6 +1,5 @@
 import { memo } from "react";
-import { Line } from "@react-three/drei";
-import { ringHalfFromDenseRing } from "../../planetOrbitRingHalves";
+import { GradientDirectionalOrbitTrail } from "../../GradientDirectionalOrbitTrail";
 import {
   PLANET_ORBIT_STYLE,
   resolvePlanetOrbitColor,
@@ -34,32 +33,15 @@ export const OrbitTrailV3 = memo(function OrbitTrailV3({
   }
 
   const ring = densifyPlanetOrbitScenePoints(finitePoints);
-  const lineColor = resolvePlanetOrbitColor(bodyName);
-  const retrograde = ringHalfFromDenseRing(ring, anchorIndex, false);
-  const prograde = ringHalfFromDenseRing(ring, anchorIndex, true);
 
   return (
-    <group>
-      {retrograde.length >= 2 && (
-        <Line
-          key={`${lineKey}-retro`}
-          points={retrograde}
-          color={lineColor}
-          lineWidth={lineWidth}
-          transparent
-          opacity={1}
-        />
-      )}
-      {prograde.length >= 2 && (
-        <Line
-          key={`${lineKey}-pro`}
-          points={prograde}
-          color={lineColor}
-          lineWidth={lineWidth * PLANET_ORBIT_STYLE.progradeLineWidthFactor}
-          transparent
-          opacity={0.2}
-        />
-      )}
-    </group>
+    <GradientDirectionalOrbitTrail
+      lineKey={lineKey}
+      lineColor={resolvePlanetOrbitColor(bodyName)}
+      points={ring}
+      anchorIndex={anchorIndex}
+      lineWidth={lineWidth}
+      progradeLineWidthFactor={PLANET_ORBIT_STYLE.progradeLineWidthFactor}
+    />
   );
 });

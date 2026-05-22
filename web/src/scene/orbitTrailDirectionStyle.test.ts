@@ -6,6 +6,7 @@ import {
   opacityForTrailSegmentDirected,
   rotateTrailToAnchorIndex,
   trailVertexOpacities,
+  progradeHalfVertexOpacities,
   ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON,
   ORBIT_TRAIL_OPACITY_TRAILING,
 } from "./orbitTrailDirectionStyle";
@@ -60,6 +61,17 @@ describe("orbitTrailDirectionStyle", () => {
       ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON,
       5,
     );
+  });
+
+  it("prograde half fades from bold at body to faint at far end", () => {
+    const ops = progradeHalfVertexOpacities(64);
+    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_OPACITY_TRAILING, 5);
+    expect(ops[ops.length - 1]).toBeCloseTo(
+      ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON,
+      5,
+    );
+    expect(ops[32]).toBeGreaterThan(ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON);
+    expect(ops[32]).toBeLessThan(ORBIT_TRAIL_OPACITY_TRAILING);
   });
 
   it("rotates closed trail so anchor vertex is first", () => {

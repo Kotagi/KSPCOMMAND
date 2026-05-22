@@ -1,11 +1,11 @@
-/** KSP-style body orbit trail: solid retrograde behind icon, 52% prograde ahead of icon. */
+/** KSP-style body orbit trail: solid retrograde behind icon, faint prograde ahead. */
 
 export const ORBIT_TRAIL_LINE_COLOR = "#9db1c3";
 
 /** Retrograde arc at/behind the icon — fully opaque. */
 export const ORBIT_TRAIL_OPACITY_TRAILING = 1;
 
-/** Prograde arc ahead of the icon. */
+/** Prograde arc ahead of the icon (KSP map faint trail). */
 export const ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON = 0.2;
 
 /**
@@ -320,6 +320,91 @@ export function rotateTrailToAnchorIndex<T extends Point3>(
 
   const start = Math.min(anchorIndex, points.length - 1);
   return [...points.slice(start), ...points.slice(0, start)] as T[];
+}
+
+/** Half-orbit prograde distance from the body anchor on a closed period. */
+export function progradeHorizonForTrail(periodVertices: number): number {
+  return Math.max(1, Math.floor((Math.max(1, periodVertices) - 1) / 2));
+}
+
+/**
+ * KSP map: one smooth opacity wave around the ring, peak at the body (retrograde),
+ * softest ~half an orbit prograde ahead, rising back to bold before the body.
+ */
+export function opacityForOrbitAheadKspRing(
+  ahead: number,
+  periodVertices: number,
+  minOpacity = ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON,
+  maxOpacity = ORBIT_TRAIL_OPACITY_TRAILING,
+): number {
+  const n = Math.max(2, periodVertices);
+  if (ahead === 0) {
+    return maxOpacity;
+  }
+
+  const horizon = progradeHorizonForTrail(n);
+
+  if (ahead <= horizon) {
+    const t = ahead / horizon;
+    const wave = (1 + Math.cos(Math.PI * t)) / 2;
+    return minOpacity + (maxOpacity - minOpacity) * wave;
+  }
+
+  const retro = ahead - horizon;
+  const retroSpan = Math.max(1, n - 1 - horizon);
+  const t = retro / retroSpan;
+  const wave = (1 - Math.cos(Math.PI * t)) / 2;
+  return minOpacity + (maxOpacity - minOpacity) * wave;
+}
+
+/** Per-vertex opacities for one closed KSP-style gradient ring. */
+export function trailVertexOpacitiesKspRing(
+  vertexCount: number,
+  anchorIndex: number,
+  progradeStep: 1 | -1 = 1,
+): number[] {
+  const n = vertexCount;
+  if (n <= 1) {
+    return [ORBIT_TRAIL_OPACITY_TRAILING];
+  }
+  return Array.from({ length: n }, (_, i) => {
+    const ahead =
+      progradeStep === 1
+        ? (i - anchorIndex + n) % n
+        : (anchorIndex - i + n) % n;
+    return opacityForOrbitAheadKspRing(ahead, n);
+  });
+}
+
+/** RGBA vertex colors for drei Line (`color` must be `#ffffff`). */
+export function hexToRgbaVertexColors(
+  hex: string,
+  opacities: number[],
+): [number, number, number, number][] {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  return opacities.map((a) => [r, g, b, a]);
+}
+
+/**
+ * Smooth fade along the prograde half only: bold at the body (index 0),
+ * faint at the far end — matches KSP map (retrograde half stays solid).
+ */
+export function progradeHalfVertexOpacities(vertexCount: number): number[] {
+  if (vertexCount <= 1) {
+    return [ORBIT_TRAIL_OPACITY_TRAILING];
+  }
+  const span = vertexCount - 1;
+  return Array.from({ length: vertexCount }, (_, i) => {
+    const t = i / span;
+    const wave = (1 + Math.cos(Math.PI * t)) / 2;
+    return (
+      ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON
+      + (ORBIT_TRAIL_OPACITY_TRAILING - ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON) * wave
+    );
+  });
 }
 
 export function trailVertexOpacities(
