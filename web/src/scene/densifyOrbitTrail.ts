@@ -56,7 +56,10 @@ export function densifyOrbitTrailPoints(
   const dense: Point3[] = [];
 
   for (let k = 0; k < target; k++) {
-    const distAlong = (k / target) * total;
+    const distAlong =
+      closed && target > 1
+        ? (k / (target - 1)) * total
+        : (k / target) * total;
     let walked = 0;
     for (let i = 0; i < segCount; i++) {
       const segLen = segLengths[i];

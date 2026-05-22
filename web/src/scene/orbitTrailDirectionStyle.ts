@@ -5,8 +5,14 @@ export const ORBIT_TRAIL_LINE_COLOR = "#9db1c3";
 /** Retrograde arc at/behind the icon — fully opaque. */
 export const ORBIT_TRAIL_OPACITY_TRAILING = 1;
 
-/** Prograde arc ahead of the icon (KSP map faint trail). */
+/** Prograde arc ahead of the icon (step-style planners / legacy). */
 export const ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON = 0.2;
+
+/** Split-trail half gradients (body → far end of each half). */
+export const ORBIT_TRAIL_HALF_RETRO_BODY = 1;
+export const ORBIT_TRAIL_HALF_RETRO_FAR = 0.7;
+export const ORBIT_TRAIL_HALF_PROGRADE_BODY = 0.7;
+export const ORBIT_TRAIL_HALF_PROGRADE_FAR = 0.4;
 
 /**
  * Opacity for a vertex on a body orbit trail (anchored at sample 0 = body at capture UT).
@@ -334,23 +340,70 @@ export function hexToRgbaVertexColors(
   return opacities.map((a) => [r, g, b, a]);
 }
 
-/**
- * Smooth fade along the prograde half only: bold at the body (index 0),
- * faint at the far end — matches KSP map (retrograde half stays solid).
- */
-export function progradeHalfVertexOpacities(vertexCount: number): number[] {
+/** Linear fade along one half-orbit polyline (index 0 = body). */
+export function halfOrbitVertexOpacities(
+  vertexCount: number,
+  opacityAtBody: number,
+  opacityAtFar: number,
+): number[] {
   if (vertexCount <= 1) {
-    return [ORBIT_TRAIL_OPACITY_TRAILING];
+    return [opacityAtBody];
   }
   const span = vertexCount - 1;
   return Array.from({ length: vertexCount }, (_, i) => {
     const t = i / span;
-    const wave = (1 + Math.cos(Math.PI * t)) / 2;
+    return opacityAtFar + (opacityAtBody - opacityAtFar) * (1 - t);
+  });
+}
+
+/**
+ * One closed ring: bold at body (1.0), prograde arc 0.7→0.4, retro arc 0.4→0.7→1.0.
+ * Avoids two-Line seam and wash-out from a symmetric cosine around 360°.
+ */
+export function closedRingHalfGradientOpacities(
+  periodVertices: number,
+  anchorIndex: number,
+): number[] {
+  const n = Math.max(2, periodVertices);
+  const half = Math.max(1, Math.floor((n - 1) / 2));
+  return Array.from({ length: n }, (_, periodIndex) => {
+    const ahead = (periodIndex - anchorIndex + n) % n;
+    if (ahead === 0) {
+      return ORBIT_TRAIL_HALF_RETRO_BODY;
+    }
+    if (ahead <= half) {
+      const t = ahead / half;
+      return (
+        ORBIT_TRAIL_HALF_PROGRADE_BODY
+        + (ORBIT_TRAIL_HALF_PROGRADE_FAR - ORBIT_TRAIL_HALF_PROGRADE_BODY) * t
+      );
+    }
+    const retroSteps = ahead - half;
+    const retroSpan = Math.max(1, n - 1 - half);
+    const t = retroSteps / retroSpan;
     return (
-      ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON
-      + (ORBIT_TRAIL_OPACITY_TRAILING - ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON) * wave
+      ORBIT_TRAIL_HALF_RETRO_FAR
+      + (ORBIT_TRAIL_HALF_RETRO_BODY - ORBIT_TRAIL_HALF_RETRO_FAR) * t
     );
   });
+}
+
+/** Retrograde half: 1.0 at body → 0.7 at far end. */
+export function retrogradeHalfVertexOpacities(vertexCount: number): number[] {
+  return halfOrbitVertexOpacities(
+    vertexCount,
+    ORBIT_TRAIL_HALF_RETRO_BODY,
+    ORBIT_TRAIL_HALF_RETRO_FAR,
+  );
+}
+
+/** Prograde half: 0.7 at body → 0.4 at far end. */
+export function progradeHalfVertexOpacities(vertexCount: number): number[] {
+  return halfOrbitVertexOpacities(
+    vertexCount,
+    ORBIT_TRAIL_HALF_PROGRADE_BODY,
+    ORBIT_TRAIL_HALF_PROGRADE_FAR,
+  );
 }
 
 export function trailVertexOpacities(

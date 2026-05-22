@@ -1,8 +1,9 @@
 import { Line } from "@react-three/drei";
 import {
+  closedRingHalfGradientOpacities,
   hexToRgbaVertexColors,
-  ORBIT_TRAIL_OPACITY_TRAILING,
   progradeHalfVertexOpacities,
+  retrogradeHalfVertexOpacities,
 } from "./orbitTrailDirectionStyle";
 import { splitOrbitTrailHalves } from "./splitOrbitTrailHalves";
 
@@ -10,10 +11,22 @@ type Point3 = [number, number, number];
 
 const LINE_COLOR_FOR_VERTEX_COLORS = "#ffffff";
 
+/** Line2 draws open polylines; duplicate the first vertex to close the ring. */
+function closeRingPoints(points: Point3[]): Point3[] {
+  if (points.length < 2) {
+    return points;
+  }
+  const first = points[0];
+  const last = points[points.length - 1];
+  const alreadyClosed =
+    Math.hypot(first[0] - last[0], first[1] - last[1], first[2] - last[2]) < 1e-6;
+  return alreadyClosed ? points : [...points, first];
+}
+
 /**
- * KspSplitTrailWithProgradeGradient — shared closed-ring drawer (V3 planet orbits).
- * - Retrograde half: solid body color via `color` + uniform opacity
- * - Prograde half: `vertexColors` smooth fade bold at body → faint at far end
+ * KspSplitTrailWithHalfGradients — shared closed-ring drawer (V3 planet orbits).
+ * - Retrograde half: vertex alpha 1.0 at body → 0.7 at far end
+ * - Prograde half: vertex alpha 0.7 at body → 0.4 at far end (fixed RGB)
  */
 export function GradientDirectionalOrbitTrail({
   lineKey,
@@ -39,6 +52,31 @@ export function GradientDirectionalOrbitTrail({
     return null;
   }
 
+  if (!closedWithDuplicateEndpoint && points.length >= 3) {
+    const ringOpacities = closedRingHalfGradientOpacities(
+      points.length,
+      anchorIndex,
+    );
+    const closedPoints = closeRingPoints(points);
+    const closedOpacities =
+      closedPoints.length === points.length
+        ? ringOpacities
+        : [...ringOpacities, ringOpacities[0]];
+    const ringVertexColors = hexToRgbaVertexColors(lineColor, closedOpacities);
+    return (
+      <Line
+        key={`${lineKey}-ring`}
+        points={closedPoints}
+        color={LINE_COLOR_FOR_VERTEX_COLORS}
+        vertexColors={ringVertexColors}
+        lineWidth={lineWidth}
+        toneMapped={false}
+        transparent
+        depthWrite
+      />
+    );
+  }
+
   const { retrograde, prograde } = splitOrbitTrailHalves(
     points,
     anchorIndex,
@@ -47,10 +85,13 @@ export function GradientDirectionalOrbitTrail({
   );
 
   const progradeWidth = lineWidth * progradeLineWidthFactor;
-  const progradeOpacities = progradeHalfVertexOpacities(prograde.points.length);
+  const retroVertexColors = hexToRgbaVertexColors(
+    lineColor,
+    retrogradeHalfVertexOpacities(retrograde.points.length),
+  );
   const progradeVertexColors = hexToRgbaVertexColors(
     lineColor,
-    progradeOpacities,
+    progradeHalfVertexOpacities(prograde.points.length),
   );
 
   return (
@@ -59,11 +100,11 @@ export function GradientDirectionalOrbitTrail({
         <Line
           key={`${lineKey}-retro`}
           points={retrograde.points}
-          color={lineColor}
+          color={LINE_COLOR_FOR_VERTEX_COLORS}
+          vertexColors={retroVertexColors}
           lineWidth={lineWidth}
-          transparent
-          opacity={ORBIT_TRAIL_OPACITY_TRAILING}
           toneMapped={false}
+          transparent
           depthWrite
         />
       ) : null}

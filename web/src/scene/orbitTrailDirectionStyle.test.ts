@@ -7,6 +7,12 @@ import {
   rotateTrailToAnchorIndex,
   trailVertexOpacities,
   progradeHalfVertexOpacities,
+  retrogradeHalfVertexOpacities,
+  closedRingHalfGradientOpacities,
+  ORBIT_TRAIL_HALF_PROGRADE_BODY,
+  ORBIT_TRAIL_HALF_PROGRADE_FAR,
+  ORBIT_TRAIL_HALF_RETRO_BODY,
+  ORBIT_TRAIL_HALF_RETRO_FAR,
   ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON,
   ORBIT_TRAIL_OPACITY_TRAILING,
 } from "./orbitTrailDirectionStyle";
@@ -63,15 +69,28 @@ describe("orbitTrailDirectionStyle", () => {
     );
   });
 
-  it("prograde half fades from bold at body to faint at far end", () => {
+  it("retrograde half fades 1.0 at body to 0.7 at far end", () => {
+    const ops = retrogradeHalfVertexOpacities(64);
+    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_HALF_RETRO_BODY, 5);
+    expect(ops[ops.length - 1]).toBeCloseTo(ORBIT_TRAIL_HALF_RETRO_FAR, 5);
+  });
+
+  it("closed ring: bold at body, 0.4 at prograde antipode, returns to 1.0 on retro arc", () => {
+    const n = 64;
+    const half = Math.floor((n - 1) / 2);
+    const ops = closedRingHalfGradientOpacities(n, 0);
+    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_HALF_RETRO_BODY, 5);
+    expect(ops[half]).toBeCloseTo(ORBIT_TRAIL_HALF_PROGRADE_FAR, 5);
+    expect(ops[half + 1]).toBeGreaterThan(ORBIT_TRAIL_HALF_PROGRADE_FAR);
+    expect(ops[n - 1]).toBeGreaterThan(ORBIT_TRAIL_HALF_RETRO_FAR);
+  });
+
+  it("prograde half fades 0.7 at body to 0.4 at far end", () => {
     const ops = progradeHalfVertexOpacities(64);
-    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_OPACITY_TRAILING, 5);
-    expect(ops[ops.length - 1]).toBeCloseTo(
-      ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON,
-      5,
-    );
-    expect(ops[32]).toBeGreaterThan(ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON);
-    expect(ops[32]).toBeLessThan(ORBIT_TRAIL_OPACITY_TRAILING);
+    expect(ops[0]).toBeCloseTo(ORBIT_TRAIL_HALF_PROGRADE_BODY, 5);
+    expect(ops[ops.length - 1]).toBeCloseTo(ORBIT_TRAIL_HALF_PROGRADE_FAR, 5);
+    expect(ops[32]).toBeGreaterThan(ORBIT_TRAIL_HALF_PROGRADE_FAR);
+    expect(ops[32]).toBeLessThan(ORBIT_TRAIL_HALF_PROGRADE_BODY);
   });
 
   it("rotates closed trail so anchor vertex is first", () => {
