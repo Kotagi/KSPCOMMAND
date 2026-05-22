@@ -19,3 +19,9 @@ web/dist/
 
 # Captured telemetry dumps (local debugging only)
 telemetry*.json
+
+# Stock KSP body textures (local copy / future plugin export; do not commit)
+assets/planets/**
+!assets/planets/README.md
+GameData/KspWebMap/Web/assets/kerbin00.png
+GameData/KspWebMap/Web/assets/bodies/

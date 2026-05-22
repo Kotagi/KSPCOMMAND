@@ -1,16 +1,14 @@
-import * as THREE from "three";
-import { useThree } from "@react-three/fiber";
 import type { Vector3 } from "../../../telemetry/schema-v6";
 import { useMapV3 } from "../../../map-v3/MapV3Context";
 import { toScenePoint } from "../../../map-v3/SceneFrame";
-import {
-  PLANET_BODY_ICON_SPHERE_SEGMENTS,
-  PLANET_BODY_MESH_SPHERE_SEGMENTS,
-  planetBodyIconRadius,
-  resolvePlanetBodyDrawMode,
-} from "../../../map-v3/elements/planetBody/planetBodyLod";
+import { isKerbinBodyName } from "../../../assets/planetBodyTextures";
+import { PLANET_BODY_MESH_SPHERE_SEGMENTS } from "../../../map-v3/elements/planetBody/planetBodyLod";
 import { bodyMeshRadius } from "../../bodyVisualScale";
 import { useKspBodyMapColor } from "../../bodyMapColors";
+import { KerbinTexturedBody } from "./KerbinTexturedBody";
+import { PlanetBodyDot } from "./PlanetBodyDot";
+import { usePlanetBodyDrawMode } from "./usePlanetBodyDrawMode";
+import { useViewStore } from "../../../store/viewStore";
 
 export function PlanetBodyMesh({
   bodyName,
@@ -22,7 +20,7 @@ export function PlanetBodyMesh({
   rootPosition: Vector3;
 }) {
   const { mapContext, sceneFrame, hostPlanetOpen } = useMapV3();
-  const { camera } = useThree();
+  const devPlanetBodyLodOverride = useViewStore((s) => s.devPlanetBodyLodOverride);
   const color = useKspBodyMapColor(bodyName);
 
   if (!mapContext) {
@@ -37,27 +35,30 @@ export function PlanetBodyMesh({
     hostPlanetOpen,
   });
 
-  const [x, y, z] = toScenePoint(rootPosition, sceneFrame);
-  const camDist = camera.position.distanceTo(new THREE.Vector3(x, y, z));
-  const drawMode = resolvePlanetBodyDrawMode({
-    sceneMeshRadius: meshR,
-    cameraDistance: camDist,
-  });
+  const scenePosition = toScenePoint(rootPosition, sceneFrame);
+  const drawMode = usePlanetBodyDrawMode(
+    meshR,
+    scenePosition,
+    devPlanetBodyLodOverride,
+  );
 
   if (drawMode === "icon") {
-    const iconR = planetBodyIconRadius();
+    return <PlanetBodyDot position={scenePosition} color={color} />;
+  }
+
+  if (isKerbinBodyName(bodyName)) {
     return (
-      <mesh position={[x, y, z]} renderOrder={2}>
-        <sphereGeometry
-          args={[iconR, PLANET_BODY_ICON_SPHERE_SEGMENTS, PLANET_BODY_ICON_SPHERE_SEGMENTS]}
-        />
-        <meshBasicMaterial color={color} />
-      </mesh>
+      <KerbinTexturedBody
+        radius={meshR}
+        position={scenePosition}
+        renderOrder={1}
+        fallbackColor={color}
+      />
     );
   }
 
   return (
-    <mesh position={[x, y, z]} renderOrder={1}>
+    <mesh position={scenePosition} renderOrder={1}>
       <sphereGeometry
         args={[meshR, PLANET_BODY_MESH_SPHERE_SEGMENTS, PLANET_BODY_MESH_SPHERE_SEGMENTS]}
       />

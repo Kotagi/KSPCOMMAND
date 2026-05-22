@@ -14,6 +14,7 @@ import {
   persistCustomizeMapDev,
 } from "../settings/customizeMapDev";
 import type { PlanetOrbitPickLine } from "../selection/pickPlanetOrbitTrail";
+import type { PlanetBodyLodDevOverride } from "../map-v3/elements/planetBody/planetBodyLod";
 
 const customizeMapInitial = loadCustomizeMapDev();
 
@@ -76,6 +77,9 @@ interface ViewState {
   /** Dev “Set color” defaults (persisted; used even when Customize Map is off). */
   planetOrbitStockDefaults: Record<string, string>;
   customizeMapOrbitPickLines: PlanetOrbitPickLine[];
+  /** Dev HUD: force Map V3 planet bodies icon vs mesh LOD (auto = zoom-based). */
+  devPlanetBodyLodOverride: PlanetBodyLodDevOverride;
+  setDevPlanetBodyLodOverride: (override: PlanetBodyLodDevOverride) => void;
   setDevCustomizeMapEnabled: (enabled: boolean) => void;
   setCustomizeMapSelectedPlanet: (planet: string | null) => void;
   setPlanetOrbitColorOverride: (planet: string, hex: string) => void;
@@ -173,6 +177,9 @@ export const useViewStore = create<ViewState>((set, get) => ({
   planetOrbitColorOverrides: customizeMapInitial.overrides,
   planetOrbitStockDefaults: customizeMapInitial.stockDefaults,
   customizeMapOrbitPickLines: [],
+  devPlanetBodyLodOverride: "auto",
+  setDevPlanetBodyLodOverride: (devPlanetBodyLodOverride) =>
+    set({ devPlanetBodyLodOverride }),
   setDevCustomizeMapEnabled: (enabled) => {
     const next = {
       devCustomizeMapEnabled: enabled,

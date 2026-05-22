@@ -120,22 +120,23 @@ Module: `web/src/map-v3/elements/planetBody/planetBodyLod.ts` — **always enabl
 
 ```text
 camDist = ||camera.position - scenePosition||_3
-ratio   = meshR / max(camDist, 0.01)
+meshDiameterPx = perspectiveProject(2 * meshR, camDist, camera.fov, viewport.height)
 
-IF ratio <= PLANET_BODY_ICON_LOD_SCREEN_RADIUS (0.12):
-  drawMode = "icon"
+IF meshDiameterPx <= PLANET_BODY_DOT_PIXEL_SIZE (7):
+  drawMode = "icon"   (fixed-screen dot, orbit color, no mesh)
 ELSE:
   drawMode = "mesh"
 ```
 
+Recomputed **every frame** in `usePlanetBodyDrawMode` (camera dolly does not re-render React).
+
 | Constant | Value |
 |----------|-------|
-| `PLANET_BODY_ICON_LOD_SCREEN_RADIUS` | 0.12 |
-| `PLANET_BODY_ICON_RADIUS` | 0.06 scene units |
+| `PLANET_BODY_DOT_PIXEL_SIZE` | 7 px (`PointsMaterial`, `sizeAttenuation: false`) |
 
-**Requirement P3-LOD-01:** As camera distance increases, `ratio` falls; at crossover the mesh’s on-screen angular proxy `meshR/camDist` is at threshold; the replacement icon at radius 0.06 is **larger on screen** than the mesh (e.g. floored `meshR=0.05` at threshold: mesh apparent 0.12, icon apparent ≈ 0.14). This matches “switch when zoomed out enough that the mesh would be smaller than the icon.”
+**Requirement P3-LOD-01:** The map **dot** does not resize with zoom (constant pixel size). When the body **mesh** would appear smaller on screen than the dot, show the dot; when the mesh would appear larger, show the mesh.
 
-**Note:** Direct rule `meshR < iconR` in scene units is **incorrect** for zoom (distance cancels); threshold-on-`ratio` is the normative implementation.
+**Note:** Direct rule `meshR < dotR` in scene units is **incorrect** for zoom (distance cancels); compare projected pixel diameters.
 
 **Requirement P3-LOD-02:** Constants may be revised after side-by-side KSP map comparison; document rev history when changed.
 
@@ -143,8 +144,8 @@ ELSE:
 
 | Mode | Geometry | Material (rev 1.0) | `renderOrder` |
 |------|----------|-------------------|---------------|
-| mesh | `sphereGeometry(meshR, 32, 32)` | `meshBasicMaterial(color)` | 1 |
-| icon | `sphereGeometry(0.06, 24, 24)` | `meshBasicMaterial(color)` | 2 |
+| mesh | `sphereGeometry(meshR, 32, 32)` | `meshBasicMaterial(color)` or Kerbin texture PoC | 1 |
+| icon | `Points` (1 vertex) | `pointsMaterial` orbit color, fixed px size | 2 |
 
 Textures, `meshStandardMaterial`, lighting response: **future revision**.
 

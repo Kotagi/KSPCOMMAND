@@ -1,36 +1,67 @@
 /**
- * Map V3 planet mesh ↔ fixed map icon (always on in PlanetBodyLayer).
+ * Map V3 planet mesh ↔ fixed-screen map dot (always on in PlanetBodyLayer).
  * V3-owned; tuned toward KSP tracking-map behavior (see v2 parity notes in tests).
  */
 
-/** Below this projected mesh radius (meshR / cameraDistance), draw icon instead. */
-export const PLANET_BODY_ICON_LOD_SCREEN_RADIUS = 0.12;
+/** Point sprite diameter in pixels (`PointsMaterial.size`, `sizeAttenuation: false`). */
+export const PLANET_BODY_DOT_PIXEL_SIZE = 7;
 
-/** Fixed scene-space icon radius for heliocentric planets (not Sun/moons). */
-export const PLANET_BODY_ICON_RADIUS = 0.06;
+/** Default perspective FOV (deg) when camera.fov is unavailable (tests). */
+export const PLANET_BODY_LOD_DEFAULT_FOV_DEG = 50;
 
-/** Sphere subdivisions — match star smoothness (8×8 icons look boxy on screen). */
+/** Default viewport height (px) when size is unavailable (tests). */
+export const PLANET_BODY_LOD_DEFAULT_VIEWPORT_HEIGHT = 800;
+
+/** Sphere subdivisions for planet mesh mode. */
 export const PLANET_BODY_MESH_SPHERE_SEGMENTS = 32;
-export const PLANET_BODY_ICON_SPHERE_SEGMENTS = 24;
 
 export type PlanetBodyDrawMode = "mesh" | "icon";
+
+/** Dev HUD override for Map V3 planet body LOD (auto = zoom-based). */
+export type PlanetBodyLodDevOverride = "auto" | "icon" | "mesh";
 
 export interface PlanetBodyLodInput {
   sceneMeshRadius: number;
   cameraDistance: number;
+  cameraFovDeg?: number;
+  viewportHeight?: number;
+  devOverride?: PlanetBodyLodDevOverride;
+}
+
+/** How wide the body mesh would appear on screen (px), for a perspective camera. */
+export function planetBodyMeshProjectedDiameterPx(
+  sceneMeshRadius: number,
+  cameraDistance: number,
+  cameraFovDeg = PLANET_BODY_LOD_DEFAULT_FOV_DEG,
+  viewportHeight = PLANET_BODY_LOD_DEFAULT_VIEWPORT_HEIGHT,
+): number {
+  const dist = Math.max(cameraDistance, 1e-6);
+  const vFovRad = (cameraFovDeg * Math.PI) / 180;
+  const diameterScene = sceneMeshRadius * 2;
+  return (
+    (diameterScene / dist) *
+    (viewportHeight * 0.5) /
+    Math.tan(vFovRad * 0.5)
+  );
 }
 
 export function resolvePlanetBodyDrawMode(
   input: PlanetBodyLodInput,
 ): PlanetBodyDrawMode {
-  const ratio =
-    input.sceneMeshRadius / Math.max(input.cameraDistance, 0.01);
-  if (ratio <= PLANET_BODY_ICON_LOD_SCREEN_RADIUS) {
+  if (input.devOverride === "icon") {
+    return "icon";
+  }
+  if (input.devOverride === "mesh") {
+    return "mesh";
+  }
+  const meshDiameterPx = planetBodyMeshProjectedDiameterPx(
+    input.sceneMeshRadius,
+    input.cameraDistance,
+    input.cameraFovDeg,
+    input.viewportHeight,
+  );
+  if (meshDiameterPx <= PLANET_BODY_DOT_PIXEL_SIZE) {
     return "icon";
   }
   return "mesh";
-}
-
-export function planetBodyIconRadius(): number {
-  return PLANET_BODY_ICON_RADIUS;
 }

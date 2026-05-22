@@ -19,6 +19,7 @@ function makeCanvasTexture(
 
 let sunTexture: THREE.CanvasTexture | null = null;
 let kerbinTexture: THREE.CanvasTexture | null = null;
+let planetBodyDotTexture: THREE.CanvasTexture | null = null;
 
 export function getSunTexture(): THREE.CanvasTexture {
   if (!sunTexture) {
@@ -32,6 +33,21 @@ export function getSunTexture(): THREE.CanvasTexture {
     });
   }
   return sunTexture;
+}
+
+/** White circle alpha mask for fixed-screen planet map dots (PointsMaterial map). */
+export function getPlanetBodyDotTexture(): THREE.CanvasTexture {
+  if (!planetBodyDotTexture) {
+    planetBodyDotTexture = makeCanvasTexture((ctx, size) => {
+      const r = size / 2;
+      ctx.clearRect(0, 0, size, size);
+      ctx.beginPath();
+      ctx.arc(r, r, r - 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+    }, 64);
+  }
+  return planetBodyDotTexture;
 }
 
 export function getKerbinTexture(): THREE.CanvasTexture {

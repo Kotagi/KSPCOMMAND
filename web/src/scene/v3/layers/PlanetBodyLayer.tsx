@@ -3,8 +3,10 @@ import { useMapV3 } from "../../../map-v3/MapV3Context";
 import { buildSegments } from "../../../map-v3/planner/buildSegments";
 import { useMoonVisibilityContext } from "../../MoonVisibilityContext";
 import { PlanetBodyMesh } from "./PlanetBodyMesh";
+import { useKerbinTextureUrlDebug } from "./KerbinTexturedBody";
 
 export function PlanetBodyLayer() {
+  useKerbinTextureUrlDebug();
   const { mapContext, layers } = useMapV3();
   const { visibleBodyNames } = useMoonVisibilityContext();
 
