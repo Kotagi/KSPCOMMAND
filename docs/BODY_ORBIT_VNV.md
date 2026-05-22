@@ -1,6 +1,6 @@
 # Body–Orbit Alignment — Verification and Validation
 
-This document supports body icon / orbit trail alignment and Phase 11 frame truth (schema v8, resolver v2).
+This document supports body icon / orbit trail alignment and Phase 11 frame truth (schema v8). **Heliocentric plane / inclination:** [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md).
 
 ## Acceptance criteria
 
@@ -23,7 +23,8 @@ This document supports body icon / orbit trail alignment and Phase 11 frame trut
 
 | Metric | Meaning |
 |--------|---------|
-| `positionRootRelativeMeters` | **Display authority** — `GetBodyDisplayRootRelative` (trail/true resolver) |
+| `positionRootRelativeMeters` | **Display authority** — `GetBodyDisplayRootRelative` (= trail sample resolver) |
+| `planeAngleToAnalyticDegrees` | Angle between sample polyline plane and element plane (&lt; 0.1° pass); see helio frame doc |
 | `positionLiveRootRelativeMeters` | `body.position - root.position` at capture |
 | `positionTrueRootRelativeMeters` | `getTruePositionAtUT` world difference into root frame |
 | `liveVsTrueDeltaMeters` | ‖live − true‖ at `T_now` |
@@ -36,11 +37,11 @@ This document supports body icon / orbit trail alignment and Phase 11 frame trut
 ## Flight QA checklist (operator)
 
 1. Quit KSP → run `scripts/build.ps1` → `scripts/install.ps1` (see [INSTALL_DLL.md](INSTALL_DLL.md)) → restart KSP.
-2. Open `http://127.0.0.1:8750/?v=85` (hard refresh; match `index.html` and `KSP_WEB_MAP_UI_VERSION`).
+2. Open `http://127.0.0.1:8750/?v=94` (hard refresh; match `index.html` and `KSP_WEB_MAP_UI_VERSION`, e.g. `94-heliocentric-relative-unified`).
 3. Optional sample density: in telemetry JSON, `bodyOrbitPaths[].samples.length` should be **128** per planet (DLL `BodyOrbitPathSampleCount`). Tuning: [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12.
 4. Stable Kerbin orbit: run `scripts/verify-telemetry.ps1` and `scripts/verify-body-positions.ps1` — expect **VERIFY PASS**.
 5. **Full system** camera: Sun at origin, Kerbin on grey ring, icon on ring.
-6. Open HUD → **Show body orbit QA** — confirm `live↔s0` ≈ 0 m; primary banner shows same-UT validation (not Gm-scale).
+6. Open HUD → **Show body orbit QA** — confirm `live↔s0` ≈ 0 m, `plane` ≈ 0°, `live↔ana` not Gm-scale; primary banner shows same-UT validation (not Gm-scale).
 7. Optional: `node scripts/diagnose-planet-positions.mjs` — clock table vs KSP neutral map.
 8. Kerbin escape / high eccentricity: trails **hidden** or **samples**; use patch conic checks (not Kerbin trail angle from `verify-vessel-frame`).
 9. If warnings appear in `Player.log` (`[KspWebMap]`), attach excerpt with snapshot id.
@@ -77,3 +78,15 @@ This document supports body icon / orbit trail alignment and Phase 11 frame trut
 2. Open web **Full system** view; compare Moho, Eve, Kerbin, Duna, Jool **relative spacing** — icons should sit on grey trails.
 3. Compare **clock** on ecliptic XZ (`eclipticLongitudeDegrees` or `diagnose-planet-positions.mjs`): ~15° tolerance is acceptable if spacing matches and only map rotation differs.
 4. Do not treat `ephemerisLivePropagationResidualMeters` (60s separation) as an icon position bug.
+5. If inclinations look mirrored vs KSP but `live↔s0` is zero: read [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) (mixed `live` + `getTruePositionAtUT` samples).
+
+## Troubleshooting — wrong inclination (heliocentric)
+
+| Check | Pass |
+|-------|------|
+| `frameDiagnostics.resolverVersion` | `"4"` or later frame doc revision (not map “V4”) |
+| `planeAngleToAnalyticDegrees` | &lt; 0.1° for planets |
+| `liveToAnalyticMeters` | Not 1e9+ m in `KSP.log` for Moho/Kerbin |
+| DLL + KSP restart after frame fix | Required — web-only refresh is not enough |
+
+Full postmortem and code pointers: [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md).

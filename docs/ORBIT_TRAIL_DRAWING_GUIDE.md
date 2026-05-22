@@ -1,10 +1,10 @@
 # Orbit trail drawing guide
 
 **Document ID:** MAP-ORBIT-TRAIL-001  
-**Revision:** 1.1 (2026-05-21) — §12 vertex/sample tuning; samples-first geometry; 128/512 defaults  
+**Revision:** 1.2 (2026-05-22) — §13 heliocentric frame; §12 vertex/sample tuning  
 **Audience:** Operators and developers extending KspWebMap solar-map trails  
 **Canonical map:** Map V3 (`solarRenderMode: "3d-v3"`, default in `viewStore.ts`)  
-**UI reference build:** `92-v3-planet-orbit-native` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`)
+**UI reference build:** `94-heliocentric-relative-unified` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`; hard-refresh `?v=94`)
 
 **Orbit colors (stock table, Customize Map, mod packs):** [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 
@@ -244,7 +244,8 @@ KSP flight scene
 |---------|------------|
 | Orbit looks like a **visible polygon** (faceted ring) but icons sit on the trail | Raise **A** (DLL samples). Web densify cannot invent curvature between sparse samples. |
 | Ring is smooth but **jagged at extreme zoom** | Raise **B** (`trailVertices`) only. |
-| Trail **offset from planet** (hundreds of Mm) with `trailRenderMode: samples` | **Geometry**, not vertex count — ensure V3 uses **samples first** (`densifyPlanetOrbitTrail.ts`); do not prefer analytic when samples exist. |
+| Trail **offset from planet** (hundreds of Mm) with `trailRenderMode: samples` | **Geometry / frame**, not vertex count — samples-first (`densifyPlanetOrbitTrail.ts`); if `live↔s0≈0` but `live↔ana` is Gm, see **§13** / [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md). |
+| Inclination **~180° off** vs KSP; icon on ring at one point | **§13** mixed `live` + `getTruePositionAtUT` on Sun-child samples (DLL frame). |
 | Motion tail on wrong side | **§7** anchor / UT — not sample count. |
 
 **Tuning history (phase 2):** 48 DLL samples looked blocky after geometry was fixed; **128** DLL samples + **512** web densify is the current shipped pair (`85-orbit-128-samples`). Try **192** DLL before pushing DLL to 512.
@@ -300,8 +301,25 @@ V3 planet rings use `resolvePlanetOrbitPointsFromPath` / `resolvePlanetOrbitSour
 
 ---
 
+## 13. Heliocentric capture frame (inclination / plane)
+
+**Full guide:** [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) — symptoms, postmortem, diagnostics, regression checklist.
+
+**Rule:** Planets orbiting the Sun use **only** `orbit.getRelativePositionAtUT(UT)` for **all** DLL trail samples and display positions. The live shortcut (`body.position - root.position`) applies to **moons**, not Sun-children.
+
+**Do not confuse versions:** Map **V3** is the product; `frameDiagnostics.resolverVersion` (e.g. `"4"`) is a DLL frame-revision tag in telemetry, not “Map V4.”
+
+| Symptom | Action |
+|---------|--------|
+| `plane` in HUD QA &gt; 1° | Rebuild/install DLL; confirm `resolverVersion` `"4"`+; read helio frame doc |
+| `live↔ana` in Gm, `live↔s0` ≈ 0 | Mixed-frame capture — fix resolver, not web inclination hack |
+| `KSP.log` liveToAnalytic spam | Same |
+
+---
+
 ## Cross-links
 
+- [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) — Sun-child plane alignment (required reading for inclination bugs)
 - [`MAP_V3_PLANET_ORBIT_SPEC.md`](MAP_V3_PLANET_ORBIT_SPEC.md) — inclusion, geometry source, acceptance
 - [`MAP_V3_RENDERING_GUIDE.md`](MAP_V3_RENDERING_GUIDE.md) § Planet orbit
 - [`MAP_V3_PROGRAM_STATE.md`](MAP_V3_PROGRAM_STATE.md)

@@ -3,10 +3,10 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | MAP-V3-PLANET-ORBIT-001 |
-| **Revision** | 1.1 (2026-05-21) |
+| **Revision** | 1.2 (2026-05-22) |
 | **Phase** | 2 |
 | **Scope** | Heliocentric planet orbit polylines only — no moons, no planet meshes, no vessel |
-| **UI build** | `92-v3-planet-orbit-native` |
+| **UI build** | `94-heliocentric-relative-unified` (`?v=94`) |
 
 ## References
 
@@ -19,6 +19,7 @@
 | [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) | Motion tail §2, vertex/sample tuning **§12** |
 | [`MAP_V3_RENDERING_GUIDE.md`](MAP_V3_RENDERING_GUIDE.md) | Living § Planet orbit summary |
 | [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) | Icon/trail alignment verification |
+| [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) | Sun-child capture frame (inclination / plane) |
 
 ## Inclusion rules
 
@@ -34,7 +35,7 @@ V3 lists paths with `shouldIncludeHeliocentricPlanetOrbit` (same rules as former
 
 ## Geometry source (samples first)
 
-On a typical flight save, `bodyOrbitPaths[].validation.trailRenderMode` is **`samples`**. V3 must draw those samples, not a separate analytic Kepler ring, or planet icons will sit far off the grey trail (`liveToAnalyticMeters` can be ~100+ Mm while `liveToSample0` ≈ 0).
+On a typical flight save, `bodyOrbitPaths[].validation.trailRenderMode` is **`samples`**. V3 must draw those samples, not a separate analytic Kepler ring. With correct Sun-child capture, `liveToSample0` ≈ 0 and `planeAngleToAnalyticDegrees` ≈ 0°; `liveToAnalyticMeters` should be **km-scale**, not Gm (Gm values indicated mixed-frame capture — see helio frame doc).
 
 | Priority | Condition | Source |
 |----------|-----------|--------|
@@ -47,7 +48,7 @@ Implementation: `resolvePlanetOrbitPointsFromPath` / `planetOrbitTrailUsesAnalyt
 
 ## Data pipeline
 
-1. **Telemetry (DLL)** — `bodyOrbitPaths[]`: **128** root-frame samples per period (`BodyOrbitPathSampleCount` in `TelemetrySnapshotService.cs`). Fractions `i/N` for `i = 0 … N-1` (never `fraction = 1.0` at period wrap).
+1. **Telemetry (DLL)** — `bodyOrbitPaths[]`: **128** root-frame samples per period (`BodyOrbitPathSampleCount` in `TelemetrySnapshotService.cs`). Fractions `i/N` for `i = 0 … N-1` (never `fraction = 1.0` at period wrap). **Every** sample (including `i = 0` at capture UT) uses `getRelativePositionAtUT` when `referenceBody === Sun` ([`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md)).
 2. **Filter** — `filterHeliocentricPlanetOrbit.ts` per `bodyOrbitPaths[]` entry.
 3. **Source resolve** — `resolvePlanetOrbitSourcePoints` → samples or analytic per table above.
 4. **Densify** — `densifyPlanetOrbitRootPoints` arc-length resamples to **512** vertices (`PLANET_ORBIT_STYLE.trailVertices`).
@@ -91,7 +92,8 @@ Implementation: `resolvePlanetOrbitPointsFromPath` / `planetOrbitTrailUsesAnalyt
 | P2-05 | Colors match v1/v2 side-by-side on same flight |
 | P2-05a | Motion tail per orbit guide §2 |
 | P2-05b | Icons on grey trails; `trailRenderMode: samples`, `liveToSample0` ≈ 0 ([`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md)) |
-| P2-06 | `MapHudV3` shows **v3 phase 2 — planet orbits**; console logs current `KSP_WEB_MAP_UI_VERSION` (e.g. `92-v3-planet-orbit-native`) |
+| P2-06 | `MapHudV3` shows **v3 phase 2 — planet orbits**; console logs current `KSP_WEB_MAP_UI_VERSION` (e.g. `94-heliocentric-relative-unified`) |
+| P2-07 | Heliocentric rings match KSP map inclination; `planeAngleToAnalyticDegrees < 0.1°` ([`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md)) |
 | P2-10 | Recenter uses full solar bounds |
 
 ## Verification

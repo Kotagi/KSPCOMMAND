@@ -159,3 +159,4 @@ Shared rules (from V2):
 | 2026-05-21 | Phase 2 | Motion-tail opacity on single closed ring (`81-orbit-motion-tail`); see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2. |
 | 2026-05-21 | Phase 2 | Samples-first planet geometry (`84-orbit-samples-first`); aligns icons with KSP trails. |
 | 2026-05-21 | Phase 2 | **128** DLL orbit samples + **512** web densify; UI `92-v3-planet-orbit-native`; tuning [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12. |
+| 2026-05-22 | Phase 2 | Heliocentric frame fix — unified `getRelativePositionAtUT` for Sun-children; UI `94-heliocentric-relative-unified`; [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md). |

@@ -1,6 +1,6 @@
 # Map V3 — Program state (as-built)
 
-**Revision:** 2026-05-21 (phase 2 complete; V3 decoupled from v2 planner; Customize Map colors)
+**Revision:** 2026-05-22 (phase 2 complete; heliocentric frame fix; V3 decoupled from v2 planner)
 
 ---
 
@@ -10,7 +10,7 @@
 |-------|--------|
 | 0 — Blank canvas | Complete |
 | 1 — Star marker | Complete |
-| 2 — Planet orbits | Complete — motion tail, samples-first, 128 DLL / 512 web verts, v3-native segment builder |
+| 2 — Planet orbits | Complete — motion tail, samples-first, 128 DLL / 512 web verts, unified Sun-child `getRelativePositionAtUT` ([`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md)) |
 | 3–12 | Not started (see [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md)) |
 
 - **Default view:** `solarRenderMode: "3d-v3"` in `web/src/store/viewStore.ts`.
@@ -97,10 +97,10 @@ flowchart TB
 |-------|--------|
 | Path filter | `filterHeliocentricPlanetOrbit.ts` (same rules as former v2 `BodyOrbit` + `planetOnly`) |
 | Geometry | `resolvePlanetOrbitSourcePoints` → `densifyPlanetOrbitRootPoints` (**512** verts) |
-| Capture | DLL **128** samples/period |
+| Capture | DLL **128** samples/period; Sun-children: parent-relative at all UTs |
 | Drawer | `GradientDirectionalOrbitTrail` — one closed `Line`, motion tail |
 | Colors | `kspBodyMapColorTable.ts` + Customize Map HUD |
-| Docs | [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md), [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) |
+| Docs | [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md), [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md), [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) |
 
 ---
 
@@ -113,6 +113,7 @@ Phase 3 (`planetBody`): new `map-v3/elements/planetBody/buildPlanetBodySegments`
 ## Verification baseline
 
 - `npm test` / `npm run build` green (72 tests).
-- UI version: `92-v3-planet-orbit-native` (`web/src/mount.tsx`; refresh `?v=92`).
+- UI version: `94-heliocentric-relative-unified` (`web/src/mount.tsx`; refresh `?v=94`).
+- DLL `frameDiagnostics.resolverVersion`: `"4"` (frame authority — not “Map V4”).
 - Manual: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) phase 2.
 - Decouple record: [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md).

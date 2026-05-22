@@ -2,7 +2,11 @@
 
 `RootRelativePositionResolver` calibrates at capture time by comparing live `body.position - root.position` against propagated offsets at `UT = now + 60 s` for Kerbin, Mun, Moho, Eve, and Duna.
 
-**Display authority (Phase 11):** `bodies[].positionRootRelativeMeters` and trail sample 0 use `GetBodyDisplayRootRelative` (trail/true path). Flip/no-flip mode still governs relative offsets in parent chains and diagnostic flip propagation only.
+**Display authority (Phase 11):** `bodies[].positionRootRelativeMeters` and all body-orbit trail samples use `GetBodyDisplayRootRelative` → `GetBodyRootRelativeForTrailSample`.
+
+**Heliocentric planets (parent = Sun):** always `getRelativePositionAtUT` — **not** governed by flip/no-flip calibration. See [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md).
+
+**Moons:** flip/no-flip mode governs parent-chain relative offsets and diagnostic flip propagation only.
 
 ## Modes
 

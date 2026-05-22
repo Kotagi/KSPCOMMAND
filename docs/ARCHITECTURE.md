@@ -227,11 +227,21 @@ Phase 6 adds route diagnostics from `orbitPatches[]`. Phase 7 adds root-frame pl
 
 ## Shared Solar-System Frame
 
-The root frame is named `solarSystemRootCenteredInertial`. The capture service identifies a root body, normally `Sun`, then stores **display** body positions via `RootRelativePositionResolver.GetBodyDisplayRootRelative` (trail/true authority: live at `T_now`, heliocentric `getTruePositionAtUT` for Sun-children at other UTs). Diagnostic fields also record `positionLiveRootRelativeMeters` (`body.position - root`) and `positionTrueRootRelativeMeters` (`getTruePositionAtUT` difference). Active-vessel position uses `vessel.GetWorldPos3D() - rootBody.position`. Body and vessel velocities are captured relative to the same root where KSP exposes frame velocity data.
+The root frame is named `solarSystemRootCenteredInertial`. The capture service identifies a root body, normally `Sun`, then stores **display** body positions via `RootRelativePositionResolver.GetBodyDisplayRootRelative` (same path as body-orbit trail samples).
+
+**Heliocentric planets** (`orbit.referenceBody == Sun`): **always** `orbit.getRelativePositionAtUT(UT)` at every sample UT, including capture time. This matches `orbit.inclination` / LAN and the stock map. Do **not** mix `body.position - root.position` on sample 0 with `getTruePositionAtUT` on other samples — see [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md).
+
+**Moons and nested bodies:** at `T_now` (within 1 s), live `body.position - root.position`; at other UTs, parent-chain `getRelativePositionAtUT` with calibrated `flipRelative` / `noFlipRelative` ([`orbit-offset-mode.md`](orbit-offset-mode.md)).
+
+Diagnostic fields (not display authority): `positionLiveRootRelativeMeters`, `positionTrueRootRelativeMeters` (`getTruePositionAtUT` world difference). `frameDiagnostics.resolverVersion` is a **DLL frame revision** (e.g. `"4"`), not a Map V3/V4 product version.
+
+Active-vessel position uses `vessel.GetWorldPos3D() - rootBody.position`. Body and vessel velocities are captured relative to the same root where KSP exposes frame velocity data.
 
 Patch placement uses schema v6 ephemeris samples when capture succeeds. `orbitPatches[].placementSamples[]` records reference and encounter body root-frame positions at patch start, end, and closest-encounter universal times. `referenceBodyPositionRootRelativeMeters` defaults to the patch-start sample for route anchoring. When sampling fails, the service falls back to `patchPlacementMode: currentReferenceBodyPosition` with an explicit warning.
 
-Body propagation at arbitrary universal time uses **hierarchical root-relative resolution**: for each body, `rootRel(UT) = rootRel(parent, UT) + FlipOrbitVector(orbit.getRelativePositionAtUT(UT))`, recursing up the parent chain until the root body (`rootRel = 0`). At the current universal time, live `body.position - rootBody.position` is used instead. Do not sum `getTruePositionAtUT` with a separately propagated parent world position — that double-counts and produces multi‑Gm residuals. Vessel root-relative position uses the same parent chain via `orbit.referenceBody`. Body-orbit trail samples use fractions `i/N` (never `UT + period` exactly) to avoid period-wrap API edge cases.
+Body propagation for **non-Sun parents** uses hierarchical root-relative resolution: `rootRel(UT) = rootRel(parent, UT) + offset(getRelativePositionAtUT(UT))`, recursing to the root. **Sun-children** skip the chain and read `getRelativePositionAtUT` directly into the root frame.
+
+Do not use `getTruePositionAtUT(body) - getTruePositionAtUT(Sun)` for displayed planet trails — that frame disagreed with orbit elements by ~180° plane tilt while `liveVsTrue` at `T_now` stayed ~0. Vessel root-relative position uses the parent chain via `orbit.referenceBody`. Body-orbit trail samples use fractions `i/N` (never `UT + period` exactly) to avoid period-wrap API edge cases.
 
 `ephemerisValidationResidualMeters` is the max **same-UT** residual: icon↔trail sample 0 and trail self-consistency (`maxSampleToRecomputedMeters`). It does **not** include the 60s orbital-separation diagnostic (`ephemerisLivePropagationResidualMeters`) or flip-propagation vs trail (`bodyOrbitFlipPropagationResidualMeters`). `GET /api/diagnostics` exposes `positionValidation` (worst body + check type).
 

@@ -94,36 +94,17 @@ namespace KspWebMap
                     }
                     else
                     {
-                        Vector3d atStart;
-                        Vector3d atPeriod;
-
-                        if (RootRelativePositionResolver.TryGetTrueRootRelative(
+                        Vector3d atStart = RootRelativePositionResolver.GetBodyRootRelativeForTrailSample(
                             body,
                             rootBody,
                             universalTime,
-                            out atStart)
-                            && RootRelativePositionResolver.TryGetTrueRootRelative(
+                            universalTime);
+                        Vector3d atPeriod = RootRelativePositionResolver.GetBodyRootRelativeForTrailSample(
                             body,
                             rootBody,
                             periodUt,
-                            out atPeriod))
-                        {
-                            validation.PeriodClosureMeters = (atStart - atPeriod).magnitude;
-                        }
-                        else
-                        {
-                            atStart = RootRelativePositionResolver.GetBodyRootRelative(
-                                body,
-                                rootBody,
-                                universalTime,
-                                universalTime);
-                            atPeriod = RootRelativePositionResolver.GetBodyRootRelative(
-                                body,
-                                rootBody,
-                                periodUt,
-                                universalTime);
-                            validation.PeriodClosureMeters = (atStart - atPeriod).magnitude;
-                        }
+                            universalTime);
+                        validation.PeriodClosureMeters = (atStart - atPeriod).magnitude;
                     }
                 }
             }
@@ -350,8 +331,7 @@ namespace KspWebMap
                 return double.NaN;
             }
 
-            Vector3d analyticNormal = OrbitFrameMapping.MathInertialToKspLocal(
-                PerifocalToInertial(new Vector3d(0d, 0d, 1d), elements));
+            Vector3d analyticNormal = OrbitFrameMapping.OrbitNormalKspLocal(elements);
 
             if (analyticNormal.sqrMagnitude <= 0d)
             {
@@ -363,9 +343,10 @@ namespace KspWebMap
                 samplePlaneNormal.X,
                 samplePlaneNormal.Y,
                 samplePlaneNormal.Z).normalized;
-            double dot = Math.Abs(Vector3d.Dot(sampleNormal, analyticNormal));
+            double dot = Vector3d.Dot(sampleNormal, analyticNormal);
             dot = Math.Min(1d, Math.Max(-1d, dot));
-            return Math.Acos(dot) * 180d / Math.PI;
+            // Coplanar test: 0° = aligned normals, 180° = opposite (same plane, flipped).
+            return Math.Acos(Math.Abs(dot)) * 180d / Math.PI;
         }
 
         private static Vector3d PerifocalToInertial(Vector3d point, BodyOrbitElementsSnapshot elements)

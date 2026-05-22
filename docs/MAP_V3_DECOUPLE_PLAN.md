@@ -38,7 +38,7 @@ npm run build
 ```
 
 - **72** tests (includes v2/v3 planet-orbit path parity on Kerbin fixture).
-- In flight: **3D Map V3** — `92-v3-planet-orbit-native` in console after `?v=92` refresh.
+- In flight: **3D Map V3** — `94-heliocentric-relative-unified` in console after `?v=94` refresh (see [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) for DLL frame rules).
 
 ## Related docs
 

@@ -48,7 +48,7 @@ for (const name of planets) {
   const d = dist(path.samples[0].positionRootRelativeMeters, b.positionRootRelativeMeters);
   const v = path.validation ?? {};
   console.log(
-    `  ${name.padEnd(6)} icon↔trail0=${d.toFixed(1)} liveToS0=${v.liveToSample0Meters ?? "—"} recomputed=${v.maxSampleToRecomputedMeters?.toExponential(2) ?? "—"} mode=${v.trailRenderMode}`,
+    `  ${name.padEnd(6)} icon↔trail0=${d.toFixed(1)} liveToS0=${v.liveToSample0Meters ?? "—"} live↔ana=${v.liveToAnalyticMeters != null ? (v.liveToAnalyticMeters / 1e6).toFixed(1) + " Mm" : "—"} plane=${v.planeAngleToAnalyticDegrees != null ? v.planeAngleToAnalyticDegrees.toFixed(2) + "°" : "—"} mode=${v.trailRenderMode}`,
   );
 }
 

@@ -15,7 +15,7 @@ namespace KspWebMap
     /// </summary>
     public static class RootRelativePositionResolver
     {
-        public const string ResolverVersion = "2";
+        public const string ResolverVersion = "4";
         public const double LiveToleranceSeconds = 1d;
 
         private static OrbitOffsetMode _orbitOffsetMode = OrbitOffsetMode.NoFlipRelative;
@@ -177,11 +177,9 @@ namespace KspWebMap
         }
 
         /// <summary>
-        /// Trail samples aligned with live icons: live at capture UT, heliocentric true for
-        /// bodies orbiting the root, parent-chain relative offsets for moons.
-        /// </summary>
-        /// <summary>
-        /// Display authority: icons, ephemeris chain bodies, and trail sample 0 at capture UT.
+        /// Display authority: icons, ephemeris, and body-orbit trails.
+        /// Live at capture UT; heliocentric planets use parent-relative propagation (matches
+        /// orbit.inclination / stock map); moons use parent-chain relative offsets.
         /// </summary>
         public static Vector3d GetBodyDisplayRootRelative(
             CelestialBody body,
@@ -217,12 +215,6 @@ namespace KspWebMap
                 return Vector3d.zero;
             }
 
-            if (IsValidUniversalTime(currentUniversalTime)
-                && Math.Abs(sampleUniversalTime - currentUniversalTime) <= LiveToleranceSeconds)
-            {
-                return GetLiveRootRelativeInternal(body, rootBody);
-            }
-
             if (body.orbit == null)
             {
                 return GetLiveRootRelativeInternal(body, rootBody);
@@ -230,22 +222,29 @@ namespace KspWebMap
 
             CelestialBody parent = body.orbit.referenceBody;
 
-            if (parent == null || parent == body)
-            {
-                return ApplyOrbitOffset(
-                    body.orbit.getRelativePositionAtUT(sampleUniversalTime),
-                    _orbitOffsetMode);
-            }
-
             if (parent == rootBody)
             {
-                Vector3d heliocentricTrue;
-
-                if (TryGetHeliocentricTrueRootRelative(body, rootBody, sampleUniversalTime, out heliocentricTrue))
+                // Sun-children: always parent-relative at every sample UT (including now).
+                // Must run before the live shortcut — sample[0] was still body.position while
+                // samples[1..] used getRelativePositionAtUT, which broke the ring (v3 regression).
+                try
                 {
-                    return heliocentricTrue;
+                    return body.orbit.getRelativePositionAtUT(sampleUniversalTime);
                 }
+                catch
+                {
+                    return Vector3d.zero;
+                }
+            }
 
+            if (IsValidUniversalTime(currentUniversalTime)
+                && Math.Abs(sampleUniversalTime - currentUniversalTime) <= LiveToleranceSeconds)
+            {
+                return GetLiveRootRelativeInternal(body, rootBody);
+            }
+
+            if (parent == null || parent == body)
+            {
                 return ApplyOrbitOffset(
                     body.orbit.getRelativePositionAtUT(sampleUniversalTime),
                     _orbitOffsetMode);

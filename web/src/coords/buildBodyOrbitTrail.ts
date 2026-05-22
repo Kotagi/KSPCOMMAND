@@ -241,6 +241,9 @@ export function formatTrailValidation(
   if (validation.liveToAnalyticMeters != null) {
     parts.push(`live↔ana ${validation.liveToAnalyticMeters.toExponential(2)} m`);
   }
+  if (validation.planeAngleToAnalyticDegrees != null) {
+    parts.push(`plane ${validation.planeAngleToAnalyticDegrees.toFixed(2)}°`);
+  }
   const sampleTrail =
     validation.maxSampleToTrailFrameMeters ?? validation.maxSampleToTrueMeters;
   if (sampleTrail != null) {

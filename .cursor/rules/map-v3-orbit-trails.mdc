@@ -11,6 +11,9 @@ globs:
   - web/src/scene/bodyMapColors.ts
   - web/src/settings/customizeMapDev.ts
   - web/src/components/CustomizeMapDevPanel.tsx
+  - src/KspWebMap/Telemetry/RootRelativePositionResolver.cs
+  - src/KspWebMap/Telemetry/BodyOrbitDiagnostics.cs
+  - src/KspWebMap/Telemetry/OrbitFrameMapping.cs
 alwaysApply: false
 ---
 
@@ -18,11 +21,12 @@ alwaysApply: false
 
 Before changing orbit trail rendering or planet/moon orbit builders:
 
-1. Read **`docs/ORBIT_TRAIL_DRAWING_GUIDE.md`** — **§2 Motion tail**; **§12** to change DLL sample count (128) or web densify (512); samples-first geometry in `densifyPlanetOrbitTrail.ts`.
-2. Prefer **`opacityForOrbitTailAhead`** / **`closedRingHalfGradientOpacities`** for closed rings; do not reintroduce full-ring symmetric opacity (`trailVertexOpacitiesKspRing`) or analytic-first planet paths when ≥2 telemetry samples exist.
-3. Default new solar-map features to **Map V3** (`3d-v3`, `web/src/scene/v3/`, `web/src/map-v3/`). Keep v1/v2 changes minimal (regression only).
-4. DLL sample changes require **`scripts/build.ps1`** + **`scripts/install.ps1`**; bump `KSP_WEB_MAP_UI_VERSION` and `index.html` `?v=`.
-5. Update **`docs/MAP_V3_RENDERING_GUIDE.md`**, **`MAP_V3_PLANET_ORBIT_SPEC.md`**, and run **`npm test`** when behavior changes.
-6. Orbit **colors** / Customize Map / mod packs: **`docs/PLANET_ORBIT_COLOR_GUIDE.md`**.
+1. Read **`docs/ORBIT_TRAIL_DRAWING_GUIDE.md`** — **§2 Motion tail**; **§12** sample/vertex counts; **§13** Sun-child frame. For inclination / plane bugs: **`docs/HELIOCENTRIC_ORBIT_FRAME.md`** (Map V3 only — `resolverVersion` in telemetry is not “Map V4”).
+2. Sun-children: **all** trail samples use `getRelativePositionAtUT` in `RootRelativePositionResolver` (before live shortcut). No web-side inclination flip.
+3. Prefer **`opacityForOrbitTailAhead`** / **`closedRingHalfGradientOpacities`** for closed rings; do not reintroduce full-ring symmetric opacity (`trailVertexOpacitiesKspRing`) or analytic-first planet paths when ≥2 telemetry samples exist.
+4. Default new solar-map features to **Map V3** (`3d-v3`, `web/src/scene/v3/`, `web/src/map-v3/`). Keep v1/v2 changes minimal (regression only).
+5. DLL / frame changes require **`scripts/build.ps1`** + **`scripts/install.ps1`** + KSP restart; bump `KSP_WEB_MAP_UI_VERSION` and `index.html` `?v=`.
+6. Update **`docs/MAP_V3_RENDERING_GUIDE.md`**, **`MAP_V3_PLANET_ORBIT_SPEC.md`**, **`HELIOCENTRIC_ORBIT_FRAME.md`** when frame behavior changes; run **`npm test`** for web edits.
+7. Orbit **colors** / Customize Map / mod packs: **`docs/PLANET_ORBIT_COLOR_GUIDE.md`**.
 
 Program state: **`docs/MAP_V3_PROGRAM_STATE.md`**. V3 is standalone from v2 planner: **`docs/MAP_V3_DECOUPLE_PLAN.md`** — do not add `map-v2/TrajectoryPlanner` imports under `map-v3/`.
