@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { MapV3Provider } from "../../map-v3/MapV3Context";
-import { MAP_V3_LAYERS_PHASE1 } from "../../map-v3/layerFlags";
+import { MAP_V3_LAYERS_PHASE2 } from "../../map-v3/layerFlags";
 import { MoonVisibilityProvider } from "../MoonVisibilityContext";
 import { CameraRig } from "../CameraRig";
 import { SelectionController } from "../SelectionController";
@@ -16,7 +16,7 @@ export function Map3DV3() {
       style={{ width: "100%", height: "100%", background: "#071019" }}
     >
       <MoonVisibilityProvider>
-        <MapV3Provider layerFlags={MAP_V3_LAYERS_PHASE1}>
+        <MapV3Provider layerFlags={MAP_V3_LAYERS_PHASE2}>
           <MapV3SceneErrorBoundary>
             <color attach="background" args={["#071019"]} />
             <ambientLight intensity={0.35} />

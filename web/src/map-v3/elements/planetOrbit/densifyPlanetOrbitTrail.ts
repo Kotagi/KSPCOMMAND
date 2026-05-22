@@ -1,0 +1,118 @@
+import {
+  buildBodyOrbitTrailSegments,
+  canUseAnalyticBodyOrbit,
+  findBodyOrbitAnchor,
+} from "../../../coords/buildBodyOrbitTrail";
+import { densifyOrbitTrailPoints } from "../../../scene/densifyOrbitTrail";
+import type { BodyOrbitPath, Vector3 } from "../../../telemetry/schema-v6";
+import type { MapContext } from "../../MapContext";
+import type { ScenePoint3 } from "../../types";
+import { PLANET_ORBIT_STYLE } from "./planetOrbitStyle";
+
+type Point3 = [number, number, number];
+
+function toPoint3(p: Vector3): Point3 {
+  return [p.x, p.y, p.z];
+}
+
+function fromPoint3(p: Point3): Vector3 {
+  return { x: p[0], y: p[1], z: p[2] };
+}
+
+function stripDuplicateClosingVertex(points: Vector3[]): Vector3[] {
+  if (points.length < 2) {
+    return points;
+  }
+  const a = points[0];
+  const b = points[points.length - 1];
+  if (Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) < 1) {
+    return points.slice(0, -1);
+  }
+  return points;
+}
+
+/** Heliocentric planet periods are always closed rings (not the 1 km planner heuristic). */
+export function densifyPlanetOrbitRootPoints(points: Vector3[]): Vector3[] {
+  const ring = stripDuplicateClosingVertex(points);
+  if (ring.length < 3) {
+    return points;
+  }
+  if (ring.length >= PLANET_ORBIT_STYLE.trailVertices) {
+    return ring.map((p) => ({ ...p }));
+  }
+  return densifyOrbitTrailPoints(
+    ring.map(toPoint3),
+    false,
+    PLANET_ORBIT_STYLE.trailVertices,
+    true,
+  ).map(fromPoint3);
+}
+
+function analyticOrbitPoints(
+  path: BodyOrbitPath,
+  bodies: { body: { name?: string }; position: Vector3 }[],
+  rootBody: string | null | undefined,
+): Vector3[] | null {
+  if (!canUseAnalyticBodyOrbit(path)) {
+    return null;
+  }
+  const anchor = findBodyOrbitAnchor(
+    path,
+    bodies,
+    rootBody,
+    path.samples?.[0] ?? null,
+  );
+  const analytic = buildBodyOrbitTrailSegments(path, anchor).flat();
+  return analytic.length >= 3 ? analytic : null;
+}
+
+/**
+ * Prefer smooth Keplerian conic samples (~512). Telemetry ships ~48 straight chords;
+ * arc-length densify on that polyline stays a 48-gon visually.
+ */
+export function resolvePlanetOrbitSourcePoints(
+  ctx: MapContext,
+  bodyName: string | undefined,
+  fallbackPoints: Vector3[],
+): Vector3[] {
+  if (!bodyName) {
+    return fallbackPoints;
+  }
+  const path = (ctx.telemetry.bodyOrbitPaths ?? []).find(
+    (p) => p.bodyName === bodyName,
+  );
+  if (!path) {
+    return fallbackPoints;
+  }
+  const bodies = ctx.bodies.map((b) => ({
+    body: { name: b.name },
+    position: b.position,
+  }));
+  return (
+    analyticOrbitPoints(path, bodies, ctx.rootBody) ?? fallbackPoints
+  );
+}
+
+export function resolvePlanetOrbitPointsFromPath(
+  path: BodyOrbitPath,
+  bodies: { body: { name?: string }; position: Vector3 }[],
+  rootBody: string | null | undefined,
+  fallbackPoints: Vector3[],
+): Vector3[] {
+  return analyticOrbitPoints(path, bodies, rootBody) ?? fallbackPoints;
+}
+
+/** Scene-space safety net when sparse trails slip through. */
+export function densifyPlanetOrbitScenePoints(points: ScenePoint3[]): ScenePoint3[] {
+  if (points.length >= PLANET_ORBIT_STYLE.trailVertices) {
+    return points;
+  }
+  const asVec = points.map(
+    (p): Vector3 => ({ x: p[0], y: p[1], z: p[2] }),
+  );
+  const dense = densifyPlanetOrbitRootPoints(asVec);
+  return dense.map((p) => [p.x, p.y, p.z] as ScenePoint3);
+}
+
+/** @deprecated Use resolvePlanetOrbitSourcePoints */
+export const ensurePlanetOrbitSourcePoints = resolvePlanetOrbitSourcePoints;

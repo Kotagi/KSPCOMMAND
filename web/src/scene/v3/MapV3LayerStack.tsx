@@ -1,4 +1,5 @@
 import { StarMarkerLayer } from "./layers/StarMarkerLayer";
+import { PlanetOrbitLayer } from "./layers/PlanetOrbitLayer";
 
 /**
  * R3F layer composition for Map V3.
@@ -8,6 +9,7 @@ export function MapV3LayerStack() {
   return (
     <>
       <StarMarkerLayer />
+      <PlanetOrbitLayer />
     </>
   );
 }

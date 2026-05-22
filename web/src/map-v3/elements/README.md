@@ -5,5 +5,6 @@ One subdirectory per `MapElementKind` containing pure segment builders (no React
 | Module | Status |
 |--------|--------|
 | `starMarker/` | **Implemented** — `resolveSystemAnchors`, `buildStarMarkerSegments` |
+| `planetOrbit/` | **Implemented** — `planetOrbitStyle`, `buildPlanetOrbitSegments` |
 
 See `docs/MAP_V3_RENDERING_GUIDE.md` and `docs/MAP_V3_MODULES.md`.

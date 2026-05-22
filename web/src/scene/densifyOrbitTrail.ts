@@ -22,17 +22,21 @@ export function densifyOrbitTrailPoints(
   points: Point3[],
   closedWithDuplicateEndpoint: boolean,
   targetPeriodVertices = BODY_ORBIT_TRAIL_PERIOD_VERTICES,
+  /** When true, wrap last→first even if the polyline has no duplicate closing vertex. */
+  closedLoop = false,
 ): Point3[] {
   if (points.length < 3) {
     return points;
   }
 
-  const period = closedWithDuplicateEndpoint ? points.slice(0, -1) : points;
+  const closed = closedLoop || closedWithDuplicateEndpoint;
+  const period =
+    closedWithDuplicateEndpoint && !closedLoop
+      ? points.slice(0, -1)
+      : points;
   if (period.length < 3) {
     return points;
   }
-
-  const closed = closedWithDuplicateEndpoint;
   const segCount = closed ? period.length : period.length - 1;
   const segLengths: number[] = [];
   let total = 0;

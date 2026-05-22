@@ -25,4 +25,10 @@ export const MAP_V3_LAYERS_PHASE1: MapV3LayerFlags = {
   starMarker: true,
 };
 
-export const MAP_V3_PHASE_LABEL = "v3 phase 1 — star";
+/** Phase 2: star + heliocentric planet orbit paths only. */
+export const MAP_V3_LAYERS_PHASE2: MapV3LayerFlags = {
+  ...MAP_V3_LAYERS_PHASE1,
+  planetOrbit: true,
+};
+
+export const MAP_V3_PHASE_LABEL = "v3 phase 2 — planet orbits";

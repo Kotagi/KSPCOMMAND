@@ -2,7 +2,7 @@
 
 How each **object type** is drawn on the modular map. Update a section when that element’s layer ships.
 
-**Status:** Phase 1 — `starMarker` implemented; other elements not rendered.
+**Status:** Phase 2 — `starMarker` + `planetOrbit` implemented; other elements not rendered.
 
 ---
 
@@ -27,7 +27,7 @@ Shared rules (from V2):
 | Kind | Layer | Phase | Status | Doc section |
 |------|-------|-------|--------|-------------|
 | `starMarker` | `StarMarkerLayer` | 1 | **Implemented** | § Star marker |
-| `planetOrbit` | `PlanetOrbitLayer` | 2 | Not started | § Planet orbit |
+| `planetOrbit` | `PlanetOrbitLayer` | 2 | **Implemented** | § Planet orbit |
 | `planetBody` | `PlanetBodyLayer` | 3 | Not started | § Planet body |
 | `moonOrbit` | `MoonOrbitLayer` | 4 | Not started | § Moon orbit |
 | `moonBody` | `MoonBodyLayer` | 5 | Not started | § Moon body |
@@ -66,13 +66,20 @@ Shared rules (from V2):
 
 ## § Planet orbit
 
+**Spec:** [`MAP_V3_PLANET_ORBIT_SPEC.md`](MAP_V3_PLANET_ORBIT_SPEC.md)
+
 | Field | Value |
 |-------|-------|
-| Data source | TBD — `bodyOrbitPaths` / analytic trail |
-| Primitive | TBD — `Line` / `Line2` closed polyline |
-| Color | TBD — `getKspBodyMapColor` |
+| Data source | `telemetry.bodyOrbitPaths` → v2 `BodyOrbit` planner → densify to **512** verts |
+| Segment builder | `buildPlanetOrbitSegments` → `kind: planetOrbit` |
+| Primitive | `@react-three/drei` `Line` ×2 (retrograde + prograde halves) |
+| Color | `resolvePlanetOrbitColor` → `getKspBodyMapColor(bodyName)` |
+| Line width | Retro: `1.0`; prograde: `0.7×` width, reduced opacity via `splitOrbitTrailHalves` |
+| Frame | `useV3SceneTrails` → `toScenePoints` with normal `sceneFrame` |
+| Visibility | `visibleBodyNames` ∩ `hierarchy.planetNames` |
+| Flags | `MAP_V3_LAYERS_PHASE2.planetOrbit` |
 
-*Not implemented.*
+**Files:** `map-v3/elements/planetOrbit/*`, `map-v3/useMapV3Trails.ts`, `scene/v3/layers/PlanetOrbitLayer.tsx`, `OrbitTrailV3.tsx`
 
 ---
 
@@ -143,3 +150,4 @@ Shared rules (from V2):
 | 2026-05-21 | Phase 0 | V3 forked from V2 patterns; blank scene uses same CEF-safe star background as V2 (no postprocessing). |
 | 2026-05-21 | Phase 1 | Star uses v2 `starBody` + modular `SystemAnchor`; emissive mesh matches V2 `StarLayer` (CEF-safe, no EffectComposer). |
 | 2026-05-21 | Phase 1 camera | V3 star-only view must frame the star, not full-system bounds; star uses `focus: null` (not moon LOD `displayFocus`). |
+| 2026-05-21 | Phase 2 | Planet orbits reuse v2 BodyOrbit geometry; v3 adds modular kind + `OrbitTrailV3`; phase 2 enables full solar camera bounds. |

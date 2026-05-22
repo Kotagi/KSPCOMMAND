@@ -28,6 +28,23 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 
 **Automated (2026-05-21):** P1-06, P1-07 pass via `npm test`. P1-01–P1-05 require manual flight check.
 
+## Phase 2 — Planet orbit paths
+
+| ID | Pass criteria |
+|----|----------------|
+| P2-01 | Colored heliocentric planet orbit trails visible (stock save with planets) |
+| P2-02 | No moon orbit rings (e.g. Mun, Minmus) |
+| P2-03 | No planet mesh markers, vessel, labels, or SOI rings |
+| P2-04 | Star still visible at center |
+| P2-05 | Side-by-side **3D WebGL (v1)** — trail colors comparable on same flight |
+| P2-06 | `MapHudV3` shows **v3 phase 2 — planet orbits** |
+| P2-07 | `buildPlanetOrbitSegments` Vitest: ≥1 segment, planets only, no moons |
+| P2-08 | `composeMapV3Layers(PHASE2)` === `["StarMarkerLayer", "PlanetOrbitLayer"]` |
+| P2-09 | No console errors on load, orbit, or Recenter |
+| P2-10 | Recenter uses full solar bounds (not star-only framing) |
+
+**Automated:** P2-07, P2-08 via `npm test`. P2-01–P2-06, P2-09–P2-10 require manual flight check.
+
 ## Future phases
 
 Per-element criteria added when the corresponding flag is enabled (mirror `docs/MAP_V2_ACCEPTANCE.md`).

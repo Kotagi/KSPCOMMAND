@@ -21,6 +21,17 @@ describe("densifyOrbitTrail", () => {
     expect(dense[0]).toEqual(dense[dense.length - 1]);
   });
 
+  it("densifies closed loop without duplicate closing vertex", () => {
+    const ring: [number, number, number][] = [
+      [10, 0, 0],
+      [0, 0, 10],
+      [-10, 0, 0],
+      [0, 0, -10],
+    ];
+    const dense = densifyOrbitTrailPoints(ring, false, 64, true);
+    expect(dense.length).toBe(64);
+  });
+
   it("interpolates sample times to densified period length", () => {
     const times = Array.from({ length: 48 }, (_, i) => 1000 + i * 100);
     const dense = densifySampleUniversalTimes(times, BODY_ORBIT_TRAIL_PERIOD_VERTICES);

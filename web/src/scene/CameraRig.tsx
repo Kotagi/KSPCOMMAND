@@ -12,7 +12,7 @@ import { useMoonVisibilityContext } from "./MoonVisibilityContext";
 import { buildMapContext } from "../map-v2/MapContext";
 import { getStarMarkerCameraBounds } from "../map-v3/camera/starCameraBounds";
 import { composeMapV3Layers } from "../map-v3/MapComposer";
-import { MAP_V3_LAYERS_PHASE1 } from "../map-v3/layerFlags";
+import { MAP_V3_LAYERS_PHASE2 } from "../map-v3/layerFlags";
 
 function isMapV3StarOnlyView(
   solarRenderMode: string,
@@ -50,7 +50,7 @@ export function CameraRig() {
 
     const v3StarOnly = isMapV3StarOnlyView(
       solarRenderMode,
-      composeMapV3Layers(MAP_V3_LAYERS_PHASE1),
+      composeMapV3Layers(MAP_V3_LAYERS_PHASE2),
     );
 
     if (v3StarOnly) {

@@ -2,6 +2,8 @@
 export {
   buildMapContext,
   starBody,
+  isPlanetBody,
+  isMoonBody,
   type MapContext,
   type BodyEntry,
 } from "../map-v2/MapContext";

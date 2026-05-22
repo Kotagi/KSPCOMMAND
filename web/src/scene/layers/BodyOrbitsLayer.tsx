@@ -3,6 +3,11 @@ import { useViewStore } from "../../store/viewStore";
 import { DirectionalOrbitTrail } from "./DirectionalOrbitTrail";
 import { applyWorldShift } from "../../coords/worldShift";
 import { resolveTrailRenderMode } from "../../coords/buildBodyOrbitTrail";
+import { buildMapContext } from "../../map-v2/MapContext";
+import {
+  densifyPlanetOrbitRootPoints,
+  resolvePlanetOrbitPointsFromPath,
+} from "../../map-v3/elements/planetOrbit/densifyPlanetOrbitTrail";
 import { useLayerFocus } from "./useLayerFocus";
 import { useMoonVisibilityContext } from "../MoonVisibilityContext";
 import type { Vector3 } from "../../telemetry/schema-v6";
@@ -22,6 +27,11 @@ export function BodyOrbitsLayer() {
   const displayScale = useViewStore((s) => s.displayScale);
   const focus = useLayerFocus();
   const { visibleBodyNames } = useMoonVisibilityContext();
+
+  const mapContext = useMemo(
+    () => buildMapContext(model?.telemetry ?? null),
+    [model?.telemetry],
+  );
 
   const paths = useMemo(() => {
     const lines: {
@@ -46,7 +56,21 @@ export function BodyOrbitsLayer() {
       if (points.length < 2) {
         return;
       }
-      const scenePoints = rootPointsToLine(points, focus, displayScale);
+      const rootBody = model?.telemetry?.rootBody;
+      const isHeliocentricPlanet =
+        path.referenceBody === rootBody
+        && (model?.hierarchy?.planetNames?.includes(path.bodyName) ?? false);
+      const bodies = (model?.bodies ?? []).map((b) => ({
+        body: { name: b.body.name },
+        position: b.position,
+      }));
+      const source = isHeliocentricPlanet
+        ? resolvePlanetOrbitPointsFromPath(path, bodies, rootBody, points)
+        : points;
+      const trailPoints = isHeliocentricPlanet
+        ? densifyPlanetOrbitRootPoints(source)
+        : source;
+      const scenePoints = rootPointsToLine(trailPoints, focus, displayScale);
       lines.push({
         key: `body-orbit-${path.bodyName ?? pathIndex}`,
         bodyName: path.bodyName,
@@ -57,7 +81,7 @@ export function BodyOrbitsLayer() {
     });
 
     return lines;
-  }, [model, focus, displayScale, visibleBodyNames]);
+  }, [model, mapContext, focus, displayScale, visibleBodyNames]);
 
   if (!paths.length) {
     return null;

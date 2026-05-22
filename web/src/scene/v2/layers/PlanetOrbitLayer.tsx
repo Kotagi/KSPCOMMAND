@@ -1,16 +1,26 @@
+import { useMemo } from "react";
 import { useMapV2 } from "../../../map-v2/MapV2Context";
-import { useV2RootSegments, useV2SceneTrails } from "../../../map-v2/useMapV2Trails";
+import { buildPlanetOrbitSegments } from "../../../map-v3/elements/planetOrbit/buildPlanetOrbitSegments";
+import { toScenePoints } from "../../../map-v2/SceneFrame";
 import { OrbitTrailV2 } from "./OrbitTrailV2";
 
 export function PlanetOrbitLayer() {
   const { mapContext, sceneFrame, layers } = useMapV2();
-  const rootSegs = useV2RootSegments(
-    mapContext,
-    "BodyOrbit",
-    { planetOnly: true },
-    layers.planetOrbits,
+  const rootSegs = useMemo(
+    () => (mapContext ? buildPlanetOrbitSegments(mapContext) : []),
+    [mapContext],
   );
-  const trails = useV2SceneTrails(rootSegs, sceneFrame);
+  const trails = useMemo(
+    () =>
+      rootSegs.map((seg) => ({
+        key: seg.key,
+        bodyName: seg.bodyName,
+        points: toScenePoints(seg.points, sceneFrame),
+        anchorIndex: seg.anchorIndex ?? 0,
+        closed: seg.closed ?? false,
+      })),
+    [rootSegs, sceneFrame],
+  );
 
   if (!layers.planetOrbits || trails.length === 0) {
     return null;
@@ -25,7 +35,8 @@ export function PlanetOrbitLayer() {
           bodyName={t.bodyName}
           points={t.points}
           anchorIndex={t.anchorIndex}
-          closedWithDuplicateEndpoint={t.closed}
+          closedWithDuplicateEndpoint={false}
+          planetRing
         />
       ))}
     </group>

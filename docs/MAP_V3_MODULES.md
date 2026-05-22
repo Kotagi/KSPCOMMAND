@@ -9,10 +9,18 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). V1 (`3d`) and V2 (`3d-
 | `MapContext.ts` | `TelemetrySnapshot` | `MapContext`, `starBody(ctx)` | Provider, anchors |
 | `SceneFrame.ts` | focus, `displayScale` | `toScenePoint(root)` | Layers |
 | `types.ts` | — | `MapElementKind`, `SystemAnchor`, `TrajectorySegment` | Planner + layers |
-| `layerFlags.ts` | — | `MAP_V3_LAYERS_PHASE0/1` | `Map3DV3`, tests |
+| `layerFlags.ts` | — | `MAP_V3_LAYERS_PHASE0/1/2` | `Map3DV3`, tests |
+| `useMapV3Trails.ts` | `MapContext`, kind | root + scene trails | Orbit layers |
 | `MapComposer.ts` | `MapV3LayerFlags` | active layer id list | Docs + tests |
 | `MapV3Context.tsx` | store + moon LOD | React context | All v3 layers |
 | `planner/buildSegments.ts` | `MapContext`, kind | `TrajectorySegment[]` | Layers |
+
+## Element — `planetOrbit` (`web/src/map-v3/elements/planetOrbit/`)
+
+| Module | Inputs | Outputs | Consumer |
+|--------|--------|---------|----------|
+| `planetOrbitStyle.ts` | `bodyName` | color + width constants | `OrbitTrailV3` |
+| `buildPlanetOrbitSegments.ts` | `MapContext` | `TrajectorySegment[]` kind `planetOrbit` | Planner, layer |
 
 ## Element — `starMarker` (`web/src/map-v3/elements/starMarker/`)
 
@@ -25,16 +33,18 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). V1 (`3d`) and V2 (`3d-
 
 | Module | Role |
 |--------|------|
-| `Map3DV3.tsx` | Canvas; `MAP_V3_LAYERS_PHASE1` |
+| `Map3DV3.tsx` | Canvas; `MAP_V3_LAYERS_PHASE2` |
 | `MapV3LayerStack.tsx` | Mounts layer components |
 | `layers/StarMarkerLayer.tsx` | Emissive textured sphere per segment |
+| `layers/PlanetOrbitLayer.tsx` | Planet orbit polylines via `OrbitTrailV3` |
+| `layers/OrbitTrailV3.tsx` | Retro/prograde split `Line` trails |
 
 ## Element kinds
 
 | Kind | Phase | Layer file | Status |
 |------|-------|------------|--------|
 | `starMarker` | 1 | `StarMarkerLayer.tsx` | **Implemented** |
-| `planetOrbit` | 2 | `PlanetOrbitLayer.tsx` | Planned |
+| `planetOrbit` | 2 | `PlanetOrbitLayer.tsx` | **Implemented** |
 | `planetBody` | 3 | `PlanetBodyLayer.tsx` | Planned |
 | `moonOrbit` | 4 | `MoonOrbitLayer.tsx` | Planned |
 | `moonBody` | 5 | `MoonBodyLayer.tsx` | Planned |
@@ -46,11 +56,12 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). V1 (`3d`) and V2 (`3d-
 | `soiRing` | 11 | `SoiRingLayer.tsx` | Planned |
 | `selection` | 12 | `SelectionLayer.tsx` | Planned |
 
-## Phase 1 state
+## Phase 2 state
 
-- `MAP_V3_LAYERS_PHASE1`: `starMarker: true`, all others `false`
-- `composeMapV3Layers(PHASE1)` → `["StarMarkerLayer"]`
-- Production `Map3DV3` uses phase 1 flags
+- `MAP_V3_LAYERS_PHASE2`: `starMarker` + `planetOrbit` true
+- `composeMapV3Layers(PHASE2)` → `["StarMarkerLayer", "PlanetOrbitLayer"]`
+- Production `Map3DV3` uses phase 2 flags
+- `MAP_V3_LAYERS_PHASE1` retained for regression tests
 
 ## Multi-star (planned)
 

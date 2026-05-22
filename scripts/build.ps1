@@ -139,17 +139,26 @@ function Invoke-WebBuild {
         Write-Error "npm is required to build the Phase 10 web UI. Install Node.js or run from web/: npm ci && npm run build"
     }
 
+    $viteBin = Join-Path $webRoot "node_modules\vite\bin\vite.js"
+    $needsInstall = -not (Test-Path $viteBin)
+
     Push-Location $webRoot
     try {
         Write-Host "Building web UI (Vite)..."
-        if (Test-Path (Join-Path $webRoot "package-lock.json")) {
-            & npm ci
+        if ($needsInstall) {
+            Write-Host "Installing web dependencies (node_modules missing or incomplete)..."
+            if (Test-Path (Join-Path $webRoot "package-lock.json")) {
+                & npm ci
+            }
+            else {
+                & npm install
+            }
+            if ($LASTEXITCODE -ne 0) {
+                exit $LASTEXITCODE
+            }
         }
         else {
-            & npm install
-        }
-        if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
+            Write-Host "Reusing existing web/node_modules (skip npm ci)."
         }
 
         & npm run build
