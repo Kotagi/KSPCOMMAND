@@ -54,7 +54,7 @@ flowchart TB
 |------|---------|-------|--------|
 | `starMarker` | `buildStarMarkerSegments` | `StarMarkerLayer` | Shipped |
 | `planetOrbit` | `buildPlanetOrbitSegments` (v3-native) | `PlanetOrbitLayer` → `OrbitTrailV3` | Shipped |
-| `planetBody` | — | `PlanetBodyLayer` | Next — phase 3 |
+| `planetBody` | `buildPlanetBodySegments` | `PlanetBodyLayer` | Shipped (phase 3.1) |
 | `moonOrbit` | — | `MoonOrbitLayer` | Phase 4 |
 | `moonBody` | — | `MoonBodyLayer` | Phase 5 |
 | `vesselMarker` | — | `VesselMarkerLayer` | Phase 6 |
@@ -106,14 +106,14 @@ flowchart TB
 
 ## Forward path
 
-Phase 3 (`planetBody`): new `map-v3/elements/planetBody/buildPlanetBodySegments` — follow [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md) procedure; do not import v2 `TrajectoryPlanner`.
+Phase 3.1 (`planetBody`) shipped — `map-v3/elements/planetBody/` + `planetBodyLod.ts`. Next: `moonOrbit` (phase 4).
 
 ---
 
 ## Verification baseline
 
 - `npm test` / `npm run build` green (72 tests).
-- UI version: `94-heliocentric-relative-unified` (`web/src/mount.tsx`; refresh `?v=94`).
+- UI version: `95-v3-planet-bodies` (`web/src/mount.tsx`; refresh `?v=95`).
 - DLL `frameDiagnostics.resolverVersion`: `"4"` (frame authority — not “Map V4”).
 - Manual: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) phase 2.
 - Decouple record: [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md).

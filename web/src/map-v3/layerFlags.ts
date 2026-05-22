@@ -31,4 +31,10 @@ export const MAP_V3_LAYERS_PHASE2: MapV3LayerFlags = {
   planetOrbit: true,
 };
 
-export const MAP_V3_PHASE_LABEL = "v3 phase 2 — planet orbits";
+/** Phase 3.1: star + planet orbits + planet bodies (mesh/icon LOD). */
+export const MAP_V3_LAYERS_PHASE3: MapV3LayerFlags = {
+  ...MAP_V3_LAYERS_PHASE2,
+  planetBody: true,
+};
+
+export const MAP_V3_PHASE_LABEL = "v3 phase 3.1 — planet bodies";

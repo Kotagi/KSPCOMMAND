@@ -64,7 +64,7 @@ Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 |------|-------|------------|--------|
 | `starMarker` | 1 | `StarMarkerLayer.tsx` | **Implemented** |
 | `planetOrbit` | 2 | `PlanetOrbitLayer.tsx` | **Implemented** |
-| `planetBody` | 3 | `PlanetBodyLayer.tsx` | Planned |
+| `planetBody` | 3.1 | `PlanetBodyLayer.tsx` | **Implemented** |
 | `moonOrbit` | 4 | `MoonOrbitLayer.tsx` | Planned |
 | `moonBody` | 5 | `MoonBodyLayer.tsx` | Planned |
 | `vesselMarker` | 6 | `VesselMarkerLayer.tsx` | Planned |

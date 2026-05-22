@@ -4,6 +4,7 @@ import {
   MAP_V3_LAYERS_PHASE0,
   MAP_V3_LAYERS_PHASE1,
   MAP_V3_LAYERS_PHASE2,
+  MAP_V3_LAYERS_PHASE3,
 } from "./layerFlags";
 
 describe("composeMapV3Layers", () => {
@@ -21,6 +22,14 @@ describe("composeMapV3Layers", () => {
     expect(composeMapV3Layers(MAP_V3_LAYERS_PHASE2)).toEqual([
       "StarMarkerLayer",
       "PlanetOrbitLayer",
+    ]);
+  });
+
+  it("returns star + orbits + planet bodies for phase 3 flags", () => {
+    expect(composeMapV3Layers(MAP_V3_LAYERS_PHASE3)).toEqual([
+      "StarMarkerLayer",
+      "PlanetOrbitLayer",
+      "PlanetBodyLayer",
     ]);
   });
 });

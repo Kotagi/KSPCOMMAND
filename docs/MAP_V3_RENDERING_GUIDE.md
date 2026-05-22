@@ -2,7 +2,7 @@
 
 How each **object type** is drawn on the modular map. Update a section when that element’s layer ships.
 
-**Status:** Phase 2 — `starMarker` + `planetOrbit` implemented; other elements not rendered.
+**Status:** Phase 3.1 — `starMarker` + `planetOrbit` + `planetBody` implemented; other elements not rendered.
 
 ---
 
@@ -28,7 +28,7 @@ Shared rules (from V2):
 |------|-------|-------|--------|-------------|
 | `starMarker` | `StarMarkerLayer` | 1 | **Implemented** | § Star marker |
 | `planetOrbit` | `PlanetOrbitLayer` | 2 | **Implemented** | § Planet orbit |
-| `planetBody` | `PlanetBodyLayer` | 3 | Not started | § Planet body |
+| `planetBody` | `PlanetBodyLayer` | 3.1 | **Implemented** | § Planet body |
 | `moonOrbit` | `MoonOrbitLayer` | 4 | Not started | § Moon orbit |
 | `moonBody` | `MoonBodyLayer` | 5 | Not started | § Moon body |
 | `vesselMarker` | `VesselMarkerLayer` | 6 | Not started | § Vessel marker |
@@ -90,7 +90,22 @@ Shared rules (from V2):
 
 ## § Planet body
 
-*Not implemented.*
+**KSP reference:** Colored planet on heliocentric trail; to-scale mesh when zoomed in, fixed map icon when zoomed out.
+
+| Field | Value |
+|-------|-------|
+| Data source | `hierarchy.planetNames` → `bodyByName` → `positionRootRelativeMeters` |
+| Segment builder | `buildPlanetBodySegments` → one point per planet, `kind: planetBody` |
+| LOD | V3 `planetBodyLod.ts` — always on; mesh when `meshR/camDist > 0.12`, else icon radius `0.06` |
+| Scale | `bodyMeshRadius` + `hostPlanetOpen` (solar floor `0.05` when host closed) |
+| Primitive | `sphereGeometry` + `meshBasicMaterial` |
+| Color | `useKspBodyMapColor` (orbit table + Customize Map overrides) |
+| Frame | `toScenePoint(seg.points[0], sceneFrame)` |
+| Visibility | `visibleBodyNames` ∩ `planetNames` (same as `PlanetOrbitLayer`) |
+| Flags | `MAP_V3_LAYERS_PHASE3.planetBody` |
+| Render order | mesh `1`, icon `2` |
+
+**Files:** `map-v3/elements/planetBody/*`, `scene/v3/layers/PlanetBodyLayer.tsx`, `PlanetBodyMesh.tsx`
 
 ---
 
@@ -160,3 +175,4 @@ Shared rules (from V2):
 | 2026-05-21 | Phase 2 | Samples-first planet geometry (`84-orbit-samples-first`); aligns icons with KSP trails. |
 | 2026-05-21 | Phase 2 | **128** DLL orbit samples + **512** web densify; UI `92-v3-planet-orbit-native`; tuning [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12. |
 | 2026-05-22 | Phase 2 | Heliocentric frame fix — unified `getRelativePositionAtUT` for Sun-children; UI `94-heliocentric-relative-unified`; [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md). |
+| 2026-05-22 | Phase 3.1 | Planet bodies: v3 `buildPlanetBodySegments` + mesh/icon LOD; UI `95-v3-planet-bodies`. |
