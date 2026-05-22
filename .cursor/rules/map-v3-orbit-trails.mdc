@@ -25,4 +25,4 @@ Before changing orbit trail rendering or planet/moon orbit builders:
 5. Update **`docs/MAP_V3_RENDERING_GUIDE.md`**, **`MAP_V3_PLANET_ORBIT_SPEC.md`**, and run **`npm test`** when behavior changes.
 6. Orbit **colors** / Customize Map / mod packs: **`docs/PLANET_ORBIT_COLOR_GUIDE.md`**.
 
-Program state: **`docs/MAP_V3_PROGRAM_STATE.md`**.
+Program state: **`docs/MAP_V3_PROGRAM_STATE.md`**. V3 is standalone from v2 planner: **`docs/MAP_V3_DECOUPLE_PLAN.md`** — do not add `map-v2/TrajectoryPlanner` imports under `map-v3/`.

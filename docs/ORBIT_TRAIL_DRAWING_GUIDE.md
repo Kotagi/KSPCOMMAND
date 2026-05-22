@@ -4,7 +4,7 @@
 **Revision:** 1.1 (2026-05-21) — §12 vertex/sample tuning; samples-first geometry; 128/512 defaults  
 **Audience:** Operators and developers extending KspWebMap solar-map trails  
 **Canonical map:** Map V3 (`solarRenderMode: "3d-v3"`, default in `viewStore.ts`)  
-**UI reference build:** `90-set-color-default` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`)
+**UI reference build:** `92-v3-planet-orbit-native` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`)
 
 **Orbit colors (stock table, Customize Map, mod packs):** [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 
@@ -16,7 +16,7 @@ Orbit trails on the KSP in-game map use **body-anchored directional styling** so
 
 | Responsibility | Location |
 |----------------|----------|
-| Telemetry → root polylines | `map-v3/elements/*Orbit*/build*Segments.ts` (+ v2 `TrajectoryPlanner` where reused) |
+| Telemetry → root polylines | `map-v3/elements/*Orbit*/build*Segments.ts` (v3-native; see [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md)) |
 | Densify / analytic source | `densifyPlanetOrbitTrail.ts`, `coords/buildBodyOrbitTrail.ts` |
 | Draw contract | `web/src/scene/GradientDirectionalOrbitTrail.tsx` |
 | Opacity curve | `web/src/scene/orbitTrailDirectionStyle.ts` (`opacityForOrbitTailAhead`, `closedRingHalfGradientOpacities`) |

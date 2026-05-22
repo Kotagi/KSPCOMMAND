@@ -1,13 +1,14 @@
 # Map V3 — Module contracts
 
-Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). V1 (`3d`) and V2 (`3d-v2`) are unchanged.
+Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). **V3 core is canonical** ([`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md)); v2 re-exports `MapContext` / `SceneFrame` and keeps `TrajectoryPlanner` for `3d-v2` only.
 
 ## Core (`web/src/map-v3/`)
 
 | Module | Inputs | Outputs | Consumer |
 |--------|--------|---------|----------|
-| `MapContext.ts` | `TelemetrySnapshot` | `MapContext`, `starBody(ctx)` | Provider, anchors |
-| `SceneFrame.ts` | focus, `displayScale` | `toScenePoint(root)` | Layers |
+| `MapContext.ts` | `TelemetrySnapshot` | `MapContext`, `isPlanetBody`, `starBody` | Provider, all v3 builders |
+| `SceneFrame.ts` | focus, `displayScale` | `toScenePoint`, `toScenePoints` | Layers |
+| `rootPointSafety.ts` | `Vector3` | `isFiniteRootPoint` | `SceneFrame` |
 | `types.ts` | — | `MapElementKind`, `SystemAnchor`, `TrajectorySegment` | Planner + layers |
 | `layerFlags.ts` | — | `MAP_V3_LAYERS_PHASE0/1/2` | `Map3DV3`, tests |
 | `useMapV3Trails.ts` | `MapContext`, kind | root + scene trails | Orbit layers |
@@ -19,9 +20,10 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). V1 (`3d`) and V2 (`3d-
 
 | Module | Inputs | Outputs | Consumer |
 |--------|--------|---------|----------|
-| `planetOrbitStyle.ts` | `bodyName` | color, widths, `trailVertices` (**512**) | `buildPlanetOrbitSegments` |
+| `filterHeliocentricPlanetOrbit.ts` | `MapContext`, `BodyOrbitPath` | include/exclude heliocentric planet path | `buildPlanetOrbitSegments` |
+| `planetOrbitStyle.ts` | `bodyName` | widths, `trailVertices` (**512**) | densify / layer |
 | `densifyPlanetOrbitTrail.ts` | `BodyOrbitPath`, `MapContext` | samples-first points, densify, UT helpers | `buildPlanetOrbitSegments` |
-| `buildPlanetOrbitSegments.ts` | `MapContext` | `TrajectorySegment[]` kind `planetOrbit` | Planner, layer |
+| `buildPlanetOrbitSegments.ts` | `MapContext` | `TrajectorySegment[]` kind `planetOrbit` (v3-native, no v2 planner) | `planner/buildSegments`, layer |
 
 ## Element — `starMarker` (`web/src/map-v3/elements/starMarker/`)
 
@@ -92,8 +94,10 @@ Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 
 1. Add kind to `MapElementKind` in `types.ts`
 2. Add flag to `MapV3LayerFlags` in `layerFlags.ts`
-3. Add `build*Segments` under `map-v3/elements/<kind>/`
+3. Add `build*Segments` under `map-v3/elements/<kind>/` — **do not import `map-v2/TrajectoryPlanner`**
 4. Register case in `planner/buildSegments.ts`
 5. Add `*Layer.tsx` under `scene/v3/layers/` and mount in `MapV3LayerStack.tsx`
 6. Enable in next `MAP_V3_LAYERS_PHASEn` constant
 7. Fill `MAP_V3_RENDERING_GUIDE.md` + `MAP_V3_ACCEPTANCE.md`
+
+Port behavior from v2 layers only as a reference; implement segment data in `map-v3/`.

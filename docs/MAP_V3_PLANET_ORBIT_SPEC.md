@@ -6,7 +6,7 @@
 | **Revision** | 1.1 (2026-05-21) |
 | **Phase** | 2 |
 | **Scope** | Heliocentric planet orbit polylines only — no moons, no planet meshes, no vessel |
-| **UI build** | `85-orbit-128-samples` |
+| **UI build** | `92-v3-planet-orbit-native` |
 
 ## References
 
@@ -15,7 +15,7 @@
 | KSP in-game map | Per-body trail colors and closed heliocentric paths |
 | V1 `BodyOrbitsLayer` / `DirectionalOrbitTrail` | Motion-tail styling (v3 uses single closed ring) |
 | V2 `PlanetOrbitLayer` / `OrbitTrailV2` | Planet-only filter + trail renderer |
-| V2 `TrajectoryPlanner` `BodyOrbit` + `{ planetOnly: true }` | Planner fallback polylines |
+| V2 `TrajectoryPlanner` `BodyOrbit` | **Legacy 3d-v2 only** — V3 does not use this |
 | [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) | Motion tail §2, vertex/sample tuning **§12** |
 | [`MAP_V3_RENDERING_GUIDE.md`](MAP_V3_RENDERING_GUIDE.md) | Living § Planet orbit summary |
 | [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) | Icon/trail alignment verification |
@@ -30,7 +30,7 @@
 | **Vessel** | Never |
 | **Planet mesh** | Out of scope (Phase 3 `planetBody`) |
 
-V3 calls v2 `buildSegments(ctx, "BodyOrbit", { planetOnly: true })` for planner segments, then **replaces** point geometry via `resolvePlanetOrbitSourcePoints` (samples-first, see below), maps `role` → `kind: "planetOrbit"`, and re-filters with `isPlanetBody`.
+V3 lists paths with `shouldIncludeHeliocentricPlanetOrbit` (same rules as former v2 `BodyOrbit` + `planetOnly`), then builds geometry via `resolvePlanetOrbitSourcePoints` (samples-first, see below). No `map-v2/TrajectoryPlanner` import in production code ([`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md)).
 
 ## Geometry source (samples first)
 
@@ -41,15 +41,15 @@ On a typical flight save, `bodyOrbitPaths[].validation.trailRenderMode` is **`sa
 | 1 | `trailRenderMode === "hidden"` | No trail (planner fallback unused for draw) |
 | 2 | ≥ 2 positions in `path.samples` | Telemetry sample polyline |
 | 3 | Valid `orbitElements`, sparse samples | `buildBodyOrbitTrailSegments` (analytic) |
-| 4 | Else | v2 planner segment points |
+| 4 | Else | No segment (path skipped) |
 
-Implementation: `resolvePlanetOrbitPointsFromPath` / `planetOrbitTrailUsesAnalyticSource` in `web/src/map-v3/elements/planetOrbit/densifyPlanetOrbitTrail.ts` (matches v2 `bodyOrbitSegmentsForPath`).
+Implementation: `resolvePlanetOrbitPointsFromPath` / `planetOrbitTrailUsesAnalyticSource` in `densifyPlanetOrbitTrail.ts` (aligned with former v2 `bodyOrbitSegmentsForPath` policy).
 
 ## Data pipeline
 
 1. **Telemetry (DLL)** — `bodyOrbitPaths[]`: **128** root-frame samples per period (`BodyOrbitPathSampleCount` in `TelemetrySnapshotService.cs`). Fractions `i/N` for `i = 0 … N-1` (never `fraction = 1.0` at period wrap).
-2. **Planner** — v2 `BodyOrbit` segments for keys, colors, visibility hints.
-3. **Source resolve** — `resolvePlanetOrbitSourcePoints` → samples or analytic per table above; `resolveTrailRenderMode` may hide bad paths.
+2. **Filter** — `filterHeliocentricPlanetOrbit.ts` per `bodyOrbitPaths[]` entry.
+3. **Source resolve** — `resolvePlanetOrbitSourcePoints` → samples or analytic per table above.
 4. **Densify** — `densifyPlanetOrbitRootPoints` arc-length resamples to **512** vertices (`PLANET_ORBIT_STYLE.trailVertices`).
 5. **UT** — `sampleUniversalTimes` from telemetry when source is **not** analytic; densified to 512 for prograde direction on the motion tail.
 6. **Segment** — `TrajectorySegment` with `points`, `anchorIndex`, optional `sampleUniversalTimes`, `closed`, `bodyName`, `referenceBody`.
@@ -91,7 +91,7 @@ Implementation: `resolvePlanetOrbitPointsFromPath` / `planetOrbitTrailUsesAnalyt
 | P2-05 | Colors match v1/v2 side-by-side on same flight |
 | P2-05a | Motion tail per orbit guide §2 |
 | P2-05b | Icons on grey trails; `trailRenderMode: samples`, `liveToSample0` ≈ 0 ([`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md)) |
-| P2-06 | `MapHudV3` shows **v3 phase 2 — planet orbits**; console logs `85-orbit-128-samples` |
+| P2-06 | `MapHudV3` shows **v3 phase 2 — planet orbits**; console logs current `KSP_WEB_MAP_UI_VERSION` (e.g. `92-v3-planet-orbit-native`) |
 | P2-10 | Recenter uses full solar bounds |
 
 ## Verification

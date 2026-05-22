@@ -4,7 +4,7 @@
 
 **Related:** Motion-tail opacity and geometry are separate — see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md). Planet orbit layer contract: [`MAP_V3_PLANET_ORBIT_SPEC.md`](MAP_V3_PLANET_ORBIT_SPEC.md) § Color.
 
-**UI build tag:** `90-set-color-default` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`; hard-refresh `?v=90` on the dashboard).
+**UI build tag:** `92-v3-planet-orbit-native` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`; hard-refresh `?v=92` on the dashboard).
 
 ---
 

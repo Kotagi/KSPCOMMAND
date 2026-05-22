@@ -1,6 +1,5 @@
-import { buildSegments as buildV2Segments } from "../../../map-v2/TrajectoryPlanner";
+import type { Vector3 } from "../../../telemetry/schema-v6";
 import type { MapContext } from "../../MapContext";
-import { isPlanetBody } from "../../MapContext";
 import type { TrajectorySegment } from "../../types";
 import {
   densifyPlanetOrbitRootPoints,
@@ -9,10 +8,11 @@ import {
   resolvePlanetOrbitSourcePoints,
   sampleUniversalTimesFromPath,
 } from "./densifyPlanetOrbitTrail";
+import { shouldIncludeHeliocentricPlanetOrbit } from "./filterHeliocentricPlanetOrbit";
 
 function nearestIndex(
-  points: { x: number; y: number; z: number }[],
-  target: { x: number; y: number; z: number },
+  points: Vector3[],
+  target: Vector3,
 ): number {
   let best = 0;
   let bestDist = Infinity;
@@ -27,61 +27,53 @@ function nearestIndex(
 }
 
 /**
- * Heliocentric planet trails only — delegates path geometry to v2 BodyOrbit planner
- * (samples + analytic fallback), maps role → v3 kind, then resamples to 512 verts.
+ * Heliocentric planet trails — v3-native path list + samples-first geometry (512 verts).
  */
 export function buildPlanetOrbitSegments(ctx: MapContext): TrajectorySegment[] {
-  const v2 = buildV2Segments(ctx, "BodyOrbit", { planetOnly: true });
-  return v2
-    .filter((seg) => {
-      const name = seg.bodyName;
-      if (!name || name === ctx.rootBody) {
-        return false;
-      }
-      return isPlanetBody(ctx, name);
-    })
-    .map((seg) => {
-      const source = resolvePlanetOrbitSourcePoints(
-        ctx,
-        seg.bodyName,
-        seg.points,
-      );
-      const points = densifyPlanetOrbitRootPoints(source);
-      const bodyEntry = seg.bodyName
-        ? ctx.bodyByName.get(seg.bodyName)
-        : null;
-      const anchorIndex = bodyEntry
-        ? nearestIndex(points, bodyEntry.position)
-        : (seg.anchorIndex ?? 0);
+  const paths = ctx.telemetry.bodyOrbitPaths ?? [];
+  const segments: TrajectorySegment[] = [];
 
-      let sampleUniversalTimes: number[] | undefined;
-      if (seg.bodyName) {
-        const path = (ctx.telemetry.bodyOrbitPaths ?? []).find(
-          (p) => p.bodyName === seg.bodyName,
-        );
-        if (path && !planetOrbitTrailUsesAnalyticSource(path)) {
-          const raw = sampleUniversalTimesFromPath(path);
-          if (raw) {
-            sampleUniversalTimes = densifyPlanetOrbitSampleUniversalTimes(raw);
-          }
-        }
-      }
+  paths.forEach((path, index) => {
+    if (!shouldIncludeHeliocentricPlanetOrbit(ctx, path)) {
+      return;
+    }
 
-      return {
-        kind: "planetOrbit" as const,
-        key: seg.key,
-        points,
-        bodyName: seg.bodyName,
-        referenceBody: seg.referenceBody,
-        parentBody: seg.parentBody,
-        closed: true,
-        anchorIndex,
-        sampleUniversalTimes,
-        closedWithDuplicateEndpoint: false,
-        lineWidth: seg.lineWidth,
-        color: seg.color,
-        opacity: seg.opacity,
-        dashed: seg.dashed,
-      };
+    const bodyName = path.bodyName!;
+    const source = resolvePlanetOrbitSourcePoints(ctx, bodyName, []);
+    if (source.length < 2) {
+      return;
+    }
+
+    const points = densifyPlanetOrbitRootPoints(source);
+    const bodyEntry = ctx.bodyByName.get(bodyName);
+    const anchorIndex = bodyEntry
+      ? nearestIndex(points, bodyEntry.position)
+      : 0;
+
+    let sampleUniversalTimes: number[] | undefined;
+    if (!planetOrbitTrailUsesAnalyticSource(path)) {
+      const raw = sampleUniversalTimesFromPath(path);
+      if (raw) {
+        sampleUniversalTimes = densifyPlanetOrbitSampleUniversalTimes(raw);
+      }
+    }
+
+    const ref = path.referenceBody ?? path.orbitElements?.referenceBody;
+    const parentBody = ref && ref !== ctx.rootBody ? ref : undefined;
+
+    segments.push({
+      kind: "planetOrbit",
+      key: `orbit-${bodyName ?? index}`,
+      points,
+      bodyName,
+      referenceBody: ref ?? undefined,
+      parentBody,
+      closed: true,
+      anchorIndex,
+      sampleUniversalTimes,
+      closedWithDuplicateEndpoint: false,
     });
+  });
+
+  return segments;
 }

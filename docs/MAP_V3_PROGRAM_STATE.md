@@ -1,6 +1,6 @@
 # Map V3 — Program state (as-built)
 
-**Revision:** 2026-05-21 (phase 2 complete; Customize Map orbit colors + mod-pack color guide)
+**Revision:** 2026-05-21 (phase 2 complete; V3 decoupled from v2 planner; Customize Map colors)
 
 ---
 
@@ -10,11 +10,12 @@
 |-------|--------|
 | 0 — Blank canvas | Complete |
 | 1 — Star marker | Complete |
-| 2 — Planet orbits | Complete — motion tail, KSP-aligned sample geometry, 128 DLL / 512 web verts (`85-orbit-128-samples`) |
+| 2 — Planet orbits | Complete — motion tail, samples-first, 128 DLL / 512 web verts, v3-native segment builder |
 | 3–12 | Not started (see [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md)) |
 
 - **Default view:** `solarRenderMode: "3d-v3"` in `web/src/store/viewStore.ts`.
-- **New feature work** targets V3 paths; v1/v2 remain for regression only.
+- **New feature work** targets `map-v3/` + `scene/v3/` only; v1/v2 remain for regression.
+- **V3 core decoupled from v2:** see [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md).
 
 ---
 
@@ -22,27 +23,28 @@
 
 ```mermaid
 flowchart TB
-  subgraph data [Data plane - map-v3]
+  subgraph data [Data plane - map-v3 canonical]
     T[TelemetrySnapshot]
-    MC[MapContext]
-    BS[buildPlanetOrbitSegments / buildStarMarkerSegments]
-    SEG[TrajectorySegment]
+    MC[MapContext.ts]
+    BS[buildStarMarkerSegments / buildPlanetOrbitSegments]
+    SEG[TrajectorySegment kind]
     T --> MC --> BS --> SEG
   end
   subgraph presentation [Presentation - scene/v3]
     SF[SceneFrame / useV3SceneTrails]
-    L[MapV3LayerStack layers]
+    L[MapV3LayerStack]
     GL[Map3DV3 Canvas]
     SEG --> SF --> L --> GL
   end
-  subgraph shared [Shared with v2]
-    TP[TrajectoryPlanner BodyOrbit]
-    COLORS[bodyMapColors / buildBodyOrbitTrail]
+  subgraph shared [Shared libs - not map-v2]
+    COORDS[coords/buildBodyOrbitTrail densify]
+    DRAW[GradientDirectionalOrbitTrail bodyMapColors]
   end
-  MC --> TP
-  BS --> TP
-  BS --> COLORS
+  BS --> COORDS
+  L --> DRAW
 ```
+
+**Legacy:** `map-v2/MapContext` and `map-v2/SceneFrame` re-export from `map-v3`. `map-v2/TrajectoryPlanner` serves **3d-v2** only.
 
 ---
 
@@ -51,28 +53,29 @@ flowchart TB
 | Kind | Builder | Layer | Status |
 |------|---------|-------|--------|
 | `starMarker` | `buildStarMarkerSegments` | `StarMarkerLayer` | Shipped |
-| `planetOrbit` | `buildPlanetOrbitSegments` | `PlanetOrbitLayer` → `OrbitTrailV3` | Shipped |
-| `planetBody` | — | `PlanetBodyLayer` | Planned phase 3 |
+| `planetOrbit` | `buildPlanetOrbitSegments` (v3-native) | `PlanetOrbitLayer` → `OrbitTrailV3` | Shipped |
+| `planetBody` | — | `PlanetBodyLayer` | Next — phase 3 |
 | `moonOrbit` | — | `MoonOrbitLayer` | Phase 4 |
 | `moonBody` | — | `MoonBodyLayer` | Phase 5 |
 | `vesselMarker` | — | `VesselMarkerLayer` | Phase 6 |
 | `vesselOrbit` | — | `VesselOrbitLayer` | Phase 8 |
 | `bodyLabel` | — | `BodyLabelLayer` | Phase 9 |
 | `futureRoute` | — | `FutureRouteLayer` | Phase 10 |
-| `soiRing` | — | `SoiRingLayer` | Phase 11 |
+| `soiRing` | — | `SoiLayer` | Phase 11 |
 | `selection` | — | `SelectionLayer` | Phase 12 |
 
 ---
 
-## Shared dependencies on v2
+## V3 ownership vs shared code
 
-| V2 module | V3 usage |
-|-----------|----------|
-| `map-v2/MapContext.ts` | `buildMapContext` (phase 0–2) |
-| `map-v2/TrajectoryPlanner` `BodyOrbit` | Planner segments; v3 replaces points via `resolvePlanetOrbitSourcePoints` |
-| `map-v2/SceneFrame` | Re-exported / reused for `toScenePoints` |
-| `coords/buildBodyOrbitTrail.ts` | Analytic fallback, `resolveTrailRenderMode` |
-| `scene/GradientDirectionalOrbitTrail.tsx` | Shared trail drawer (not v3-exclusive) |
+| Owned by `map-v3/` | Shared (intentional) |
+|--------------------|----------------------|
+| `MapContext`, `SceneFrame`, `rootPointSafety` | `coords/*`, `telemetry/*`, `model/bodyHierarchy` |
+| `planner/buildSegments`, element builders | `scene/GradientDirectionalOrbitTrail`, `orbitTrailDirectionStyle` |
+| `filterHeliocentricPlanetOrbit`, `densifyPlanetOrbitTrail` | `scene/CameraRig`, `MoonVisibilityContext`, `viewStore` |
+| `types`, `layerFlags`, `useMapV3Trails` | `scene/bodyMapColors`, `kspBodyMapColorTable` |
+
+**Not used by V3:** `map-v2/TrajectoryPlanner` (v2 map modes only).
 
 ---
 
@@ -80,11 +83,11 @@ flowchart TB
 
 | Item | Notes |
 |------|-------|
-| `MapV3LayerStack.tsx` | Manual layer list; `composeMapV3Layers` used in tests/docs only — dynamic registry deferred |
-| `planetBody` | Spec’d but not rendered (phase 3 blocked on orbit acceptance — orbits now aligned) |
-| Vessel orbits | Documented in orbit guide; not wired to drawer |
-| `trailDrawSegments.ts` | Open-trail prototype, unused in production |
-| Analytic planet rings | Used only when &lt;2 samples; no `sampleUniversalTimes` on analytic paths |
+| `MapV3LayerStack.tsx` | Manual layer list; dynamic registry deferred |
+| Customize Map orbit highlight | Widen selected ring in dev mode — remove or refine (see commit TODO) |
+| Vessel orbits | Documented in orbit guide; not wired on V3 |
+| `trailDrawSegments.ts` | Open-trail prototype, unused |
+| Analytic planet rings | When &lt;2 samples; no `sampleUniversalTimes` on analytic paths |
 
 ---
 
@@ -92,25 +95,24 @@ flowchart TB
 
 | Layer | Detail |
 |-------|--------|
-| Capture | DLL **128** samples/period; fraction `i/N`, no wrap at 1.0 |
-| Geometry | Samples-first in `densifyPlanetOrbitTrail.ts` |
-| Densify | Web **512** vertices (`planetOrbitStyle.trailVertices`) |
-| Drawer | `GradientDirectionalOrbitTrail` — one closed `Line` for planet rings |
-| Style | `opacityForOrbitTailAhead` — attach **1.0**, lead **0.25**, linear prograde ramp |
-| Colors | `kspBodyMapColorTable.ts` + `bodyMapColors.ts`; dev **Customize Map** HUD (**Set color**, revert) |
-| Docs | Orbit trail [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md); colors [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) |
+| Path filter | `filterHeliocentricPlanetOrbit.ts` (same rules as former v2 `BodyOrbit` + `planetOnly`) |
+| Geometry | `resolvePlanetOrbitSourcePoints` → `densifyPlanetOrbitRootPoints` (**512** verts) |
+| Capture | DLL **128** samples/period |
+| Drawer | `GradientDirectionalOrbitTrail` — one closed `Line`, motion tail |
+| Colors | `kspBodyMapColorTable.ts` + Customize Map HUD |
+| Docs | [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md), [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) |
 
 ---
 
 ## Forward path
 
-Phases 3–12 follow [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md) and phase plans (`MAP_V3_PHASE*_PLAN.md`). Each phase enables one `MapV3LayerFlags` group, adds `build*Segments`, layer TSX, rendering guide section, and acceptance rows.
+Phase 3 (`planetBody`): new `map-v3/elements/planetBody/buildPlanetBodySegments` — follow [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md) procedure; do not import v2 `TrajectoryPlanner`.
 
 ---
 
 ## Verification baseline
 
-- `npm test` / `npm run build` green.
-- UI version: `KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx` (currently `90-set-color-default`).
-- Manual: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) phase 2 rows P2-01–P2-10.
-- Flight scripts: [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md).
+- `npm test` / `npm run build` green (72 tests).
+- UI version: `92-v3-planet-orbit-native` (`web/src/mount.tsx`; refresh `?v=92`).
+- Manual: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) phase 2.
+- Decouple record: [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md).

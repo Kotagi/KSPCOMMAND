@@ -2,7 +2,7 @@
 
 **Goal:** Heliocentric planet orbit polylines on **3D Map V3**, matching v1/v2 KSP colors and KSP motion-tail styling on one closed ring. No moons, bodies, or vessel.
 
-**Status (2026-05-21):** Shipped — samples-first geometry, **128** DLL samples / **512** web densify, motion tail (`85-orbit-128-samples`). Tuning: [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12.
+**Status (2026-05-21):** Shipped — samples-first geometry, **128** DLL / **512** web densify, motion tail, v3-native `buildPlanetOrbitSegments`. Decouple: [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md). Tuning: [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12.
 
 ## Deliverables
 
@@ -28,6 +28,7 @@
 - [x] `npm test` / `npm run build`
 - [x] Samples-first planet geometry (`densifyPlanetOrbitTrail.ts`)
 - [x] DLL `BodyOrbitPathSampleCount` = 128
+- [x] V3 decoupled from v2 `TrajectoryPlanner` (planet orbits v3-native)
 - [ ] Manual in-game compare with KSP map / v1 (see acceptance P2-05, P2-05a–c)
 
 ## Test plan

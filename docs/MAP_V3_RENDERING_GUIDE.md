@@ -155,7 +155,7 @@ Shared rules (from V2):
 | 2026-05-21 | Phase 0 | V3 forked from V2 patterns; blank scene uses same CEF-safe star background as V2 (no postprocessing). |
 | 2026-05-21 | Phase 1 | Star uses v2 `starBody` + modular `SystemAnchor`; emissive mesh matches V2 `StarLayer` (CEF-safe, no EffectComposer). |
 | 2026-05-21 | Phase 1 camera | V3 star-only view must frame the star, not full-system bounds; star uses `focus: null` (not moon LOD `displayFocus`). |
-| 2026-05-21 | Phase 2 | Planet orbits reuse v2 BodyOrbit geometry; v3 adds modular kind + `OrbitTrailV3`; phase 2 enables full solar camera bounds. |
+| 2026-05-21 | Phase 2 | Planet orbits: v3-native `buildPlanetOrbitSegments` + `OrbitTrailV3`; decouple [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md). |
 | 2026-05-21 | Phase 2 | Motion-tail opacity on single closed ring (`81-orbit-motion-tail`); see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2. |
 | 2026-05-21 | Phase 2 | Samples-first planet geometry (`84-orbit-samples-first`); aligns icons with KSP trails. |
-| 2026-05-21 | Phase 2 | **128** DLL orbit samples + **512** web densify (`85-orbit-128-samples`); tuning [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12. |
+| 2026-05-21 | Phase 2 | **128** DLL orbit samples + **512** web densify; UI `92-v3-planet-orbit-native`; tuning [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12. |

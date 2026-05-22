@@ -3,7 +3,7 @@
 **Document ID:** MAP-V3-STRUCT-001  
 **Status:** Phase 2 — `starMarker` + `planetOrbit` shipped; V3 is the **canonical** map for new work  
 **Scope:** Repository layout, module boundaries, and rollout gates for the modular 3D solar map (`solarRenderMode: 3d-v3`, default).  
-**Reference:** Stock KSP in-game map (acceptance), Map V2 lessons (`docs/MAP_V2_MODULES.md`), orbit trails ([`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md)), orbit colors / mod packs ([`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)).
+**Reference:** Stock KSP in-game map (acceptance), V3 decouple ([`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md)), Map V2 regression (`docs/MAP_V2_MODULES.md`), orbit trails ([`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md)), orbit colors ([`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)).
 
 ---
 
@@ -24,7 +24,7 @@ No bodies, orbits, vessels, or labels are rendered in Phase 0.
 | ID | Principle | Rationale |
 |----|-----------|-----------|
 | P-01 | **One element kind → one layer file** | Traceability from KSP map feature to code and docs |
-| P-02 | **Planner produces data; layer only draws** | `TrajectoryPlanner` / segment builders stay free of Three.js |
+| P-02 | **Planner produces data; layer only draws** | `map-v3/planner/buildSegments` + element builders stay free of Three.js |
 | P-03 | **SceneFrame is the only coordinate gate** | Root meters → scene units in one place (`SceneFrame.ts`) |
 | P-04 | **Layer flags gate rollout** | Enable one phase at a time; blank map = all flags false |
 | P-05 | **No hardcoded stock body lists** | Hierarchy from telemetry snapshot |
@@ -40,21 +40,26 @@ web/src/
 ├── map-v3/                          # Domain: telemetry → segments → scene frame (no React Three)
 │   ├── types.ts                     # MapElementKind, TrajectorySegment, SceneFrameState
 │   ├── layerFlags.ts                # Per-element enable flags + phase labels
-│   ├── MapContext.ts                # Snapshot → bodies, hierarchy, UT (reuses v2 builder in P0)
-│   ├── SceneFrame.ts                # Root → scene coordinates (reuses v2 in P0)
+│   ├── MapContext.ts                # Canonical: telemetry → bodies, hierarchy
+│   ├── SceneFrame.ts                # Canonical: root → scene coordinates
+│   ├── rootPointSafety.ts           # isFiniteRootPoint for SceneFrame
 │   ├── MapV3Context.tsx             # React context: mapContext, sceneFrame, layers
 │   ├── MapComposer.ts               # Pure: which layer ids are active for current flags
+│   ├── useMapV3Trails.ts            # Root segments + scene trails
 │   ├── planner/buildSegments.ts     # Dispatches MapElementKind → element builders
-│   └── elements/                    # One folder per MapElementKind
-│       ├── README.md
-│       └── starMarker/              # resolveSystemAnchors, buildStarMarkerSegments
+│   └── elements/
+│       ├── starMarker/              # buildStarMarkerSegments
+│       └── planetOrbit/             # filterHeliocentricPlanetOrbit, densify, buildPlanetOrbitSegments
 │
-├── scene/v3/                        # Presentation: R3F Canvas and layers only
-│   ├── Map3DV3.tsx                  # Canvas root, provider stack, layer composition
-│   ├── MapV3SceneEffects.tsx        # Background stars (no postprocessing in CEF)
-│   ├── MapV3SceneErrorBoundary.tsx  # In-tree error surface
-│   └── layers/                      # One TSX per MapElementKind
-│       └── StarMarkerLayer.tsx      # Phase 1
+├── map-v2/                          # Legacy 3d-v2; MapContext + SceneFrame re-export from map-v3
+│
+├── scene/v3/                        # Presentation: R3F Canvas and layers only (no map-v2 imports)
+│   ├── Map3DV3.tsx
+│   ├── MapV3LayerStack.tsx          # StarMarkerLayer, PlanetOrbitLayer, …
+│   └── layers/
+│       ├── StarMarkerLayer.tsx
+│       ├── PlanetOrbitLayer.tsx
+│       └── OrbitTrailV3.tsx
 │
 ├── components/
 │   ├── MapHudV3.tsx                 # Phase / status strip when 3d-v3 selected
@@ -76,6 +81,7 @@ docs/
 ├── MAP_V3_PHASE0_PLAN.md            # Phase 0 scope and test plan
 ├── MAP_V3_MODULES.md                # Module I/O contracts (living)
 ├── MAP_V3_RENDERING_GUIDE.md        # How each object type is drawn (living)
+├── MAP_V3_DECOUPLE_PLAN.md          # V3 standalone from v2 planner (complete)
 └── MAP_V3_ACCEPTANCE.md             # Per-phase pass criteria
 ```
 
@@ -100,8 +106,8 @@ File name = PascalCase layer matching `MapElementKind` (e.g. `StarMarker` → `S
 ```mermaid
 flowchart LR
   T[TelemetrySnapshot] --> MC[MapContext]
-  MC --> TP[TrajectoryPlanner / element builders]
-  TP --> SEG[TrajectorySegment[]]
+  MC --> BS[planner/buildSegments + element builders]
+  BS --> SEG[TrajectorySegment[]]
   SEG --> SF[SceneFrame.toScenePoint]
   SF --> L[scene/v3/layers/*]
   L --> GL[WebGL via R3F]
@@ -117,13 +123,13 @@ Phase 0 stops after `MapV3Context` (no segments, no layers).
 
 - **Inputs:** `TelemetrySnapshot | null`
 - **Outputs:** `rootBody`, `hierarchy`, `bodyByName`, positions at UT, `canDraw`
-- **Phase 0:** Delegates to `map-v2/MapContext.ts` (identical contract)
+- **Canonical:** `map-v3/MapContext.ts`; `map-v2/MapContext.ts` re-exports for legacy maps
 
 ### 6.2 `SceneFrame`
 
 - **Inputs:** focus mode, `displayScale`, focus position
 - **Outputs:** `toScenePoint(rootMeters)` → scene units
-- **Phase 0:** Types in `map-v3/types.ts`; transform reuses v2 implementation
+- **Canonical:** `map-v3/SceneFrame.ts` + `rootPointSafety.ts`; v2 re-exports
 
 ### 6.3 `MapV3LayerFlags`
 

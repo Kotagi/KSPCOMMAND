@@ -150,7 +150,7 @@ declare global {
 }
 
 /** Bumped when web UI changes; check in devtools if map looks stale. */
-export const KSP_WEB_MAP_UI_VERSION = "90-set-color-default";
+export const KSP_WEB_MAP_UI_VERSION = "92-v3-planet-orbit-native";
 
 window.KspSolarMap = api;
 window.KspSolarMapUiVersion = KSP_WEB_MAP_UI_VERSION;
