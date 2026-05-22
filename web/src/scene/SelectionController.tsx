@@ -10,6 +10,7 @@ import {
 } from "../selection/buildSelectionTargets";
 import { useMoonVisibilityContext } from "./MoonVisibilityContext";
 import { bodyPickRadius } from "./bodyVisualScale";
+import { pickPlanetOrbitTrail } from "../selection/pickPlanetOrbitTrail";
 
 export function SelectionController() {
   const model = useViewStore((s) => s.model);
@@ -17,6 +18,11 @@ export function SelectionController() {
   const setSelectionDetail = useViewStore((s) => s.setSelectionDetail);
   const setHoverObjectId = useViewStore((s) => s.setHoverObjectId);
   const focusOnBody = useViewStore((s) => s.focusOnBody);
+  const customizeEnabled = useViewStore((s) => s.devCustomizeMapEnabled);
+  const orbitPickLines = useViewStore((s) => s.customizeMapOrbitPickLines);
+  const setCustomizeSelected = useViewStore(
+    (s) => s.setCustomizeMapSelectedPlanet,
+  );
   const { visibleBodyNames, hostPlanetOpen } = useMoonVisibilityContext();
   const { camera, gl } = useThree();
   const raycaster = useRef(new THREE.Raycaster());
@@ -91,16 +97,47 @@ export function SelectionController() {
       if (!model?.canDraw) {
         return;
       }
+      if (customizeEnabled && orbitPickLines.length > 0) {
+        const rect = dom.getBoundingClientRect();
+        pointer.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.current.setFromCamera(pointer.current, camera);
+        const orbitBody = pickPlanetOrbitTrail(
+          raycaster.current.ray,
+          orbitPickLines,
+          3,
+        );
+        if (orbitBody) {
+          setCustomizeSelected(orbitBody);
+          return;
+        }
+      }
       const id = pick(event.clientX, event.clientY);
       const targets = buildSelectionTargets(model);
       const detail = findSelectionDetail(targets, id);
       setSelectionDetail(detail);
+      if (customizeEnabled) {
+        return;
+      }
       if (detail?.type === "body" && detail.id.startsWith("body:")) {
         focusOnBody(detail.id.slice("body:".length));
       }
     }
 
     function onMove(event: MouseEvent) {
+      if (customizeEnabled && orbitPickLines.length > 0) {
+        const rect = dom.getBoundingClientRect();
+        pointer.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.current.setFromCamera(pointer.current, camera);
+        const orbitBody = pickPlanetOrbitTrail(
+          raycaster.current.ray,
+          orbitPickLines,
+          3,
+        );
+        dom.style.cursor = orbitBody ? "pointer" : "";
+        return;
+      }
       const id = pick(event.clientX, event.clientY);
       setHoverObjectId(id);
       dom.style.cursor = id?.startsWith("body:") ? "pointer" : "";
@@ -113,7 +150,18 @@ export function SelectionController() {
       dom.removeEventListener("mousemove", onMove);
       dom.style.cursor = "";
     };
-  }, [gl, camera, spheres, model, setSelectionDetail, setHoverObjectId, focusOnBody]);
+  }, [
+    gl,
+    camera,
+    spheres,
+    model,
+    setSelectionDetail,
+    setHoverObjectId,
+    focusOnBody,
+    customizeEnabled,
+    orbitPickLines,
+    setCustomizeSelected,
+  ]);
 
   return null;
 }

@@ -65,10 +65,14 @@ Implementation: `resolvePlanetOrbitPointsFromPath` / `planetOrbitTrailUsesAnalyt
 
 ## Color and style customization
 
+**User guide (mod packs, Customize Map):** [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
+
 | Knob | File | Effect |
 |------|------|--------|
-| Per-body hex color | `web/src/scene/bodyMapColors.ts` `KSP_BODY_MAP_COLORS` | Orbit line hue |
-| Default fallback color | `DEFAULT_BODY_COLOR` in same file | Unknown bodies |
+| Shipped per-body hex | `web/src/scene/kspBodyMapColorTable.ts` `KSP_BODY_MAP_COLORS` | Orbit line hue for all installs |
+| Runtime resolution | `web/src/scene/bodyMapColors.ts` `getKspBodyMapColor` / `useKspBodyMapColor` | Stock + dev **Set color** defaults |
+| Dev HUD (flight) | `web/src/components/CustomizeMapDevPanel.tsx` | Click planet orbit → picker → **Set color** / revert |
+| Default fallback color | `DEFAULT_BODY_MAP_COLOR` in `kspBodyMapColorTable.ts` | Unknown / mod bodies not in table |
 | Motion-tail opacity | `GradientDirectionalOrbitTrail.tsx`, `orbitTrailDirectionStyle.ts` | §2 orbit guide — 1.0 trailing attach, 0.25 prograde lead, linear ramp |
 | Line widths | `planetOrbitStyle.ts` | `retrogradeLineWidth`, `progradeLineWidthFactor` (split fallback) |
 | **DLL samples per period** | `TelemetrySnapshotService.cs` `BodyOrbitPathSampleCount` | **128** (capture fidelity; rebuild DLL) |

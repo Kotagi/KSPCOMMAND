@@ -1,4 +1,4 @@
-import { getKspBodyMapColor } from "../bodyMapColors";
+import { useKspBodyMapColor } from "../bodyMapColors";
 import { GradientDirectionalOrbitTrail } from "../GradientDirectionalOrbitTrail";
 
 type Point3 = [number, number, number];
@@ -24,6 +24,8 @@ export function DirectionalOrbitTrail({
   closedWithDuplicateEndpoint = false,
   sampleUniversalTimes,
 }: DirectionalOrbitTrailProps) {
+  const lineColor = useKspBodyMapColor(bodyName);
+
   if (points.length < 2) {
     return null;
   }
@@ -31,7 +33,7 @@ export function DirectionalOrbitTrail({
   return (
     <GradientDirectionalOrbitTrail
       lineKey={lineKey}
-      lineColor={getKspBodyMapColor(bodyName)}
+      lineColor={lineColor}
       points={points}
       anchorIndex={anchorIndex}
       lineWidth={lineWidth}

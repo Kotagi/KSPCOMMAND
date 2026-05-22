@@ -7,6 +7,29 @@ import {
 import type { QualityPreset } from "../settings/qualityStore";
 import type { SelectionDetail } from "../selection/types";
 import type { MoonVisibilityReason } from "../scene/moonVisibility";
+import {
+  getStockPlanetOrbitColor,
+  loadCustomizeMapDev,
+  normalizeHexColor,
+  persistCustomizeMapDev,
+} from "../settings/customizeMapDev";
+import type { PlanetOrbitPickLine } from "../selection/pickPlanetOrbitTrail";
+
+const customizeMapInitial = loadCustomizeMapDev();
+
+function persistCustomizeFromState(state: {
+  devCustomizeMapEnabled: boolean;
+  customizeMapSelectedPlanet: string | null;
+  planetOrbitColorOverrides: Record<string, string>;
+  planetOrbitStockDefaults: Record<string, string>;
+}): void {
+  persistCustomizeMapDev(
+    state.devCustomizeMapEnabled,
+    state.customizeMapSelectedPlanet,
+    state.planetOrbitColorOverrides,
+    state.planetOrbitStockDefaults,
+  );
+}
 
 export interface MoonLodDebugState {
   reason: MoonVisibilityReason;
@@ -46,6 +69,20 @@ interface ViewState {
   vesselDisplayPosition: Vector3 | null;
   vesselTargetPosition: Vector3 | null;
   moonLodDebug: MoonLodDebugState | null;
+  /** Dev HUD: customize planet orbit colors (click orbit to select). */
+  devCustomizeMapEnabled: boolean;
+  customizeMapSelectedPlanet: string | null;
+  planetOrbitColorOverrides: Record<string, string>;
+  /** Dev “Set color” defaults (persisted; used even when Customize Map is off). */
+  planetOrbitStockDefaults: Record<string, string>;
+  customizeMapOrbitPickLines: PlanetOrbitPickLine[];
+  setDevCustomizeMapEnabled: (enabled: boolean) => void;
+  setCustomizeMapSelectedPlanet: (planet: string | null) => void;
+  setPlanetOrbitColorOverride: (planet: string, hex: string) => void;
+  setPlanetOrbitStockDefault: (planet: string) => void;
+  resetPlanetOrbitColorToStock: (planet: string) => void;
+  resetAllPlanetOrbitColorsToStock: () => void;
+  setCustomizeMapOrbitPickLines: (lines: PlanetOrbitPickLine[]) => void;
   setMoonLodDebug: (debug: MoonLodDebugState | null) => void;
   setTelemetry: (telemetry: TelemetrySnapshot | null) => void;
   setCameraMode: (mode: CameraMode) => void;
@@ -131,6 +168,103 @@ export const useViewStore = create<ViewState>((set, get) => ({
   vesselDisplayPosition: null,
   vesselTargetPosition: null,
   moonLodDebug: null,
+  devCustomizeMapEnabled: customizeMapInitial.enabled,
+  customizeMapSelectedPlanet: customizeMapInitial.selectedPlanet,
+  planetOrbitColorOverrides: customizeMapInitial.overrides,
+  planetOrbitStockDefaults: customizeMapInitial.stockDefaults,
+  customizeMapOrbitPickLines: [],
+  setDevCustomizeMapEnabled: (enabled) => {
+    const next = {
+      devCustomizeMapEnabled: enabled,
+      customizeMapSelectedPlanet: get().customizeMapSelectedPlanet,
+      planetOrbitColorOverrides: get().planetOrbitColorOverrides,
+      planetOrbitStockDefaults: get().planetOrbitStockDefaults,
+    };
+    persistCustomizeFromState(next);
+    set({ devCustomizeMapEnabled: enabled });
+  },
+  setCustomizeMapSelectedPlanet: (planet) => {
+    const next = {
+      devCustomizeMapEnabled: get().devCustomizeMapEnabled,
+      customizeMapSelectedPlanet: planet,
+      planetOrbitColorOverrides: get().planetOrbitColorOverrides,
+      planetOrbitStockDefaults: get().planetOrbitStockDefaults,
+    };
+    persistCustomizeFromState(next);
+    set({ customizeMapSelectedPlanet: planet });
+  },
+  setPlanetOrbitColorOverride: (planet, hex) => {
+    const normalized = normalizeHexColor(hex);
+    if (!normalized) {
+      return;
+    }
+    const overrides = {
+      ...get().planetOrbitColorOverrides,
+      [planet]: normalized,
+    };
+    const next = {
+      devCustomizeMapEnabled: get().devCustomizeMapEnabled,
+      customizeMapSelectedPlanet: planet,
+      planetOrbitColorOverrides: overrides,
+      planetOrbitStockDefaults: get().planetOrbitStockDefaults,
+    };
+    persistCustomizeFromState(next);
+    set({
+      customizeMapSelectedPlanet: planet,
+      planetOrbitColorOverrides: overrides,
+    });
+  },
+  setPlanetOrbitStockDefault: (planet) => {
+    const { planetOrbitColorOverrides, planetOrbitStockDefaults } = get();
+    const hex = normalizeHexColor(
+      planetOrbitColorOverrides[planet] ??
+        getStockPlanetOrbitColor(planet, planetOrbitStockDefaults),
+    );
+    if (!hex) {
+      return;
+    }
+    const stockDefaults = { ...planetOrbitStockDefaults, [planet]: hex };
+    const overrides = { ...planetOrbitColorOverrides };
+    delete overrides[planet];
+    const next = {
+      devCustomizeMapEnabled: get().devCustomizeMapEnabled,
+      customizeMapSelectedPlanet: planet,
+      planetOrbitColorOverrides: overrides,
+      planetOrbitStockDefaults: stockDefaults,
+    };
+    persistCustomizeFromState(next);
+    set({
+      customizeMapSelectedPlanet: planet,
+      planetOrbitColorOverrides: overrides,
+      planetOrbitStockDefaults: stockDefaults,
+    });
+  },
+  resetPlanetOrbitColorToStock: (planet) => {
+    const overrides = { ...get().planetOrbitColorOverrides };
+    delete overrides[planet];
+    const stockDefaults = { ...get().planetOrbitStockDefaults };
+    delete stockDefaults[planet];
+    const next = {
+      devCustomizeMapEnabled: get().devCustomizeMapEnabled,
+      customizeMapSelectedPlanet: get().customizeMapSelectedPlanet,
+      planetOrbitColorOverrides: overrides,
+      planetOrbitStockDefaults: stockDefaults,
+    };
+    persistCustomizeFromState(next);
+    set({ planetOrbitColorOverrides: overrides, planetOrbitStockDefaults: stockDefaults });
+  },
+  resetAllPlanetOrbitColorsToStock: () => {
+    const next = {
+      devCustomizeMapEnabled: get().devCustomizeMapEnabled,
+      customizeMapSelectedPlanet: get().customizeMapSelectedPlanet,
+      planetOrbitColorOverrides: {},
+      planetOrbitStockDefaults: {},
+    };
+    persistCustomizeFromState(next);
+    set({ planetOrbitColorOverrides: {}, planetOrbitStockDefaults: {} });
+  },
+  setCustomizeMapOrbitPickLines: (lines) =>
+    set({ customizeMapOrbitPickLines: lines }),
   setMoonLodDebug: (moonLodDebug) => set({ moonLodDebug }),
   setTelemetry: (telemetry) => {
     const { scrubEnabled, scrubUniversalTime, vesselDisplayPosition } = get();

@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { GradientDirectionalOrbitTrail } from "../../GradientDirectionalOrbitTrail";
 import { densifyPlanetOrbitScenePoints } from "../../../map-v3/elements/planetOrbit/densifyPlanetOrbitTrail";
-import { getKspBodyMapColor } from "../../bodyMapColors";
+import { useKspBodyMapColor } from "../../bodyMapColors";
 import type { ScenePoint3 } from "../../../map-v2/types";
 
 export const OrbitTrailV2 = memo(function OrbitTrailV2({
@@ -21,6 +21,7 @@ export const OrbitTrailV2 = memo(function OrbitTrailV2({
   lineWidth?: number;
   planetRing?: boolean;
 }) {
+  const lineColor = useKspBodyMapColor(bodyName);
   const finitePoints = points.filter(
     (p) =>
       p.length >= 3 &&
@@ -32,7 +33,6 @@ export const OrbitTrailV2 = memo(function OrbitTrailV2({
     return null;
   }
 
-  const lineColor = getKspBodyMapColor(bodyName);
   const ring = planetRing
     ? densifyPlanetOrbitScenePoints(finitePoints)
     : finitePoints;

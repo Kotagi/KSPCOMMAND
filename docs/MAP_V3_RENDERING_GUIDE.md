@@ -75,7 +75,7 @@ Shared rules (from V2):
 | Web densify | Arc-length to **512** verts (`PLANET_ORBIT_STYLE.trailVertices`) |
 | Segment builder | `buildPlanetOrbitSegments` → `kind: planetOrbit` |
 | Primitive | `GradientDirectionalOrbitTrail` → one closed `Line` (512 verts + close duplicate) |
-| Color | `resolvePlanetOrbitColor` → `getKspBodyMapColor(bodyName)` |
+| Color | `useKspBodyMapColor(bodyName)` — stock table + dev defaults; see [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) |
 | Opacity | Motion tail: `ORBIT_TRAIL_TAIL_ATTACH` 1.0 at body, `ORBIT_TRAIL_TAIL_LEAD` 0.25 one step prograde, linear ramp to 1.0 via `closedRingHalfGradientOpacities` + `vertexColors` |
 | Line width | `1.0` on single ring (`progradeLineWidthFactor` only on split-trail fallback) |
 | Prograde direction | `sampleUniversalTimes` when telemetry samples used (omitted for analytic rings); see orbit guide §2 |

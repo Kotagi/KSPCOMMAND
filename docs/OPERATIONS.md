@@ -62,6 +62,8 @@ Vite proxies `/api/*` to `http://127.0.0.1:8750`.
 
 Players only need the built assets from `build.ps1` + `install.ps1`; they do not run npm.
 
+**Planet orbit colors (mod packs):** in-flight **Customize Map** HUD on 3D Map V3; ship hex values via `kspBodyMapColorTable.ts`. See [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md).
+
 ## Install
 
 Install the staged package into KSP:

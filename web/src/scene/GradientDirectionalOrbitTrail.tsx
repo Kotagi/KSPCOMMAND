@@ -1,4 +1,6 @@
 import { Line } from "@react-three/drei";
+import type { ThreeEvent } from "@react-three/fiber";
+import { useViewStore } from "../store/viewStore";
 import {
   closedRingHalfGradientOpacities,
   hexToRgbaVertexColors,
@@ -36,6 +38,8 @@ export function GradientDirectionalOrbitTrail({
   progradeLineWidthFactor = 0.7,
   closedWithDuplicateEndpoint = false,
   sampleUniversalTimes,
+  customizeMapPickable = false,
+  customizeMapBodyName,
 }: {
   lineKey: string;
   lineColor: string;
@@ -46,10 +50,34 @@ export function GradientDirectionalOrbitTrail({
   closedWithDuplicateEndpoint?: boolean;
   sampleUniversalTimes?: number[];
   useDenseRingHalves?: boolean;
+  customizeMapPickable?: boolean;
+  customizeMapBodyName?: string;
 }) {
+  const customizeEnabled = useViewStore((s) => s.devCustomizeMapEnabled);
+  const selectedPlanet = useViewStore((s) => s.customizeMapSelectedPlanet);
+  const setSelectedPlanet = useViewStore((s) => s.setCustomizeMapSelectedPlanet);
+
   if (points.length < 2) {
     return null;
   }
+
+  const pickActive =
+    customizeEnabled && customizeMapPickable && !!customizeMapBodyName;
+  const isSelected = pickActive && customizeMapBodyName === selectedPlanet;
+  const drawWidth =
+    pickActive && isSelected
+      ? lineWidth * 3
+      : pickActive
+        ? lineWidth * 2.5
+        : lineWidth;
+
+  const onPickPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (!pickActive || !customizeMapBodyName) {
+      return;
+    }
+    e.stopPropagation();
+    setSelectedPlanet(customizeMapBodyName);
+  };
 
   if (!closedWithDuplicateEndpoint && points.length >= 3) {
     const ringOpacities = closedRingHalfGradientOpacities(
@@ -69,10 +97,11 @@ export function GradientDirectionalOrbitTrail({
         points={closedPoints}
         color={LINE_COLOR_FOR_VERTEX_COLORS}
         vertexColors={ringVertexColors}
-        lineWidth={lineWidth}
+        lineWidth={drawWidth}
         toneMapped={false}
         transparent
         depthWrite
+        onPointerDown={pickActive ? onPickPointerDown : undefined}
       />
     );
   }

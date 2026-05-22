@@ -7,6 +7,10 @@ globs:
   - web/src/scene/orbitTrailDirectionStyle.ts
   - web/src/scene/trailDrawSegments.ts
   - web/src/map-v3/elements/**/*Orbit*
+  - web/src/scene/kspBodyMapColorTable.ts
+  - web/src/scene/bodyMapColors.ts
+  - web/src/settings/customizeMapDev.ts
+  - web/src/components/CustomizeMapDevPanel.tsx
 alwaysApply: false
 ---
 
@@ -19,5 +23,6 @@ Before changing orbit trail rendering or planet/moon orbit builders:
 3. Default new solar-map features to **Map V3** (`3d-v3`, `web/src/scene/v3/`, `web/src/map-v3/`). Keep v1/v2 changes minimal (regression only).
 4. DLL sample changes require **`scripts/build.ps1`** + **`scripts/install.ps1`**; bump `KSP_WEB_MAP_UI_VERSION` and `index.html` `?v=`.
 5. Update **`docs/MAP_V3_RENDERING_GUIDE.md`**, **`MAP_V3_PLANET_ORBIT_SPEC.md`**, and run **`npm test`** when behavior changes.
+6. Orbit **colors** / Customize Map / mod packs: **`docs/PLANET_ORBIT_COLOR_GUIDE.md`**.
 
 Program state: **`docs/MAP_V3_PROGRAM_STATE.md`**.

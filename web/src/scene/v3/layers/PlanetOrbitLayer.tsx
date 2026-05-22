@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useViewStore } from "../../../store/viewStore";
 import { useMapV3 } from "../../../map-v3/MapV3Context";
 import { PLANET_ORBIT_STYLE } from "../../../map-v3/elements/planetOrbit/planetOrbitStyle";
 import { useV3RootSegments, useV3SceneTrails } from "../../../map-v3/useMapV3Trails";
@@ -40,6 +41,9 @@ export function PlanetOrbitLayer() {
 
   const trails = useV3SceneTrails(filteredRoot, sceneFrame);
 
+  const customizeEnabled = useViewStore((s) => s.devCustomizeMapEnabled);
+  const setPickLines = useViewStore((s) => s.setCustomizeMapOrbitPickLines);
+
   useEffect(() => {
     if (!layers.planetOrbit || trails.length === 0) {
       window.KspSolarMapPlanetOrbitDebug = undefined;
@@ -53,6 +57,21 @@ export function PlanetOrbitLayer() {
       targetVertices: PLANET_ORBIT_STYLE.trailVertices,
     };
   }, [layers.planetOrbit, trails]);
+
+  useEffect(() => {
+    if (!customizeEnabled) {
+      setPickLines([]);
+      return;
+    }
+    setPickLines(
+      trails
+        .filter((t) => t.bodyName && t.points.length >= 2)
+        .map((t) => ({
+          bodyName: t.bodyName!,
+          points: t.points,
+        })),
+    );
+  }, [customizeEnabled, trails, setPickLines]);
 
   if (!layers.planetOrbit || !mapContext?.canDraw || trails.length === 0) {
     return null;

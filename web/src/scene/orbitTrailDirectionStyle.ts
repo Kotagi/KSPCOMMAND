@@ -9,7 +9,7 @@ export const ORBIT_TRAIL_OPACITY_TRAILING = 1;
 export const ORBIT_TRAIL_OPACITY_PROGRADE_AT_ICON = 0.2;
 
 /** Motion tail: bold where orbit meets the body from behind (retrograde attach). */
-export const ORBIT_TRAIL_TAIL_ATTACH = 1;
+export const ORBIT_TRAIL_TAIL_ATTACH = 0.85;
 /** Motion tail: faint leading edge in prograde direction (ahead of the body). */
 export const ORBIT_TRAIL_TAIL_LEAD = 0.25;
 

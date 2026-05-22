@@ -1,6 +1,6 @@
 # Map V3 — Program state (as-built)
 
-**Revision:** 2026-05-21 (phase 2 complete: motion tail, samples-first geometry, 128→512 orbit density)
+**Revision:** 2026-05-21 (phase 2 complete; Customize Map orbit colors + mod-pack color guide)
 
 ---
 
@@ -97,8 +97,8 @@ flowchart TB
 | Densify | Web **512** vertices (`planetOrbitStyle.trailVertices`) |
 | Drawer | `GradientDirectionalOrbitTrail` — one closed `Line` for planet rings |
 | Style | `opacityForOrbitTailAhead` — attach **1.0**, lead **0.25**, linear prograde ramp |
-| Colors | `bodyMapColors.ts`; alpha-only fade |
-| Docs | [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2 motion tail, **§12** vertex tuning |
+| Colors | `kspBodyMapColorTable.ts` + `bodyMapColors.ts`; dev **Customize Map** HUD (**Set color**, revert) |
+| Docs | Orbit trail [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md); colors [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) |
 
 ---
 
@@ -111,6 +111,6 @@ Phases 3–12 follow [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md) and phase plans (`
 ## Verification baseline
 
 - `npm test` / `npm run build` green.
-- UI version: `KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx` (currently `85-orbit-128-samples`).
+- UI version: `KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx` (currently `90-set-color-default`).
 - Manual: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) phase 2 rows P2-01–P2-10.
 - Flight scripts: [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md).

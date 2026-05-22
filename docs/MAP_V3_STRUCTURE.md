@@ -3,7 +3,7 @@
 **Document ID:** MAP-V3-STRUCT-001  
 **Status:** Phase 2 — `starMarker` + `planetOrbit` shipped; V3 is the **canonical** map for new work  
 **Scope:** Repository layout, module boundaries, and rollout gates for the modular 3D solar map (`solarRenderMode: 3d-v3`, default).  
-**Reference:** Stock KSP in-game map (acceptance), Map V2 lessons (`docs/MAP_V2_MODULES.md`), orbit trails ([`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md)).
+**Reference:** Stock KSP in-game map (acceptance), Map V2 lessons (`docs/MAP_V2_MODULES.md`), orbit trails ([`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md)), orbit colors / mod packs ([`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)).
 
 ---
 

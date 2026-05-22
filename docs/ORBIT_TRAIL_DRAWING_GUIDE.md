@@ -4,7 +4,9 @@
 **Revision:** 1.1 (2026-05-21) — §12 vertex/sample tuning; samples-first geometry; 128/512 defaults  
 **Audience:** Operators and developers extending KspWebMap solar-map trails  
 **Canonical map:** Map V3 (`solarRenderMode: "3d-v3"`, default in `viewStore.ts`)  
-**UI reference build:** `85-orbit-128-samples` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`)
+**UI reference build:** `90-set-color-default` (`KSP_WEB_MAP_UI_VERSION` in `web/src/mount.tsx`)
+
+**Orbit colors (stock table, Customize Map, mod packs):** [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 
 ---
 
@@ -74,7 +76,9 @@ Compare side-by-side with in-game map and **3D WebGL (v1)** on the same flight.
 | `GradientDirectionalOrbitTrail.tsx` | `points`, `anchorIndex`, `lineColor`, optional `sampleUniversalTimes` | One closed `Line` (planets) or two `Line`s (fallback) | **Default** KSP motion tail |
 | `orbitTrailDirectionStyle.ts` | counts, anchor, optional UT | `opacityForOrbitTailAhead`, `closedRingHalfGradientOpacities`, `hexToRgbaVertexColors` | Tuning tail attach/lead and prograde direction |
 | `splitOrbitTrailHalves.ts` | points, anchor, closed flag, optional UT | `{ retrograde, prograde }` polylines | Fallback when `closedWithDuplicateEndpoint` or &lt;3 points |
-| `bodyMapColors.ts` | `bodyName` | hex string | Stock KSP palette (`getKspBodyMapColor`) |
+| `bodyMapColors.ts` | `bodyName` | hex string | Stock + dev defaults (`getKspBodyMapColor` / `useKspBodyMapColor`); see [color guide](PLANET_ORBIT_COLOR_GUIDE.md) |
+| `kspBodyMapColorTable.ts` | body name | `#rrggbb` | Shipped stock palette (edit for mod-pack releases) |
+| `CustomizeMapDevPanel.tsx` | HUD | preview / **Set color** | In-flight tuning; [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) |
 | `densifyOrbitTrail.ts` | sparse polyline | 512-vertex ring | Arc-length resample; `densifySampleUniversalTimes` for UT |
 | `densifyPlanetOrbitTrail.ts` | `MapContext`, path | 512 planet ring + optional UT | V3 planet geometry: **telemetry samples first**, analytic fallback, densify |
 | `coords/buildBodyOrbitTrail.ts` | `BodyOrbitPath` | analytic segments | Keplerian fallback when samples sparse |
@@ -123,7 +127,7 @@ flowchart LR
 | `progradeLineWidthFactor` | `planetOrbitStyle.ts` / drawer prop | Prograde line width on **split** fallback only (0.7) |
 | `PLANET_ORBIT_STYLE.trailVertices` | `planetOrbitStyle.ts` | Web densify target (**512** draw vertices) |
 | `BodyOrbitPathSampleCount` | `TelemetrySnapshotService.cs` | DLL samples per period (**128**; was 48) |
-| `getKspBodyMapColor` | `bodyMapColors.ts` | Per-body hue |
+| `getKspBodyMapColor` | `bodyMapColors.ts` | Per-body hue (stock table + optional dev defaults) |
 
 **Changing sample or vertex counts:** see **§12** (full procedure).
 

@@ -3,6 +3,7 @@ import type { CameraMode } from "../store/viewStore";
 import { useViewStore } from "../store/viewStore";
 import type { QualityPreset } from "../settings/qualityStore";
 import { formatTrailValidation } from "../coords/buildBodyOrbitTrail";
+import { CustomizeMapDevPanel } from "./CustomizeMapDevPanel";
 import { MapHudV2 } from "./MapHudV2";
 import { MapHudV3 } from "./MapHudV3";
 
@@ -210,6 +211,7 @@ export function MapHud() {
           Moon LOD debug
         </label>
       </div>
+      <CustomizeMapDevPanel />
       {bodyOrbitPaths.length > 0 && (
         <div className="ksp-solar-hud-row">
           <button

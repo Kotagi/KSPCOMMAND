@@ -16,7 +16,7 @@
 
 - `planetBody`, `moonOrbit`, `moonBody`, `vesselMarker`, `vesselOrbit`
 - Orbit line pick/hover (Phase 12)
-- Mod-specific color tables beyond `getKspBodyMapColor` fallback
+- In-game color authoring — use [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) (Customize Map + `kspBodyMapColorTable.ts` for mod packs); shipped stock table only at build time
 
 ## Implementation checklist
 

@@ -1,9 +1,8 @@
 import { memo } from "react";
+import { useViewStore } from "../../../store/viewStore";
 import { GradientDirectionalOrbitTrail } from "../../GradientDirectionalOrbitTrail";
-import {
-  PLANET_ORBIT_STYLE,
-  resolvePlanetOrbitColor,
-} from "../../../map-v3/elements/planetOrbit/planetOrbitStyle";
+import { PLANET_ORBIT_STYLE } from "../../../map-v3/elements/planetOrbit/planetOrbitStyle";
+import { useKspBodyMapColor } from "../../bodyMapColors";
 import { densifyPlanetOrbitScenePoints } from "../../../map-v3/elements/planetOrbit/densifyPlanetOrbitTrail";
 import type { ScenePoint3 } from "../../../map-v3/types";
 
@@ -23,6 +22,8 @@ export const OrbitTrailV3 = memo(function OrbitTrailV3({
   closedWithDuplicateEndpoint?: boolean;
   lineWidth?: number;
 }) {
+  const lineColor = useKspBodyMapColor(bodyName);
+  const customizeEnabled = useViewStore((s) => s.devCustomizeMapEnabled);
   const finitePoints = points.filter(
     (p) =>
       p.length >= 3 &&
@@ -39,12 +40,14 @@ export const OrbitTrailV3 = memo(function OrbitTrailV3({
   return (
     <GradientDirectionalOrbitTrail
       lineKey={lineKey}
-      lineColor={resolvePlanetOrbitColor(bodyName)}
+      lineColor={lineColor}
       points={ring}
       anchorIndex={anchorIndex}
       sampleUniversalTimes={sampleUniversalTimes}
       lineWidth={lineWidth}
       progradeLineWidthFactor={PLANET_ORBIT_STYLE.progradeLineWidthFactor}
+      customizeMapPickable={customizeEnabled}
+      customizeMapBodyName={bodyName}
     />
   );
 });

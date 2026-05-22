@@ -43,6 +43,19 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). V1 (`3d`) and V2 (`3d-
 | `scene/splitOrbitTrailHalves.ts` | Half-orbit polyline split at anchor |
 | `scene/orbitTrailDirectionStyle.ts` | Motion-tail opacity (`opacityForOrbitTailAhead`, attach 1.0 / lead 0.25) |
 
+## Dev — planet orbit colors
+
+| Module | Role |
+|--------|------|
+| `scene/kspBodyMapColorTable.ts` | Shipped `KSP_BODY_MAP_COLORS` |
+| `scene/bodyMapColors.ts` | `getKspBodyMapColor`, `useKspBodyMapColor` |
+| `settings/customizeMapDev.ts` | `localStorage` load/save for Customize Map |
+| `components/CustomizeMapDevPanel.tsx` | HUD: enable, pick orbit, **Set color**, revert |
+| `selection/pickPlanetOrbitTrail.ts` | Ray pick heliocentric planet rings |
+| `store/viewStore.ts` | `planetOrbitColorOverrides`, `planetOrbitStockDefaults` |
+
+Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
+
 ## Element kinds
 
 | Kind | Phase | Layer file | Status |

@@ -36,7 +36,7 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 | P2-02 | No moon orbit rings (e.g. Mun, Minmus) |
 | P2-03 | No planet mesh markers, vessel, labels, or SOI rings |
 | P2-04 | Star still visible at center |
-| P2-05 | Side-by-side **3D WebGL (v1)** — trail colors comparable on same flight |
+| P2-05 | Side-by-side **3D WebGL (v1)** — trail colors comparable on same flight (tune mod bodies via [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)) |
 | P2-05a | **Motion tail:** bold (**1.0**) where orbit meets planet from behind; faint (**0.25**) prograde lead; linear ramp around ring so orbital direction is obvious without time warp (see [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §2) |
 | P2-05b | Planet icons on grey trails; `trailRenderMode: samples`, `liveToSample0` ≈ 0 m on stable flight ([`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md)) |
 | P2-05c | Orbit rings visually smooth (not obvious 48-gon); telemetry `bodyOrbitPaths[].samples.length` ≈ **128** after DLL install |
