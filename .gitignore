@@ -24,4 +24,7 @@ telemetry*.json
 assets/planets/**
 !assets/planets/README.md
 GameData/KspWebMap/Web/assets/kerbin00.png
-GameData/KspWebMap/Web/assets/bodies/
+GameData/KspWebMap/Web/assets/bodies/*
+!GameData/KspWebMap/Web/assets/bodies/README.md
+!GameData/KspWebMap/Web/assets/bodies/.gitkeep
+web/public/assets/bodies/*

@@ -31,10 +31,13 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). **V3 core is canonical
 |--------|--------|---------|----------|
 | `buildPlanetBodySegments.ts` | `MapContext` | `TrajectorySegment[]` kind `planetBody` | `planner/buildSegments`, layer |
 | `planetBodyLod.ts` | `meshR`, `cameraDistance` | `mesh` \| `icon` draw mode | `PlanetBodyMesh` |
+| `planetBodyTextureFields.ts` | telemetry body fields | `bodyTextureUrl`, status helpers | `PlanetBodyLayer`, tests |
 
-**Spec:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md)
+**Specs:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md), textures [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md)
 
-**Presentation:** `scene/v3/layers/PlanetBodyLayer.tsx` → `PlanetBodyMesh.tsx`
+**Operator guide:** [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md)
+
+**Presentation:** `scene/v3/layers/PlanetBodyLayer.tsx` → `PlanetBodyMesh.tsx` → `TexturedPlanetBody` / `FlatPlanetBody` / `PlanetBodyDot`
 
 ## Element — `starMarker` (`web/src/map-v3/elements/starMarker/`)
 
@@ -52,6 +55,10 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). **V3 core is canonical
 | `layers/StarMarkerLayer.tsx` | Emissive textured sphere per segment |
 | `layers/PlanetOrbitLayer.tsx` | Planet orbit polylines via `OrbitTrailV3` |
 | `layers/PlanetBodyLayer.tsx` | Planet mesh/icon LOD per segment |
+| `layers/PlanetBodyMesh.tsx` | LOD router (dot / textured / flat mesh) |
+| `layers/TexturedPlanetBody.tsx` | Mesh LOD + exported JPEG |
+| `layers/FlatPlanetBody.tsx` | Mesh LOD color fallback |
+| `layers/PlanetBodyDot.tsx` | Icon LOD round dot |
 | `layers/OrbitTrailV3.tsx` | Planet trails → `GradientDirectionalOrbitTrail` |
 | `scene/GradientDirectionalOrbitTrail.tsx` | Shared motion-tail drawer (single closed ring; split fallback) |
 | `scene/splitOrbitTrailHalves.ts` | Half-orbit polyline split at anchor |
@@ -70,13 +77,33 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). **V3 core is canonical
 
 Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 
+## Assets — planet body textures (phase 3.3)
+
+| Module | Role |
+|--------|------|
+| `assets/planetBodyTextures.ts` | `THREE.TextureLoader` + revision cache; `flipY = false` |
+| `GameData/.../Web/assets/bodies/*.jpg` | Runtime JPEG exports (gitignored) |
+| `src/KspWebMap/Textures/ScaledBodyTextureExporter.cs` | KSP ScaledSpace → JPEG |
+| `src/KspWebMap/Services/BodyTextureExportService.cs` | Flight-load export queue |
+
+## Dev — planet texture lab
+
+| Module | Role |
+|--------|------|
+| `dev/planet-texture-lab-entry.tsx` | Separate Vite entry (not `mount.tsx`) |
+| `dev/PlanetTextureLab.tsx` | Full-screen test sphere |
+| `web/dev/planet-texture-lab.html` | Dev HTML shell |
+| `GameData/.../Web/planet-texture-lab.html` | Packaged lab page |
+
+Guide: [`web/dev/README.md`](../web/dev/README.md) · Phase 3 hub: [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) §7
+
 ## Element kinds
 
 | Kind | Phase | Layer file | Status |
 |------|-------|------------|--------|
 | `starMarker` | 1 | `StarMarkerLayer.tsx` | **Implemented** |
 | `planetOrbit` | 2 | `PlanetOrbitLayer.tsx` | **Implemented** |
-| `planetBody` | 3.1 | `PlanetBodyLayer.tsx` | **Implemented** |
+| `planetBody` | 3.1 + 3.3 textures | `PlanetBodyLayer.tsx` | **Implemented** |
 | `moonOrbit` | 4 | `MoonOrbitLayer.tsx` | Planned |
 | `moonBody` | 5 | `MoonBodyLayer.tsx` | Planned |
 | `vesselMarker` | 6 | `VesselMarkerLayer.tsx` | Planned |
@@ -93,12 +120,14 @@ Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 - `composeMapV3Layers(PHASE2)` → `["StarMarkerLayer", "PlanetOrbitLayer"]`
 - `MAP_V3_LAYERS_PHASE1` retained for regression tests
 
-## Phase 3.1 state (production)
+## Phase 3 state (production)
 
 - `MAP_V3_LAYERS_PHASE3`: phase 2 + `planetBody` true
 - `composeMapV3Layers(PHASE3)` → `["StarMarkerLayer", "PlanetOrbitLayer", "PlanetBodyLayer"]`
 - Production `Map3DV3` uses phase 3 flags
-- Element spec: [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md)
+- HUD: `MAP_V3_PHASE_LABEL` = `v3 phase 3.3 — planet textures`
+- Element specs: [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md), [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md)
+- **How-to:** [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md)
 
 ## Multi-star (planned)
 

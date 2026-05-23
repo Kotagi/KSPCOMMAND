@@ -8,12 +8,17 @@ namespace KspWebMap
     {
         private readonly GameObject _host;
         private readonly TelemetryStore _store;
+        private readonly BodyTextureExportRegistry _textureRegistry;
         private TelemetrySnapshotComponent _component;
 
-        public TelemetrySnapshotService(GameObject host, TelemetryStore store)
+        public TelemetrySnapshotService(
+            GameObject host,
+            TelemetryStore store,
+            BodyTextureExportRegistry textureRegistry)
         {
             _host = host;
             _store = store;
+            _textureRegistry = textureRegistry;
         }
 
         public string Name
@@ -26,7 +31,7 @@ namespace KspWebMap
             if (_component == null)
             {
                 _component = _host.AddComponent<TelemetrySnapshotComponent>();
-                _component.Initialize(_store);
+                _component.Initialize(_store, _textureRegistry);
             }
         }
 
@@ -52,11 +57,13 @@ namespace KspWebMap
             private const double VesselPathUniversalTimeToleranceSeconds = 1d;
             private const string RootFrameName = "solarSystemRootCenteredInertial";
             private TelemetryStore _store;
+            private BodyTextureExportRegistry _textureRegistry;
             private float _nextCaptureTime;
 
-            public void Initialize(TelemetryStore store)
+            public void Initialize(TelemetryStore store, BodyTextureExportRegistry textureRegistry)
             {
                 _store = store;
+                _textureRegistry = textureRegistry;
                 CaptureAndPublish();
             }
 
@@ -1697,7 +1704,7 @@ namespace KspWebMap
                 };
             }
 
-            private static CelestialBodySnapshot[] CaptureBodies(CelestialBody rootBody, double universalTime)
+            private CelestialBodySnapshot[] CaptureBodies(CelestialBody rootBody, double universalTime)
             {
                 List<CelestialBodySnapshot> snapshots = new List<CelestialBodySnapshot>();
 
@@ -1732,7 +1739,7 @@ namespace KspWebMap
                             * (180d / Math.PI);
                     }
 
-                    snapshots.Add(new CelestialBodySnapshot
+                    CelestialBodySnapshot snapshot = new CelestialBodySnapshot
                     {
                         Name = body.bodyName,
                         ParentBody = body.orbit != null && body.orbit.referenceBody != null
@@ -1753,10 +1760,40 @@ namespace KspWebMap
                         SphereOfInfluenceMeters = body.sphereOfInfluence,
                         HasAtmosphere = body.atmosphere,
                         AtmosphereDepthMeters = body.atmosphereDepth
-                    });
+                    };
+                    ApplyBodyTextureFields(snapshot, body, rootBody);
+                    snapshots.Add(snapshot);
                 }
 
                 return snapshots.ToArray();
+            }
+
+            private void ApplyBodyTextureFields(
+                CelestialBodySnapshot snapshot,
+                CelestialBody body,
+                CelestialBody rootBody)
+            {
+                if (snapshot == null || body == null || _textureRegistry == null)
+                {
+                    return;
+                }
+
+                if (!HeliocentricPlanetFilter.IsHeliocentricPlanet(body, rootBody))
+                {
+                    return;
+                }
+
+                BodyTextureExportState exportState;
+
+                if (_textureRegistry.TryGetState(body.bodyName, out exportState) && exportState != null)
+                {
+                    snapshot.BodyTextureStatus = exportState.Status;
+                    snapshot.BodyTextureRevision = exportState.Revision;
+                    snapshot.BodyTextureUrl = exportState.Url;
+                    return;
+                }
+
+                snapshot.BodyTextureStatus = BodyTextureExportState.StatusPending;
             }
 
             private static CelestialBody FindRootBody()

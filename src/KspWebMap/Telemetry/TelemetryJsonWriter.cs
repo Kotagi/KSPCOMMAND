@@ -433,6 +433,12 @@ namespace KspWebMap
             WriteProperty(builder, "hasAtmosphere", body.HasAtmosphere);
             builder.Append(',');
             WriteProperty(builder, "atmosphereDepthMeters", body.AtmosphereDepthMeters);
+            builder.Append(',');
+            WriteProperty(builder, "bodyTextureUrl", body.BodyTextureUrl);
+            builder.Append(',');
+            WriteProperty(builder, "bodyTextureRevision", body.BodyTextureRevision);
+            builder.Append(',');
+            WriteProperty(builder, "bodyTextureStatus", body.BodyTextureStatus);
             builder.Append('}');
         }
 

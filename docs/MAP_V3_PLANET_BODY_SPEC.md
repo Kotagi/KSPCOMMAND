@@ -3,10 +3,10 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | MAP-V3-PLANET-BODY-001 |
-| **Revision** | 1.0 (2026-05-22) |
-| **Phase** | 3.1 (`planetBody`) |
-| **Scope** | Heliocentric **planet** position markers only: to-scale mesh + fixed map icon LOD |
-| **UI build** | `95-v3-planet-bodies` (`?v=95`) |
+| **Revision** | 1.1 (2026-05-22) |
+| **Phase** | 3.1 (`planetBody`) + 3.3 textures (mesh LOD only) |
+| **Scope** | Heliocentric **planet** position markers: mesh/icon LOD; textures per texture spec |
+| **UI build** | `107-planet-texture-material-ref` (`?v=107`) |
 | **Depends on** | Phase 1 `starMarker`, Phase 2 `planetOrbit` (alignment reference) |
 
 ## References
@@ -20,6 +20,8 @@
 | [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md) | V3 must not import v2 planner |
 | [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) | Color resolution (orbits + bodies) |
 | [`MAP_V3_RENDERING_GUIDE.md`](MAP_V3_RENDERING_GUIDE.md) | Living § Planet body summary |
+| [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md) | Phase 3.3 mesh LOD textures (plugin export) |
+| [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) | Operator + developer how-to |
 | V2 `PlanetBodyLayer` / `BodyMeshV2` | **Reference only** — not imported by V3 |
 
 ## Purpose and KSP reference behavior
@@ -41,7 +43,7 @@
 | Body labels | 9 |
 | Picking / selection highlight | 12 |
 | Focus emissive glow (v2 blue) | Deferred |
-| Procedural/textured globes (Kerbin/Sun-style) | Future revision |
+| *(shipped)* ScaledSpace JPEG on mesh LOD | Phase 3.3 — [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md) |
 | Separate `bodyLod` flag / `BodyLodLayer` | Phase 7 generalization |
 | Web-side inclination / plane “fixes” | **Forbidden** |
 
@@ -218,7 +220,7 @@ Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 | Production canvas | `Map3DV3.tsx` uses `PHASE3` |
 | Compose order | `StarMarkerLayer` → `PlanetOrbitLayer` → `PlanetBodyLayer` |
 | Stack mount | Orbits then bodies (`MapV3LayerStack.tsx`) |
-| HUD label | `v3 phase 3.1 — planet bodies` |
+| HUD label | `v3 phase 3.3 — planet textures` (`MAP_V3_PHASE_LABEL`) |
 | Camera | `CameraRig` star-only framing uses `composeMapV3Layers(PHASE3)` — not star-only when bodies enabled |
 
 ## Acceptance IDs
@@ -234,7 +236,7 @@ Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 | P3-07 | LOD zoom in | Zooming in: dots become to-scale meshes; physical size dominates floor |
 | P3-08 | Host-open scale | With host planet open, planets use physical `bodyMeshRadius` (no 0.05 floor) |
 | P3-09 | Phase 2 regression | Orbits, motion tail, inclination unchanged |
-| P3-10 | HUD / UI | `MapHudV3` phase 3.1 label; console `95-v3-planet-bodies` |
+| P3-10 | HUD / UI | `MapHudV3` phase 3.3 label; console `107-planet-texture-material-ref` |
 | P3-11 | Recenter | Full solar bounds (not star-only) |
 | P3-12 | No console errors | Load, orbit, recenter |
 
@@ -255,7 +257,7 @@ Operator checklist: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) § Phase 3.1.
 ### Manual
 
 1. `scripts/build.ps1` + `scripts/install.ps1` if DLL changed; else web-only rebuild.
-2. Open `http://127.0.0.1:8750/?v=95` (hard refresh).
+2. Open `http://127.0.0.1:8750/?v=107` (hard refresh). See [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md).
 3. **3D Map V3** — full system: planets on colored rings.
 4. Zoom sweep: icon ↔ mesh transition vs KSP tracking map.
 5. `scripts/verify-telemetry.ps1`, `scripts/verify-body-positions.ps1` — PASS.
@@ -266,3 +268,4 @@ Operator checklist: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) § Phase 3.1.
 | Rev | Date | Change |
 |-----|------|--------|
 | 1.0 | 2026-05-22 | Initial Phase 3.1 — as-built mesh/icon LOD, flat color, V3 decouple |
+| 1.1 | 2026-05-22 | Phase 3.3 textures shipped; UI v107; link Phase 3 guide |

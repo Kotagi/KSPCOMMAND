@@ -13,6 +13,9 @@ Read in this order when onboarding to the modular solar map:
 9. **[MAP_V3_ACCEPTANCE.md](MAP_V3_ACCEPTANCE.md)** — Manual + automated pass criteria.
 10. **Phase plans** — `MAP_V3_PHASE0_PLAN.md` … `MAP_V3_PHASE2_PLAN.md`.
 11. **Planet orbit spec** — [MAP_V3_PLANET_ORBIT_SPEC.md](MAP_V3_PLANET_ORBIT_SPEC.md).
+12. **Planet body spec** — [MAP_V3_PLANET_BODY_SPEC.md](MAP_V3_PLANET_BODY_SPEC.md).
+13. **Planet body textures** — [MAP_V3_PLANET_BODY_TEXTURE_SPEC.md](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md).
+14. **Phase 3 guide (operator + developer)** — [MAP_V3_PHASE3_GUIDE.md](MAP_V3_PHASE3_GUIDE.md) — planets on map, texture export/load, lab, build, troubleshooting.
 
 **V2 reference (regression):** `MAP_V2_MODULES.md`, `MAP_V2_ACCEPTANCE.md` (if present).
 

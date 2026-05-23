@@ -69,6 +69,40 @@ if ($telemetry.ephemerisValidationResidualMeters -gt 1e6) {
     $failures += "ephemerisValidationResidual=$($telemetry.ephemerisValidationResidualMeters) (same-UT max 1 Mm)"
 }
 
+$rootBody = $telemetry.rootBody
+$textureRows = @()
+
+foreach ($body in $telemetry.bodies) {
+    if ($null -eq $body.name) { continue }
+    if ($body.name -eq $rootBody) { continue }
+    if ($body.parentBody -ne $rootBody) { continue }
+
+    $textureRows += [pscustomobject]@{
+        Body = $body.name
+        Status = $body.bodyTextureStatus
+        Revision = $body.bodyTextureRevision
+        Url = $body.bodyTextureUrl
+    }
+
+    if ([string]::IsNullOrWhiteSpace($body.bodyTextureStatus)) {
+        $failures += "$($body.name): missing bodyTextureStatus (heliocentric planet)"
+    }
+    elseif ($body.bodyTextureStatus -eq "ready") {
+        if ([string]::IsNullOrWhiteSpace($body.bodyTextureUrl)) {
+            $failures += "$($body.name): bodyTextureStatus=ready but bodyTextureUrl missing"
+        }
+        if ([string]::IsNullOrWhiteSpace($body.bodyTextureRevision)) {
+            $failures += "$($body.name): bodyTextureStatus=ready but bodyTextureRevision missing"
+        }
+    }
+}
+
+if ($textureRows.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Planet body textures:"
+    $textureRows | Format-Table -AutoSize
+}
+
 if ($failures.Count -gt 0) {
     Write-Host ""
     Write-Error "VERIFY FAILED ($($failures.Count) issue(s)):"

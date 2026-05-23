@@ -1,7 +1,7 @@
-# Planet textures (local only)
+# Planet textures (legacy manual copy)
 
-Copy ScaledSpace textures from your KSP install for Map V3 mesh PoC, e.g.:
+**Preferred:** load a flight with KspWebMap — the plugin exports ScaledSpace albedo to `GameData/KspWebMap/Web/assets/bodies/*.jpg` automatically. See [`docs/MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](../docs/MAP_V3_PLANET_BODY_TEXTURE_SPEC.md).
 
-`Squad/Textures/.../kerbin00.png` → `GameData/KspWebMap/Web/assets/kerbin00.png`
+**Legacy PoC (optional):** copy `kerbin00.png` from your KSP install to `GameData/KspWebMap/Web/assets/kerbin00.png`. The web UI no longer uses this path after phase 3.3.
 
-These files are gitignored. Phase 3.3.2+ will export readable textures from the plugin (SCANsat-style).
+Stock textures under `assets/planets/**` are gitignored — do not commit Squad binaries.

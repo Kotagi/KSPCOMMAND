@@ -19,5 +19,8 @@ namespace KspWebMap
         public double SphereOfInfluenceMeters;
         public bool HasAtmosphere;
         public double AtmosphereDepthMeters;
+        public string BodyTextureUrl;
+        public string BodyTextureRevision;
+        public string BodyTextureStatus;
     }
 }

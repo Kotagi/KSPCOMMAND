@@ -243,6 +243,12 @@ namespace KspWebMap
                 return;
             }
 
+            if (path == "/planet-texture-lab.html")
+            {
+                ServeStaticFile(stream, "planet-texture-lab.html", isHead);
+                return;
+            }
+
             if (path.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase))
             {
                 string relativePath = path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
@@ -277,7 +283,20 @@ namespace KspWebMap
             }
 
             byte[] bytes = File.ReadAllBytes(filePath);
-            WriteBytesResponse(stream, "200 OK", GetContentType(filePath), bytes, headOnly);
+            string cacheControl = GetCacheControl(relativePath);
+            WriteBytesResponse(stream, "200 OK", GetContentType(filePath), bytes, headOnly, cacheControl);
+        }
+
+        private static string GetCacheControl(string relativePath)
+        {
+            string normalized = relativePath.Replace('\\', '/');
+
+            if (normalized.StartsWith("assets/bodies/", StringComparison.OrdinalIgnoreCase))
+            {
+                return "public, max-age=31536000";
+            }
+
+            return "no-store";
         }
 
         private string NormalizeRequestPath(string rawPath)
@@ -339,6 +358,9 @@ namespace KspWebMap
                     return "application/json; charset=utf-8";
                 case ".png":
                     return "image/png";
+                case ".jpg":
+                case ".jpeg":
+                    return "image/jpeg";
                 case ".webp":
                     return "image/webp";
                 case ".svg":
@@ -358,16 +380,23 @@ namespace KspWebMap
         private static void WriteTextResponse(Stream stream, string status, string contentType, string body, bool headOnly)
         {
             byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
-            WriteBytesResponse(stream, status, contentType, bodyBytes, headOnly);
+            WriteBytesResponse(stream, status, contentType, bodyBytes, headOnly, "no-store");
         }
 
-        private static void WriteBytesResponse(Stream stream, string status, string contentType, byte[] body, bool headOnly)
+        private static void WriteBytesResponse(
+            Stream stream,
+            string status,
+            string contentType,
+            byte[] body,
+            bool headOnly,
+            string cacheControl)
         {
             string headers = string.Format(
-                "HTTP/1.1 {0}\r\nContent-Type: {1}\r\nContent-Length: {2}\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n",
+                "HTTP/1.1 {0}\r\nContent-Type: {1}\r\nContent-Length: {2}\r\nConnection: close\r\nCache-Control: {3}\r\n\r\n",
                 status,
                 contentType,
-                body.Length);
+                body.Length,
+                cacheControl);
 
             byte[] headerBytes = Encoding.ASCII.GetBytes(headers);
             stream.Write(headerBytes, 0, headerBytes.Length);

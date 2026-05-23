@@ -1,33 +1,78 @@
 import * as THREE from "three";
 
-/** Static file under KspWebMap/Web/assets/ (see build copy from assets/planets/kerbol/). */
-export function resolveKerbinBodyTextureUrl(): string {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return new URL("assets/kerbin00.png", `${window.location.origin}/`).href;
+const textureCache = new Map<string, THREE.Texture>();
+const loader = new THREE.TextureLoader();
+
+export function resolveBodyTextureUrl(urlPath: string): string {
+  if (urlPath.startsWith("http://") || urlPath.startsWith("https://")) {
+    return urlPath;
   }
-  return "/assets/kerbin00.png";
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    const path = urlPath.startsWith("/") ? urlPath.slice(1) : urlPath;
+    return new URL(path, `${window.location.origin}/`).href;
+  }
+
+  return urlPath.startsWith("/") ? urlPath : `/${urlPath}`;
 }
 
-export function isKerbinBodyName(bodyName: string): boolean {
-  return bodyName === "Kerbin";
+export function buildBodyTextureCacheKey(url: string, revision?: string): string {
+  return `${url}::${revision ?? ""}`;
 }
 
-export function loadKerbinBodyTexture(
+function configureBodyTexture(texture: THREE.Texture): void {
+  // KSP/Unity planet maps are authored with flipY off; Three defaults to true.
+  texture.flipY = false;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+}
+
+export function isBodyTextureReady(texture: THREE.Texture | null | undefined): boolean {
+  const image = texture?.image as { width?: number; height?: number } | undefined;
+  return !!image && (image.width ?? 0) > 0 && (image.height ?? 0) > 0;
+}
+
+export function loadBodyTexture(
+  urlPath: string | undefined,
+  revision: string | undefined,
   onLoad: (texture: THREE.Texture) => void,
-  onError?: (url: string) => void,
+  onError?: (resolvedUrl: string) => void,
 ): void {
-  const url = resolveKerbinBodyTextureUrl();
-  const loader = new THREE.TextureLoader();
+  if (!urlPath) {
+    return;
+  }
+
+  const resolvedUrl = resolveBodyTextureUrl(urlPath);
+  const cacheKey = buildBodyTextureCacheKey(resolvedUrl, revision);
+  const cached = textureCache.get(cacheKey);
+
+  if (cached && isBodyTextureReady(cached)) {
+    onLoad(cached);
+    return;
+  }
+
   loader.load(
-    url,
+    resolvedUrl,
     (texture) => {
-      texture.colorSpace = THREE.SRGBColorSpace;
+      if (!isBodyTextureReady(texture)) {
+        console.warn("[KspWebMap] Body texture has no image data:", resolvedUrl);
+        onError?.(resolvedUrl);
+        return;
+      }
+      configureBodyTexture(texture);
+      textureCache.set(cacheKey, texture);
       onLoad(texture);
     },
     undefined,
     () => {
-      console.warn("[KspWebMap] Kerbin texture failed to load:", url);
-      onError?.(url);
+      console.warn("[KspWebMap] Body texture failed to load:", resolvedUrl);
+      onError?.(resolvedUrl);
     },
   );
+}
+
+/** Test helper — clears module cache between Vitest cases. */
+export function clearBodyTextureCacheForTests(): void {
+  textureCache.forEach((texture) => texture.dispose());
+  textureCache.clear();
 }

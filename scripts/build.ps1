@@ -14,6 +14,7 @@ $managedPath = Join-Path $KspRoot "KSP_x64_Data\Managed"
 $assemblyCSharp = Join-Path $managedPath "Assembly-CSharp.dll"
 $unityCore = Join-Path $managedPath "UnityEngine.CoreModule.dll"
 $unityImgui = Join-Path $managedPath "UnityEngine.IMGUIModule.dll"
+$unityImageConversion = Join-Path $managedPath "UnityEngine.ImageConversionModule.dll"
 
 function Assert-FileExists {
     param(
@@ -30,6 +31,7 @@ Assert-FileExists -Path (Join-Path $KspRoot "KSP_x64.exe") -Description "KSP exe
 Assert-FileExists -Path $assemblyCSharp -Description "KSP Assembly-CSharp.dll"
 Assert-FileExists -Path $unityCore -Description "UnityEngine.CoreModule.dll"
 Assert-FileExists -Path $unityImgui -Description "UnityEngine.IMGUIModule.dll"
+Assert-FileExists -Path $unityImageConversion -Description "UnityEngine.ImageConversionModule.dll"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $projectPath = Join-Path $repoRoot "src\KspWebMap\KspWebMap.csproj"
@@ -93,6 +95,7 @@ function Invoke-FrameworkCscBuild {
         /reference:$assemblyCSharp `
         /reference:$unityCore `
         /reference:$unityImgui `
+        /reference:$unityImageConversion `
         $sources
 
     if ($LASTEXITCODE -ne 0) {
@@ -180,10 +183,18 @@ function Invoke-WebBuild {
 
     $webDest = Join-Path $packageModRoot "Web"
   $assetsDest = Join-Path $webDest "assets"
+    $bodiesDest = Join-Path $assetsDest "bodies"
     New-Item -ItemType Directory -Force -Path $assetsDest | Out-Null
+    New-Item -ItemType Directory -Force -Path $bodiesDest | Out-Null
 
     if (Test-Path $distAssets) {
         Copy-Item -Path (Join-Path $distAssets "*") -Destination $assetsDest -Recurse -Force
+    }
+
+    $labHtmlSource = Join-Path $webRoot "dev\planet-texture-lab.html"
+    if (Test-Path $labHtmlSource) {
+        Copy-Item -Path $labHtmlSource -Destination (Join-Path $webDest "planet-texture-lab.html") -Force
+        Write-Host "Copied planet-texture-lab.html to $webDest"
     }
 
     Write-Host "Copied web bundle to $assetsDest"

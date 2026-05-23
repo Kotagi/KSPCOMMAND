@@ -25,10 +25,12 @@ namespace KspWebMap
 
             ServerConfig serverConfig = ServerConfig.CreateDefault();
             TelemetryStore telemetryStore = new TelemetryStore();
+            BodyTextureExportRegistry textureRegistry = new BodyTextureExportRegistry();
 
             _services = new ServiceRegistry(LogPrefix);
             _services.Add(new DevWindowService(gameObject));
-            _services.Add(new TelemetrySnapshotService(gameObject, telemetryStore));
+            _services.Add(new BodyTextureExportService(gameObject, serverConfig, textureRegistry));
+            _services.Add(new TelemetrySnapshotService(gameObject, telemetryStore, textureRegistry));
             _services.Add(new LocalHttpServerService(serverConfig, telemetryStore));
             _services.StartAll();
 

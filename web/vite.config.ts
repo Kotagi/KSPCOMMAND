@@ -12,14 +12,13 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    lib: {
-      entry: resolve(__dirname, "src/mount.tsx"),
-      formats: ["es"],
-      fileName: "ksp-solar-map",
-    },
     rollupOptions: {
+      input: {
+        "ksp-solar-map": resolve(__dirname, "src/mount.tsx"),
+        "planet-texture-lab": resolve(__dirname, "src/dev/planet-texture-lab-entry.tsx"),
+      },
       output: {
-        entryFileNames: "assets/ksp-solar-map.js",
+        entryFileNames: "assets/[name].js",
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name][extname]",
       },
@@ -29,6 +28,10 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
+        target: "http://127.0.0.1:8750",
+        changeOrigin: true,
+      },
+      "/assets/bodies": {
         target: "http://127.0.0.1:8750",
         changeOrigin: true,
       },

@@ -1,12 +1,11 @@
 import { useMemo } from "react";
 import { useMapV3 } from "../../../map-v3/MapV3Context";
+import { planetBodyTextureFields } from "../../../map-v3/elements/planetBody/planetBodyTextureFields";
 import { buildSegments } from "../../../map-v3/planner/buildSegments";
 import { useMoonVisibilityContext } from "../../MoonVisibilityContext";
 import { PlanetBodyMesh } from "./PlanetBodyMesh";
-import { useKerbinTextureUrlDebug } from "./KerbinTexturedBody";
 
 export function PlanetBodyLayer() {
-  useKerbinTextureUrlDebug();
   const { mapContext, layers } = useMapV3();
   const { visibleBodyNames } = useMoonVisibilityContext();
 
@@ -38,12 +37,15 @@ export function PlanetBodyLayer() {
         if (!entry) {
           return null;
         }
+        const texture = planetBodyTextureFields(entry.body);
+
         return (
           <PlanetBodyMesh
             key={seg.key}
             bodyName={name}
             radiusMeters={entry.radiusMeters}
             rootPosition={seg.points[0]}
+            {...texture}
           />
         );
       })}

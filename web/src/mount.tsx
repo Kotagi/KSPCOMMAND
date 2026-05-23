@@ -150,7 +150,7 @@ declare global {
 }
 
 /** Bumped when web UI changes; check in devtools if map looks stale. */
-export const KSP_WEB_MAP_UI_VERSION = "104-planet-body-lod-per-frame";
+export const KSP_WEB_MAP_UI_VERSION = "107-planet-texture-material-ref";
 
 window.KspSolarMap = api;
 window.KspSolarMapUiVersion = KSP_WEB_MAP_UI_VERSION;

@@ -51,7 +51,7 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 
 ## Phase 3.1 — Planet bodies
 
-**Spec:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md)
+**Spec:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md) · **Guide:** [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md)
 
 | ID | Pass criteria |
 |----|----------------|
@@ -64,13 +64,32 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 | P3-07 | Zoom in: dots become to-scale meshes; physical radius visible when close |
 | P3-08 | Host planet open: physical scale (no `0.05` solar floor on planets) |
 | P3-09 | Phase 2 orbits, motion tail, and inclination unchanged |
-| P3-10 | `MapHudV3` shows **v3 phase 3.1 — planet bodies**; console `95-v3-planet-bodies` |
+| P3-10 | Phase 3 HUD active; console includes `107-planet-texture-material-ref` (phase 3.3 label on HUD) |
 | P3-11 | Recenter uses full solar bounds (not star-only) |
 | P3-12 | No console errors on load, orbit, or Recenter |
 | P3-13 | `buildPlanetBodySegments` Vitest: planets only, positions from `bodyByName` |
 | P3-14 | `composeMapV3Layers(PHASE3)` === `["StarMarkerLayer", "PlanetOrbitLayer", "PlanetBodyLayer"]` |
 
 **Automated:** P3-13, P3-14 via `npm test`. P3-01–P3-12 require manual flight check.
+
+## Phase 3.3 — Planet body textures
+
+**Spec:** [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md) · **Guide:** [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md)
+
+| ID | Pass criteria |
+|----|----------------|
+| P3T-01 | Mesh LOD: stock Kerbin shows continents (not flat map color only) |
+| P3T-02 | Mesh LOD: Duna, Eve, Jool recognizable vs KSP tracking map |
+| P3T-03 | Icon LOD: orbit-colored round dots; no texture HTTP in icon mode |
+| P3T-04 | Telemetry: heliocentric planets have `bodyTextureStatus`; `ready` includes `bodyTextureUrl` |
+| P3T-05 | `GET /assets/bodies/Kerbin.jpg` returns 200 after flight load |
+| P3T-06 | Mod texture change updates `bodyTextureRevision`; web reloads without full page restart |
+| P3T-07 | P3-01–P3-12 regression unchanged |
+| P3T-08 | No console errors; `failed`/`unsupported` bodies use color fallback |
+| P3T-09 | `npm test` + `npm run build` pass |
+| P3T-10 | `MapHudV3` shows **v3 phase 3.3 — planet textures**; console `107-planet-texture-material-ref` |
+
+**Automated:** P3T-04 partial via `scripts/verify-telemetry.ps1`; `planetBodyTextures.test.ts`. P3T-01–P3T-03, P3T-05–P3T-08 require manual flight check.
 
 ## Future phases
 
@@ -80,4 +99,4 @@ Per-element criteria added when the corresponding flag is enabled (mirror `docs/
 
 - `web/src/coords/*.test.ts` — shared math
 - `MapComposer.test.ts` — phase 0–3 composition
-- `buildPlanetBodySegments.test.ts`, `planetBodyLod.test.ts` — planet body element
+- `buildPlanetBodySegments.test.ts`, `planetBodyLod.test.ts`, `planetBodyTextureFields.test.ts`, `planetBodyTextures.test.ts` — planet body element

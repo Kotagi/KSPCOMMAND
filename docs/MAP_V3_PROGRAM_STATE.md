@@ -1,6 +1,6 @@
 # Map V3 — Program state (as-built)
 
-**Revision:** 2026-05-22 (phase 2 complete; heliocentric frame fix; V3 decoupled from v2 planner)
+**Revision:** 2026-05-22 (phase 3 complete — bodies + plugin textures; see [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md))
 
 ---
 
@@ -11,7 +11,9 @@
 | 0 — Blank canvas | Complete |
 | 1 — Star marker | Complete |
 | 2 — Planet orbits | Complete — motion tail, samples-first, 128 DLL / 512 web verts, unified Sun-child `getRelativePositionAtUT` ([`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md)) |
-| 3–12 | Not started (see [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md)) |
+| 3.1 — Planet bodies | Complete — mesh/icon LOD |
+| 3.3 — Planet textures | Complete — plugin ScaledSpace export + HTTP JPEG ([`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md)) |
+| 4–12 | Not started (see [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md)) |
 
 - **Default view:** `solarRenderMode: "3d-v3"` in `web/src/store/viewStore.ts`.
 - **New feature work** targets `map-v3/` + `scene/v3/` only; v1/v2 remain for regression.
@@ -54,7 +56,7 @@ flowchart TB
 |------|---------|-------|--------|
 | `starMarker` | `buildStarMarkerSegments` | `StarMarkerLayer` | Shipped |
 | `planetOrbit` | `buildPlanetOrbitSegments` (v3-native) | `PlanetOrbitLayer` → `OrbitTrailV3` | Shipped |
-| `planetBody` | `buildPlanetBodySegments` | `PlanetBodyLayer` | Shipped (phase 3.1) |
+| `planetBody` | `buildPlanetBodySegments` | `PlanetBodyLayer` | Shipped (3.1 LOD + 3.3 textures) |
 | `moonOrbit` | — | `MoonOrbitLayer` | Phase 4 |
 | `moonBody` | — | `MoonBodyLayer` | Phase 5 |
 | `vesselMarker` | — | `VesselMarkerLayer` | Phase 6 |
@@ -104,16 +106,27 @@ flowchart TB
 
 ---
 
+## Phase 3 (bodies + textures)
+
+| Item | Detail |
+|------|--------|
+| Bodies (3.1) | `buildPlanetBodySegments` + mesh/icon LOD (`planetBodyLod.ts`) |
+| Textures (3.3) | `BodyTextureExportService` → `Web/assets/bodies/*.jpg`; web `TexturedPlanetBody` |
+| Operator guide | [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) |
+| Dev lab | `http://127.0.0.1:8750/planet-texture-lab.html` — [`web/dev/README.md`](../web/dev/README.md) |
+
 ## Forward path
 
-Phase 3.1 (`planetBody`) shipped — `map-v3/elements/planetBody/` + `planetBodyLod.ts`. Spec: [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md). Next: `moonOrbit` (phase 4).
+Phase 3 complete. Next: `moonOrbit` (phase 4) — spec TBD; follow [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md) § Adding a new map element.
 
 ---
 
 ## Verification baseline
 
-- `npm test` / `npm run build` green (72 tests).
-- UI version: `95-v3-planet-bodies` (`web/src/mount.tsx`; refresh `?v=95`).
+- `npm test` / `npm run build` green (86+ tests).
+- UI version: `107-planet-texture-material-ref` (`web/src/mount.tsx`; refresh `?v=107`).
+- HUD: `v3 phase 3.3 — planet textures` (`MAP_V3_PHASE_LABEL` in `layerFlags.ts`).
 - DLL `frameDiagnostics.resolverVersion`: `"4"` (frame authority — not “Map V4”).
-- Manual: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) phase 2.
+- Manual: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) § Phase 3.1 + 3.3.
+- Textures: `scripts/verify-telemetry.ps1` after flight load.
 - Decouple record: [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md).

@@ -4,7 +4,7 @@ namespace KspWebMap
 {
     public sealed class TelemetrySnapshot
     {
-        public const int CurrentSchemaVersion = 8;
+        public const int CurrentSchemaVersion = 9;
 
         public int SchemaVersion;
         public long SnapshotId;

@@ -83,6 +83,9 @@ export interface CelestialBody {
   eclipticLongitudeDegrees?: number;
   velocityReferenceFrame?: string;
   velocityRootRelativeMetersPerSecond?: Vector3;
+  bodyTextureUrl?: string;
+  bodyTextureRevision?: string;
+  bodyTextureStatus?: string;
 }
 
 export interface VesselRootPathSample {
