@@ -740,7 +740,8 @@ namespace KspWebMap
                         body,
                         rootBody,
                         sampleUniversalTime,
-                        currentUniversalTime));
+                        currentUniversalTime,
+                        orbitTrailRingSample: true));
                 }
                 catch
                 {

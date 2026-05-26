@@ -37,4 +37,10 @@ export const MAP_V3_LAYERS_PHASE3: MapV3LayerFlags = {
   planetBody: true,
 };
 
-export const MAP_V3_PHASE_LABEL = "v3 phase 3.4 — planet tilt and spin";
+/** Phase 4: phase 3 + moon orbit paths (mesh-gated visibility). */
+export const MAP_V3_LAYERS_PHASE4: MapV3LayerFlags = {
+  ...MAP_V3_LAYERS_PHASE3,
+  moonOrbit: true,
+};
+
+export const MAP_V3_PHASE_LABEL = "v3 phase 4 — moon orbits";

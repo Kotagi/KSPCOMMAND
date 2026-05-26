@@ -8,6 +8,8 @@
 
 **Moons:** flip/no-flip mode governs parent-chain relative offsets and diagnostic flip propagation only.
 
+**Moon orbit trail rings (resolver `"5"`):** All 128 capture samples use propagated parent chain (`orbitTrailRingSample: true`) — no live@sample0 on the polyline. Icons at `T_now` may still use live. Web: [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) § Standard procedure.
+
 ## Modes
 
 | Mode | Behavior |

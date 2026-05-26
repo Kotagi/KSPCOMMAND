@@ -305,21 +305,33 @@ V3 planet rings use `resolvePlanetOrbitPointsFromPath` / `resolvePlanetOrbitSour
 
 **Full guide:** [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) — symptoms, postmortem, diagnostics, regression checklist.
 
-**Rule:** Planets orbiting the Sun use **only** `orbit.getRelativePositionAtUT(UT)` for **all** DLL trail samples and display positions. The live shortcut (`body.position - root.position`) applies to **moons**, not Sun-children.
+**Rule — Sun children:** Planets orbiting the Sun use **only** `orbit.getRelativePositionAtUT(UT)` for **all** DLL trail samples and display positions.
 
-**Do not confuse versions:** Map **V3** is the product; `frameDiagnostics.resolverVersion` (e.g. `"4"`) is a DLL frame-revision tag in telemetry, not “Map V4.”
+**Rule — Moon trail rings:** All 128 DLL samples use propagated parent chain (`orbitTrailRingSample: true`). Web draws **samples-first** parent-relative offsets; display = `parent(now) + offset`; **no** mesh orientation on trails. Live shortcut applies to **moon icons** at `T_now`, not to trail polylines.
+
+**Do not confuse versions:** Map **V3** is the product; `frameDiagnostics.resolverVersion` (e.g. `"5"`) is a DLL frame-revision tag in telemetry, not “Map V4.”
 
 | Symptom | Action |
 |---------|--------|
-| `plane` in HUD QA &gt; 1° | Rebuild/install DLL; confirm `resolverVersion` `"4"`+; read helio frame doc |
+| `plane` in HUD QA &gt; 1° (planets) | Rebuild/install DLL; confirm `resolverVersion` `"5"`+; read helio frame doc |
+| Moon inclination ~180° off KSP map | Read [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) § Forbidden patterns; confirm `geometrySource: "samples"` |
 | `live↔ana` in Gm, `live↔s0` ≈ 0 | Mixed-frame capture — fix resolver, not web inclination hack |
 | `KSP.log` liveToAnalytic spam | Same |
 
 ---
 
+## 14. Moon orbit trails (Phase 4)
+
+**Full spec:** [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) § Standard procedure.
+
+**Pipeline:** DLL parent-relative samples → densify 512 → `parent(now) + offset` → `toScenePoint`. Same “one authority per ring” rule as §13.
+
+---
+
 ## Cross-links
 
-- [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) — Sun-child plane alignment (required reading for inclination bugs)
+- [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) — Sun-child + moon trail frame (required reading for inclination bugs)
+- [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) — Moon orbit standard procedure
 - [`MAP_V3_PLANET_ORBIT_SPEC.md`](MAP_V3_PLANET_ORBIT_SPEC.md) — inclusion, geometry source, acceptance
 - [`MAP_V3_RENDERING_GUIDE.md`](MAP_V3_RENDERING_GUIDE.md) § Planet orbit
 - [`MAP_V3_PROGRAM_STATE.md`](MAP_V3_PROGRAM_STATE.md)

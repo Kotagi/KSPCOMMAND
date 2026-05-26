@@ -1,6 +1,6 @@
 # Map V3 — Program state (as-built)
 
-**Revision:** 2026-05-23 (Phase 3 complete — bodies, textures, tilt/spin)
+**Revision:** 2026-05-26 (Phase 4 — moon orbits)
 
 **Operator hub:** [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md)
 
@@ -16,12 +16,13 @@
 | 3.1 — Planet bodies | Complete — mesh/icon LOD |
 | 3.3 — Planet textures | Complete — plugin ScaledSpace export + HTTP JPEG ([`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md)) |
 | 3.4 — Planet tilt and spin | Complete — schema v10, oriented mesh LOD ([`MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md`](MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md)) |
-| 4–12 | Not started (see [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md)) |
+| 4 — Moon orbits | Complete — mesh-gated visibility, v3-native element ([`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md)) |
+| 5–12 | Not started (see [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md)) |
 
 - **Default view:** `solarRenderMode: "3d-v3"` in `web/src/store/viewStore.ts`.
 - **New feature work** targets `map-v3/` + `scene/v3/` only; v1/v2 remain for regression.
 - **V3 core decoupled from v2:** see [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md).
-- **Next:** Phase 4 `moonOrbit` — follow element pattern in [`MAP_V3_MODULES.md`](MAP_V3_MODULES.md) § Adding a new map element.
+- **Next:** Phase 5 `moonBody` — reuse mesh LOD gate from Phase 4.
 
 ---
 
@@ -61,7 +62,7 @@ flowchart TB
 | `starMarker` | `buildStarMarkerSegments` | `StarMarkerLayer` | Shipped |
 | `planetOrbit` | `buildPlanetOrbitSegments` (v3-native) | `PlanetOrbitLayer` → `OrbitTrailV3` | Shipped |
 | `planetBody` | `buildPlanetBodySegments` | `PlanetBodyLayer` | Shipped (3.1 LOD + 3.3 textures + 3.4 orientation) |
-| `moonOrbit` | — | `MoonOrbitLayer` | Phase 4 |
+| `moonOrbit` | `buildMoonOrbitSegments` | `MoonOrbitLayer` | Shipped (mesh-gated) |
 | `moonBody` | — | `MoonBodyLayer` | Phase 5 |
 | `vesselMarker` | — | `VesselMarkerLayer` | Phase 6 |
 | `vesselOrbit` | — | `VesselOrbitLayer` | Phase 8 |
@@ -142,10 +143,10 @@ PlanetBodyLayer → PlanetBodyMesh
 |-------|--------|
 | Tests | `npm test` — 106+ (planet body, orientation, textures, composer) |
 | Web build | `npm run build` green |
-| UI version | `112-planet-texture-flipy` (`web/src/mount.tsx`; hard-refresh `?v=112`) |
-| HUD label | `v3 phase 3.4 — planet tilt and spin` (`MAP_V3_PHASE_LABEL` in `layerFlags.ts`) |
+| UI version | `123-moon-orbit-icon-on-trail` (`web/src/mount.tsx`; hard-refresh `?v=123`) |
+| HUD label | `v3 phase 4 — moon orbits` (`MAP_V3_PHASE_LABEL` in `layerFlags.ts`) |
 | Telemetry schema | **v10** (`bodyOrientationRootRelative`, texture fields on schema v9+) |
-| DLL frame revision | `frameDiagnostics.resolverVersion` `"4"` (orbit positions — not “Map V4”) |
+| DLL frame revision | `frameDiagnostics.resolverVersion` `"6"` (Sun-child + moon trail + moon icon propagation — not “Map V4”) |
 | Manual acceptance | [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) § Phase 3.1, 3.3, 3.4 |
 | Telemetry script | `scripts/verify-telemetry.ps1` (textures + orientation tables) |
 | Decouple record | [`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md) |
@@ -154,6 +155,10 @@ PlanetBodyLayer → PlanetBodyMesh
 
 ## Forward path
 
-**Phase 3 is closed for roadmap purposes.** Begin Phase 4 (`moonOrbit`) using the same planner/layer split documented in [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) §11.5.
+**Phase 4** ships `moonOrbit` with visibility tied to [`PlanetBodyMeshLodContext`](../web/src/map-v3/PlanetBodyMeshLodContext.tsx) (parent planet mesh LOD), not `MoonVisibilityContext` SOI rules.
 
-Planet texture meridian alignment and in-game map overlays remain optional polish — do not block moon work.
+**Moon orbit frame (2026-05-26):** Samples-first DLL geometry + `parent(now) + offset` placement only — same discipline as heliocentric planet rings. See [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) rev 1.2 and [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) § Moon trail rings.
+
+**Phase 5** (`moonBody`) should reuse the same mesh gate.
+
+Planet texture meridian alignment and in-game map overlays remain optional polish.

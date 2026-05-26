@@ -1,4 +1,5 @@
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { usePlanetBodyMeshLodRegistry } from "../../../map-v3/PlanetBodyMeshLodContext";
 import type { Vector3 } from "../../../telemetry/schema-v6";
 import { useMapV3 } from "../../../map-v3/MapV3Context";
 import { toScenePoint } from "../../../map-v3/SceneFrame";
@@ -145,6 +146,17 @@ export function PlanetBodyMesh({
     scenePosition,
     devPlanetBodyLodOverride,
   );
+
+  const meshLodRegistry = usePlanetBodyMeshLodRegistry();
+  useEffect(() => {
+    if (!meshLodRegistry) {
+      return;
+    }
+    meshLodRegistry.registerPlanetDrawMode(bodyName, drawMode);
+    return () => {
+      meshLodRegistry.unregisterPlanet(bodyName);
+    };
+  }, [meshLodRegistry, bodyName, drawMode]);
 
   if (drawMode === "icon") {
     return <PlanetBodyDot position={scenePosition} color={color} />;

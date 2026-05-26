@@ -1,8 +1,8 @@
 # Heliocentric orbit frame — inclination / plane alignment
 
 **Document ID:** MAP-HELIO-FRAME-001  
-**Revision:** 1.0 (2026-05-22)  
-**Applies to:** Map **V3** planet orbits (Phase 2), DLL `RootRelativePositionResolver`  
+**Revision:** 1.1 (2026-05-26)  
+**Applies to:** Map **V3** planet orbits (Phase 2) and moon orbits (Phase 4), DLL `RootRelativePositionResolver`  
 **Not a product version:** This is **not** “Map V4.” See [Version names](#version-names-do-not-confuse) below.
 
 ---
@@ -22,7 +22,7 @@ Stock KSP map planet rings use the same orbital frame as `orbit.inclination` and
 | **Map V3** | 3D modular solar map program / phase | Planet orbits shipped in phase 2 |
 | **`KSP_WEB_MAP_UI_VERSION`** | Web bundle cache-bust tag | `94-heliocentric-relative-unified` |
 | **`?v=` in `index.html`** | Must match web deploy | `94` |
-| **`frameDiagnostics.resolverVersion`** | DLL **frame-authority** revision (telemetry only) | `"4"` — not a map product version |
+| **`frameDiagnostics.resolverVersion`** | DLL **frame-authority** revision (telemetry only) | `"5"` — not a map product version |
 
 When debugging, say: *“Map V3, UI 94, resolver frame revision 4.”*
 
@@ -74,7 +74,18 @@ For `parent == rootBody` (Sun):
 2. Always `return body.orbit.getRelativePositionAtUT(sampleUniversalTime)`.
 3. Same path for icons (`GetBodyDisplayRootRelative` → `GetBodyRootRelativeForTrailSample`).
 
-Moons (`parent != Sun`) keep: live at `T_now`, parent-chain propagation + calibrated `flipRelative` / `noFlipRelative` ([`orbit-offset-mode.md`](orbit-offset-mode.md)).
+Moons (`parent != Sun`):
+
+| Use case | Behavior |
+|----------|----------|
+| **Body icon** at `T_now` | Live `body.position − root.position` (`orbitTrailRingSample: false`) |
+| **Orbit trail ring** (every sample UT) | Parent chain + `getRelativePositionAtUT` + `flipRelative` / `noFlipRelative` — **including sample 0 at capture** (`orbitTrailRingSample: true`) |
+
+**Fix (2026-05-26, resolver `"5"`):** Moon trail capture had the same mixed-frame bug as planets: sample `0` at `T_capture` used **live** while samples `1…127` used **propagated** offsets → ring plane ~180° off vs KSP map while the moon icon still sat on the trail.
+
+**Fix (2026-05-26, resolver `"6"`):** Moon **icons** now use the same propagated path as trail samples (`UseTrailPropagationForDisplay`). Web uses `findTrailAnchorIndex` in scene space (UI `123-moon-orbit-icon-on-trail`).
+
+**Web:** Draw DLL parent-relative samples; anchor with `parent(now) + offset`; **do not** rotate trails with `bodyOrientationRootRelative`. See [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) § Standard procedure.
 
 ### What we do **not** use for display trails
 
@@ -103,7 +114,8 @@ Without that transform, spin axes look **in-plane** (poles toward the Sun) while
 
 | File | Responsibility |
 |------|----------------|
-| `src/KspWebMap/Telemetry/RootRelativePositionResolver.cs` | `GetBodyRootRelativeForTrailSample` — Sun-child branch **before** live shortcut |
+| `src/KspWebMap/Telemetry/RootRelativePositionResolver.cs` | `GetBodyRootRelativeForTrailSample` — Sun-child branch **before** live shortcut; `orbitTrailRingSample` for moon rings |
+| `web/.../moonOrbit/` | Samples-first; `moonOrbitPlacement.ts` — **no** mesh orientation on trails ([`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md)) |
 | `src/KspWebMap/Telemetry/TelemetrySnapshotService.cs` | `CaptureBodyOrbitPaths`, `CaptureBodyTrailSamplePosition` |
 | `src/KspWebMap/Telemetry/BodyOrbitDiagnostics.cs` | `planeAngleToAnalyticDegrees`, `liveToAnalyticMeters` |
 | `src/KspWebMap/Telemetry/OrbitFrameMapping.cs` | `OrbitNormalKspLocal` for plane QA |
@@ -138,7 +150,7 @@ Throttled warnings when `liveToAnalyticMeters > 1e6 m`. After fix, heliocentric 
 
 ### `frameDiagnostics` (telemetry JSON)
 
-- `resolverVersion`: `"4"` — frame revision with unified Sun-child relative propagation.
+- `resolverVersion`: `"6"` — Sun-child unified propagation + moon trail rings + moon display icons propagated (`orbitTrailRingSample` / `UseTrailPropagationForDisplay`).
 - `orbitOffsetMode`: still `flipRelative` or `noFlipRelative` for **moon chains** only.
 
 ---
@@ -156,12 +168,26 @@ Align with [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) AC-004, AC-001/002:
 
 ## If this regresses again — checklist
 
-1. Confirm DLL loaded: `frameDiagnostics.resolverVersion` in `/api/telemetry` (expect `"4"` or later frame revision, not old `"2"` without plane fix).
+1. Confirm DLL loaded: `frameDiagnostics.resolverVersion` in `/api/telemetry` (expect `"5"` or later frame revision, not old `"2"`/`"4"` without moon trail fix).
 2. Confirm web cache: console `UI 94-heliocentric-relative-unified`, `?v=94` hard refresh.
 3. In `GetBodyRootRelativeForTrailSample`, verify Sun-child branch is **above** live shortcut and uses **only** `getRelativePositionAtUT`.
 4. Compare sample plane vs elements: `plane` in QA; optional manual check in `diagnose-planet-positions.mjs`.
 5. Do **not** “fix” by negating inclination in Three.js or forcing analytic rings while samples exist.
 6. Read §12 in [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) if the issue is faceting or icon offset with **small** `live↔ana` (vertex count / samples-first, not frame).
+
+---
+
+## Moon trail rings (Phase 4)
+
+Same **one authority per ring** rule as heliocentric planets:
+
+| Layer | Rule |
+|-------|------|
+| DLL | All 128 samples via `orbitTrailRingSample: true` — no live@sample0 on the polyline |
+| Web source | `samplePositionsParentRelativeFromPath` when ≥2 samples ([`resolveMoonOrbitSource.ts`](../web/src/map-v3/elements/moonOrbit/resolveMoonOrbitSource.ts)) |
+| Web display | `parent(now) + (moon(t) − parent(t))` then `toScenePoint` only ([`moonOrbitPlacement.ts`](../web/src/map-v3/elements/moonOrbit/moonOrbitPlacement.ts)) |
+
+**Forbidden:** analytic ring when samples exist; `bodyOrientationRootRelative` on trail points; extra solar rotation matrices. Full list: [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) § Forbidden patterns.
 
 ---
 
@@ -178,6 +204,8 @@ Web: [`kspBodyOrientation.ts`](../web/src/coords/kspBodyOrientation.ts) + [`MAP_
 
 **Do not** compare raw Unity `body.rotation` to root-relative positions without this mapping.
 
+**Do not** apply `bodyOrientationRootRelative` to moon or planet **orbit trail** geometry — orientation is for [`PlanetBodyMesh`](../web/src/scene/v3/layers/PlanetBodyMesh.tsx) only.
+
 ---
 
 ## Related docs
@@ -188,6 +216,7 @@ Web: [`kspBodyOrientation.ts`](../web/src/coords/kspBodyOrientation.ts) + [`MAP_
 - [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) §13 — Phase 3 lessons learned
 - [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) — Acceptance + QA checklist
 - [`orbit-offset-mode.md`](orbit-offset-mode.md) — Moon flip calibration (not Sun children)
+- [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) — Moon orbit standard procedure (Phase 4)
 - [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §13 — Short pointer + symptom table
 
 ---
@@ -198,3 +227,5 @@ Web: [`kspBodyOrientation.ts`](../web/src/coords/kspBodyOrientation.ts) + [`MAP_
 |------|--------|
 | 2026-05-22 | Unified Sun-child `getRelativePositionAtUT`; `OrbitNormalKspLocal`; HUD `plane` metric; UI `94-heliocentric-relative-unified`; `resolverVersion` `"4"` |
 | 2026-05-23 | Documented orientation capture uses same world→root-relative mapping as positions |
+| 2026-05-26 | Moon trail rings: `orbitTrailRingSample`; web samples-first + `moonOrbitPlacement`; `resolverVersion` `"5"`; UI `122-moon-orbit-samples-first` |
+| 2026-05-26 | Moon display icons propagated (`resolverVersion` `"6"`); scene `findTrailAnchorIndex`; UI `123-moon-orbit-icon-on-trail` |

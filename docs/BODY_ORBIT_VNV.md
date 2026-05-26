@@ -78,15 +78,26 @@ This document supports body icon / orbit trail alignment and Phase 11 frame trut
 2. Open web **Full system** view; compare Moho, Eve, Kerbin, Duna, Jool **relative spacing** — icons should sit on grey trails.
 3. Compare **clock** on ecliptic XZ (`eclipticLongitudeDegrees` or `diagnose-planet-positions.mjs`): ~15° tolerance is acceptable if spacing matches and only map rotation differs.
 4. Do not treat `ephemerisLivePropagationResidualMeters` (60s separation) as an icon position bug.
-5. If inclinations look mirrored vs KSP but `live↔s0` is zero: read [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) (mixed `live` + `getTruePositionAtUT` samples).
+5. If inclinations look mirrored vs KSP but `live↔s0` is zero: read [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) (mixed `live` + propagated samples on one ring).
 
-## Troubleshooting — wrong inclination (heliocentric)
+## Troubleshooting — wrong inclination (heliocentric planets)
 
 | Check | Pass |
 |-------|------|
-| `frameDiagnostics.resolverVersion` | `"4"` or later frame doc revision (not map “V4”) |
+| `frameDiagnostics.resolverVersion` | `"5"` or later frame doc revision (not map “V4”) |
 | `planeAngleToAnalyticDegrees` | &lt; 0.1° for planets |
 | `liveToAnalyticMeters` | Not 1e9+ m in `KSP.log` for Moho/Kerbin |
 | DLL + KSP restart after frame fix | Required — web-only refresh is not enough |
 
 Full postmortem and code pointers: [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md).
+
+## Troubleshooting — wrong inclination (moons, e.g. Jool system)
+
+| Check | Pass |
+|-------|------|
+| `resolverVersion` | `"5"` |
+| `KspSolarMapMoonOrbitDebug.geometrySource` | `"samples"` on typical saves |
+| Spec § Forbidden patterns | No analytic override, no `bodyOrientationRootRelative` on trails |
+| New telemetry after DLL update | Stale JSON may predate `orbitTrailRingSample` |
+
+Procedure: [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) § Standard procedure and § If this regresses.

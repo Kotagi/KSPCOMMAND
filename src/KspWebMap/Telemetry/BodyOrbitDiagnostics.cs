@@ -58,7 +58,8 @@ namespace KspWebMap
                         body,
                         rootBody,
                         sample.SampleUniversalTimeSeconds,
-                        universalTime));
+                        universalTime,
+                        orbitTrailRingSample: true));
                 double sampleResidual = ResidualMeters(sample.PositionRootRelativeMeters, expectedAtSample);
                 validation.MaxSampleToRecomputedMeters = Math.Max(
                     validation.MaxSampleToRecomputedMeters,

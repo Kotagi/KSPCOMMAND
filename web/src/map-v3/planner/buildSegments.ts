@@ -1,6 +1,7 @@
 import type { MapContext } from "../MapContext";
 import { buildStarMarkerSegments } from "../elements/starMarker/buildStarMarkerSegments";
 import { buildPlanetBodySegments } from "../elements/planetBody/buildPlanetBodySegments";
+import { buildMoonOrbitSegments } from "../elements/moonOrbit/buildMoonOrbitSegments";
 import { buildPlanetOrbitSegments } from "../elements/planetOrbit/buildPlanetOrbitSegments";
 import type { MapElementKind, TrajectorySegment } from "../types";
 
@@ -15,6 +16,8 @@ export function buildSegments(
       return buildPlanetOrbitSegments(ctx);
     case "planetBody":
       return buildPlanetBodySegments(ctx);
+    case "moonOrbit":
+      return buildMoonOrbitSegments(ctx);
     default:
       return [];
   }

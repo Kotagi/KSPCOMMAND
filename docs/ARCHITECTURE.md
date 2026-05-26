@@ -231,9 +231,9 @@ The root frame is named `solarSystemRootCenteredInertial`. The capture service i
 
 **Heliocentric planets** (`orbit.referenceBody == Sun`): **always** `orbit.getRelativePositionAtUT(UT)` at every sample UT, including capture time. This matches `orbit.inclination` / LAN and the stock map. Do **not** mix `body.position - root.position` on sample 0 with `getTruePositionAtUT` on other samples — see [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md).
 
-**Moons and nested bodies:** at `T_now` (within 1 s), live `body.position - root.position`; at other UTs, parent-chain `getRelativePositionAtUT` with calibrated `flipRelative` / `noFlipRelative` ([`orbit-offset-mode.md`](orbit-offset-mode.md)).
+**Moons and nested bodies:** **Icons** at `T_now` may use live `body.position - root.position`. **Orbit trail rings** use parent-chain `getRelativePositionAtUT` at every sample UT (`orbitTrailRingSample`, resolver `"5"`). Web draws samples-first parent-relative offsets anchored to `parent(now)` — see [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md). Flip mode: [`orbit-offset-mode.md`](orbit-offset-mode.md).
 
-Diagnostic fields (not display authority): `positionLiveRootRelativeMeters`, `positionTrueRootRelativeMeters` (`getTruePositionAtUT` world difference). `frameDiagnostics.resolverVersion` is a **DLL frame revision** (e.g. `"4"`), not a Map V3/V4 product version.
+Diagnostic fields (not display authority): `positionLiveRootRelativeMeters`, `positionTrueRootRelativeMeters` (`getTruePositionAtUT` world difference). `frameDiagnostics.resolverVersion` is a **DLL frame revision** (e.g. `"5"`), not a Map V3/V4 product version.
 
 Active-vessel position uses `vessel.GetWorldPos3D() - rootBody.position`. Body and vessel velocities are captured relative to the same root where KSP exposes frame velocity data.
 

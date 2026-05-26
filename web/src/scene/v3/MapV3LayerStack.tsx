@@ -1,5 +1,6 @@
 import { StarMarkerLayer } from "./layers/StarMarkerLayer";
 import { PlanetOrbitLayer } from "./layers/PlanetOrbitLayer";
+import { MoonOrbitLayer } from "./layers/MoonOrbitLayer";
 import { PlanetBodyLayer } from "./layers/PlanetBodyLayer";
 
 /**
@@ -11,6 +12,7 @@ export function MapV3LayerStack() {
     <>
       <StarMarkerLayer />
       <PlanetOrbitLayer />
+      <MoonOrbitLayer />
       <PlanetBodyLayer />
     </>
   );

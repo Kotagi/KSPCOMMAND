@@ -29,7 +29,7 @@ Shared rules (from V2):
 | `starMarker` | `StarMarkerLayer` | 1 | **Implemented** | § Star marker |
 | `planetOrbit` | `PlanetOrbitLayer` | 2 | **Implemented** | § Planet orbit |
 | `planetBody` | `PlanetBodyLayer` | 3.1–3.4 | **Implemented** | Body + texture + orientation specs |
-| `moonOrbit` | `MoonOrbitLayer` | 4 | Not started | § Moon orbit |
+| `moonOrbit` | `MoonOrbitLayer` | 4 | Shipped | § Moon orbit |
 | `moonBody` | `MoonBodyLayer` | 5 | Not started | § Moon body |
 | `vesselMarker` | `VesselMarkerLayer` | 6 | Not started | § Vessel marker |
 | `bodyLod` | (body layers) | 7 | Not started | § Body LOD |
@@ -118,7 +118,26 @@ Shared rules (from V2):
 
 ## § Moon orbit
 
-*Not implemented.*
+**Spec:** [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) — § **Standard procedure** (required reading before edits).
+
+**Frame:** [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) § Moon trail rings. UI `122-moon-orbit-samples-first`; DLL `resolverVersion` `"5"`.
+
+| Piece | Location |
+|-------|----------|
+| Filter | `map-v3/elements/moonOrbit/filterMoonOrbit.ts` |
+| Source | `resolveMoonOrbitSource.ts` (samples-first) |
+| Placement | `moonOrbitPlacement.ts` → `parent(now) + offset` |
+| Scene | `moonOrbitScene.ts` → `toScenePoint` only |
+| Builder | `buildMoonOrbitSegments.ts` |
+| Mesh LOD gate | `map-v3/PlanetBodyMeshLodContext.tsx` |
+| Layer | `scene/v3/layers/MoonOrbitLayer.tsx` |
+| Drawer | `OrbitTrailV3` → `GradientDirectionalOrbitTrail` (same as planet orbits) |
+
+**Visibility:** Moon trails draw only when **parent planet** is in mesh mode (`usePlanetsInMeshMode`). Not gated by `MoonVisibilityContext` / SOI zoom alone.
+
+**Do not** use `bodyOrientationRootRelative` or analytic Kepler rings when DLL samples exist — see spec § Forbidden patterns.
+
+**Production flags:** `MAP_V3_LAYERS_PHASE4` in `layerFlags.ts`.
 
 ---
 

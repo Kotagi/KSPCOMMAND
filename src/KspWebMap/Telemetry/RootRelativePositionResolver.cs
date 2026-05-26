@@ -15,7 +15,7 @@ namespace KspWebMap
     /// </summary>
     public static class RootRelativePositionResolver
     {
-        public const string ResolverVersion = "4";
+        public const string ResolverVersion = "6";
         public const double LiveToleranceSeconds = 1d;
 
         private static OrbitOffsetMode _orbitOffsetMode = OrbitOffsetMode.NoFlipRelative;
@@ -181,6 +181,12 @@ namespace KspWebMap
         /// Live at capture UT; heliocentric planets use parent-relative propagation (matches
         /// orbit.inclination / stock map); moons use parent-chain relative offsets.
         /// </summary>
+        /// <summary>
+        /// Display authority for map icons and body list positions.
+        /// Moons use the same propagated parent chain as orbit trail rings so icons sit on trails.
+        /// Sun-children use heliocentric getRelativePositionAtUT. Live world state remains in
+        /// positionLiveRootRelativeMeters for QA only.
+        /// </summary>
         public static Vector3d GetBodyDisplayRootRelative(
             CelestialBody body,
             CelestialBody rootBody,
@@ -191,7 +197,24 @@ namespace KspWebMap
                 body,
                 rootBody,
                 universalTime,
-                currentUniversalTime);
+                currentUniversalTime,
+                UseTrailPropagationForDisplay(body, rootBody));
+        }
+
+        /// <summary>
+        /// Moons (parent != solar root): match orbitTrailRingSample propagation, not live@now.
+        /// </summary>
+        private static bool UseTrailPropagationForDisplay(
+            CelestialBody body,
+            CelestialBody rootBody)
+        {
+            if (body == null || rootBody == null || body == rootBody || body.orbit == null)
+            {
+                return false;
+            }
+
+            CelestialBody parent = body.orbit.referenceBody;
+            return parent != null && parent != body && parent != rootBody;
         }
 
         public static Vector3d GetLiveRootRelative(CelestialBody body, CelestialBody rootBody)
@@ -203,7 +226,8 @@ namespace KspWebMap
             CelestialBody body,
             CelestialBody rootBody,
             double sampleUniversalTime,
-            double currentUniversalTime)
+            double currentUniversalTime,
+            bool orbitTrailRingSample = false)
         {
             if (body == null || rootBody == null)
             {
@@ -237,7 +261,10 @@ namespace KspWebMap
                 }
             }
 
-            if (IsValidUniversalTime(currentUniversalTime)
+            // Orbit trail rings: always propagated parent chain (never live@sample0).
+            // Moon display icons use the same path via GetBodyDisplayRootRelative.
+            if (!orbitTrailRingSample
+                && IsValidUniversalTime(currentUniversalTime)
                 && Math.Abs(sampleUniversalTime - currentUniversalTime) <= LiveToleranceSeconds)
             {
                 return GetLiveRootRelativeInternal(body, rootBody);
@@ -254,7 +281,8 @@ namespace KspWebMap
                 parent,
                 rootBody,
                 sampleUniversalTime,
-                currentUniversalTime);
+                currentUniversalTime,
+                orbitTrailRingSample);
             return parentRootRelative
                 + ApplyOrbitOffset(body.orbit.getRelativePositionAtUT(sampleUniversalTime), _orbitOffsetMode);
         }

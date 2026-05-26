@@ -28,7 +28,7 @@ export interface SystemAnchor {
 export interface TrajectorySegment {
   kind: MapElementKind;
   key: string;
-  /** Root-relative meters (before SceneFrame). */
+  /** Root-relative meters before SceneFrame (moonOrbit: parent-relative). */
   points: Vector3[];
   bodyName?: string;
   referenceBody?: string;
@@ -43,6 +43,8 @@ export interface TrajectorySegment {
   opacity?: number;
   dashed?: boolean;
   iconScenePosition?: ScenePoint3 | null;
+  /** Moon orbit: telemetry samples vs analytic fallback. */
+  geometrySource?: "samples" | "analytic";
 }
 
 export type SceneFrameFocusMode = "system" | "body";

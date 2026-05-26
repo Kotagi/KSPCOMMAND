@@ -109,7 +109,7 @@ Guide: [`web/dev/README.md`](../web/dev/README.md) · Phase 3 hub: [`MAP_V3_PHAS
 | `starMarker` | 1 | `StarMarkerLayer.tsx` | **Implemented** |
 | `planetOrbit` | 2 | `PlanetOrbitLayer.tsx` | **Implemented** |
 | `planetBody` | 3.1 + 3.3 textures + 3.4 orientation | `PlanetBodyLayer.tsx` | **Implemented** |
-| `moonOrbit` | 4 | `MoonOrbitLayer.tsx` | Planned |
+| `moonOrbit` | 4 | `MoonOrbitLayer.tsx` | **Implemented** |
 | `moonBody` | 5 | `MoonBodyLayer.tsx` | Planned |
 | `vesselMarker` | 6 | `VesselMarkerLayer.tsx` | Planned |
 | `bodyLod` | 7 | (body layers) | Planned |
@@ -125,12 +125,37 @@ Guide: [`web/dev/README.md`](../web/dev/README.md) · Phase 3 hub: [`MAP_V3_PHAS
 - `composeMapV3Layers(PHASE2)` → `["StarMarkerLayer", "PlanetOrbitLayer"]`
 - `MAP_V3_LAYERS_PHASE1` retained for regression tests
 
-## Phase 3 state (production)
+## Element — `moonOrbit` (`web/src/map-v3/elements/moonOrbit/`)
+
+| Module | Inputs | Outputs | Consumer |
+|--------|--------|---------|----------|
+| `filterMoonOrbit.ts` | `MapContext`, `BodyOrbitPath` | moon-only inclusion | `buildMoonOrbitSegments` |
+| `resolveMoonOrbitSource.ts` | path, `MapContext` | samples-first parent-relative points | builder |
+| `moonOrbitGeometry.ts` | path, `MapContext` | per-sample `moon − parent` @ same UT | source resolver |
+| `moonOrbitPlacement.ts` | offsets, parent entry | solar @ `parent(now)` | scene |
+| `moonOrbitScene.ts` | solar root, `SceneFrame` | scene points | layer |
+| `moonOrbitStyle.ts` | — | widths, `trailVertices` (512) | layer / densify |
+| `buildMoonOrbitSegments.ts` | `MapContext` | `TrajectorySegment[]` kind `moonOrbit` | planner, layer |
+
+**Spec:** [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md) rev 1.2 — § Standard procedure, § Forbidden patterns.
+
+**Frame:** [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) § Moon trail rings. DLL `resolverVersion` `"5"`; UI `122-moon-orbit-samples-first`.
+
+**Visibility:** `PlanetBodyMeshLodContext` + `MoonOrbitLayer` (`parentBody ∈ planetsInMeshMode`)
+
+**Presentation:** `MoonOrbitLayer` → `moonOrbitPointsToScene` → `OrbitTrailV3` → `GradientDirectionalOrbitTrail`
+
+## Phase 3 state (regression)
 
 - `MAP_V3_LAYERS_PHASE3`: phase 2 + `planetBody` true
 - `composeMapV3Layers(PHASE3)` → `["StarMarkerLayer", "PlanetOrbitLayer", "PlanetBodyLayer"]`
-- Production `Map3DV3` uses phase 3 flags
-- HUD: `MAP_V3_PHASE_LABEL` = `v3 phase 3.3 — planet textures`
+
+## Phase 4 state (production)
+
+- `MAP_V3_LAYERS_PHASE4`: phase 3 + `moonOrbit` true
+- `composeMapV3Layers(PHASE4)` → `["StarMarkerLayer", "PlanetOrbitLayer", "MoonOrbitLayer", "PlanetBodyLayer"]`
+- Production `Map3DV3` uses phase 4 flags
+- HUD: `MAP_V3_PHASE_LABEL` = `v3 phase 4 — moon orbits`
 - Element specs: [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md), [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md)
 - **How-to:** [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md)
 

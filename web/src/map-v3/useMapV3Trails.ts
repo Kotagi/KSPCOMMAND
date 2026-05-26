@@ -39,6 +39,7 @@ export interface SceneTrail {
   closed: boolean;
   closedWithDuplicateEndpoint?: boolean;
   lineWidth?: number;
+  geometrySource?: "samples" | "analytic";
 }
 
 /** Apply world shift to root segments; cheap when only focus/scale changes. */

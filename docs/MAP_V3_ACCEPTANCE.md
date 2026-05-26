@@ -33,7 +33,7 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 | ID | Pass criteria |
 |----|----------------|
 | P2-01 | Colored heliocentric planet orbit trails visible (stock save with planets) |
-| P2-02 | No moon orbit rings (e.g. Mun, Minmus) |
+| P2-02 | No moon orbit rings (e.g. Mun, Minmus) — **Phase 2 flags only**; Phase 4 enables moons per P4-01 |
 | P2-03 | No planet mesh markers, vessel, labels, or SOI rings |
 | P2-04 | Star still visible at center |
 | P2-05 | Side-by-side **3D WebGL (v1)** — trail colors comparable on same flight (tune mod bodies via [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)) |
@@ -110,6 +110,27 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 
 **Automated:** P3R-07–P3R-08 partial (`planetBodyOrientationFields.test.ts`, `kspBodyOrientation.test.ts`, verify script). P3R-01–P3R-06, P3R-09 require manual flight check.
 
+## Phase 4 — Moon orbit paths
+
+**Spec:** [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md)
+
+| ID | Pass criteria |
+|----|----------------|
+| P4-01 | Parent planet mesh: Mun and Minmus closed colored rings; motion tail per orbit guide §2 |
+| P4-02 | Full solar / all planets icon: no moon rings |
+| P4-03 | Parent planet icon (zoomed out): moon rings off; heliocentric planet ring unchanged |
+| P4-04 | Colors match stock table / v2 on same flight |
+| P4-05 | `buildMoonOrbitSegments` Vitest: moons only, `referenceBody !== root`, ≥512 verts |
+| P4-06 | Flight: moon paths ~128 samples; `verify-telemetry.ps1` PASS for Mun |
+| P4-07 | `planetsInMeshModeFromDrawModes` Vitest: mesh gate |
+| P4-08 | Dev force mesh on two planets: both moon systems’ rings show |
+| P4-09 | P2/P3 regression unchanged |
+| P4-10 | `composeMapV3Layers(PHASE4)` includes `MoonOrbitLayer` |
+| P4-11 | HUD **v3 phase 4 — moon orbits**; console `122-moon-orbit-samples-first` |
+| P4-12 | No `map-v2` imports under `map-v3/elements/moonOrbit/` |
+
+**Automated:** P4-05, P4-07, P4-10 via `npm test`. P4-01–P4-04, P4-06, P4-08–P4-09 require manual flight check.
+
 ## Future phases
 
 Per-element criteria added when the corresponding flag is enabled (mirror `docs/MAP_V2_ACCEPTANCE.md`).
@@ -117,5 +138,6 @@ Per-element criteria added when the corresponding flag is enabled (mirror `docs/
 ## Automated (shared)
 
 - `web/src/coords/*.test.ts` — shared math
-- `MapComposer.test.ts` — phase 0–3 composition
+- `MapComposer.test.ts` — phase 0–4 composition
+- `buildMoonOrbitSegments.test.ts`, `filterMoonOrbit.test.ts`, `PlanetBodyMeshLodContext.test.ts` — moon orbit element
 - `buildPlanetBodySegments.test.ts`, `planetBodyLod.test.ts`, `planetBodyTextureFields.test.ts`, `planetBodyTextures.test.ts`, `planetBodyOrientationFields.test.ts`, `kspBodyOrientation.test.ts` — planet body element
