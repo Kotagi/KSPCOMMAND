@@ -21,8 +21,8 @@ export function buildBodyTextureCacheKey(url: string, revision?: string): string
 }
 
 function configureBodyTexture(texture: THREE.Texture): void {
-  // KSP/Unity planet maps are authored with flipY off; Three defaults to true.
-  texture.flipY = false;
+  // flipY true: Three SphereGeometry v=1 at +Y must match KSP albedo north in JPEG.
+  texture.flipY = true;
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
 }

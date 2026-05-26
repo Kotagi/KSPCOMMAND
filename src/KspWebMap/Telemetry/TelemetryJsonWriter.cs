@@ -439,6 +439,29 @@ namespace KspWebMap
             WriteProperty(builder, "bodyTextureRevision", body.BodyTextureRevision);
             builder.Append(',');
             WriteProperty(builder, "bodyTextureStatus", body.BodyTextureStatus);
+            builder.Append(',');
+            WriteProperty(builder, "bodyOrientationReferenceFrame", body.BodyOrientationReferenceFrame);
+            builder.Append(',');
+            WriteProperty(builder, "bodyOrientationSampleUniversalTimeSeconds", body.BodyOrientationSampleUniversalTimeSeconds);
+            builder.Append(',');
+            builder.Append("\"bodyOrientationRootRelative\":");
+            WriteQuaternion(builder, body.BodyOrientationRootRelative);
+            builder.Append(',');
+            builder.Append("\"spinAxisRootRelative\":");
+            WriteVector(builder, body.SpinAxisRootRelative);
+            builder.Append(',');
+            builder.Append("\"angularVelocityRootRelativeRadPerSec\":");
+            WriteVector(builder, body.AngularVelocityRootRelativeRadPerSec);
+            builder.Append(',');
+            WriteProperty(builder, "rotationPeriodSeconds", body.RotationPeriodSeconds);
+            builder.Append(',');
+            WriteProperty(builder, "rotationAngleRadians", body.RotationAngleRadians);
+            builder.Append(',');
+            WriteProperty(builder, "rotates", body.Rotates);
+            builder.Append(',');
+            WriteProperty(builder, "inverseRotation", body.InverseRotation);
+            builder.Append(',');
+            WriteProperty(builder, "tidallyLocked", body.TidallyLocked);
             builder.Append('}');
         }
 
@@ -588,6 +611,25 @@ namespace KspWebMap
             WriteProperty(builder, "y", vector.Y);
             builder.Append(',');
             WriteProperty(builder, "z", vector.Z);
+            builder.Append('}');
+        }
+
+        private static void WriteQuaternion(StringBuilder builder, QuaternionSnapshot quaternion)
+        {
+            if (quaternion == null)
+            {
+                builder.Append("null");
+                return;
+            }
+
+            builder.Append('{');
+            WriteProperty(builder, "x", quaternion.X);
+            builder.Append(',');
+            WriteProperty(builder, "y", quaternion.Y);
+            builder.Append(',');
+            WriteProperty(builder, "z", quaternion.Z);
+            builder.Append(',');
+            WriteProperty(builder, "w", quaternion.W);
             builder.Append('}');
         }
 

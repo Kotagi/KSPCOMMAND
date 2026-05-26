@@ -21,6 +21,9 @@ if (-not $telemetry.valid) {
 
 $schema = $telemetry.schemaVersion
 Write-Host "Schema v$schema | resolver: $($telemetry.frameDiagnostics.orbitOffsetMode) | paths: $($telemetry.bodyOrbitPaths.Count)"
+if ($schema -lt 10) {
+    Write-Warning "Schema v10 expected for planet body orientation (tilt/spin); got v$schema — rebuild and install DLL."
+}
 
 $failures = @()
 $rows = @()
@@ -71,6 +74,7 @@ if ($telemetry.ephemerisValidationResidualMeters -gt 1e6) {
 
 $rootBody = $telemetry.rootBody
 $textureRows = @()
+$orientationRows = @()
 
 foreach ($body in $telemetry.bodies) {
     if ($null -eq $body.name) { continue }
@@ -95,12 +99,48 @@ foreach ($body in $telemetry.bodies) {
             $failures += "$($body.name): bodyTextureStatus=ready but bodyTextureRevision missing"
         }
     }
+
+    $q = $body.bodyOrientationRootRelative
+    if ($null -ne $q) {
+        $norm = [Math]::Sqrt([double]$q.x * $q.x + [double]$q.y * $q.y + [double]$q.z * $q.z + [double]$q.w * $q.w)
+        $spin = $body.spinAxisRootRelative
+        $orientationRows += [pscustomobject]@{
+            Body = $body.name
+            Rotates = $body.rotates
+            QuatNorm = $norm
+            SpinAxis = if ($null -ne $spin) { "($($spin.x),$($spin.y),$($spin.z))" } else { "" }
+            SampleUt = $body.bodyOrientationSampleUniversalTimeSeconds
+        }
+        if ($norm -lt 0.99 -or $norm -gt 1.01) {
+            $failures += "$($body.name): bodyOrientationRootRelative norm=$norm (expected ~1)"
+        }
+        if ($body.rotates -eq $true) {
+            if ($null -eq $spin) {
+                $failures += "$($body.name): rotates=true but spinAxisRootRelative missing"
+            }
+            else {
+                $axisLen = [Math]::Sqrt([double]$spin.x * $spin.x + [double]$spin.y * $spin.y + [double]$spin.z * $spin.z)
+                if ($axisLen -lt 0.99 -or $axisLen -gt 1.01) {
+                    $failures += "$($body.name): spinAxisRootRelative not unit (len=$axisLen)"
+                }
+            }
+        }
+    }
+    else {
+        $failures += "$($body.name): missing bodyOrientationRootRelative (heliocentric planet, schema v10)"
+    }
 }
 
 if ($textureRows.Count -gt 0) {
     Write-Host ""
     Write-Host "Planet body textures:"
     $textureRows | Format-Table -AutoSize
+}
+
+if ($orientationRows.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Planet body orientation (schema v10):"
+    $orientationRows | Format-Table -AutoSize
 }
 
 if ($failures.Count -gt 0) {

@@ -86,6 +86,16 @@ export interface CelestialBody {
   bodyTextureUrl?: string;
   bodyTextureRevision?: string;
   bodyTextureStatus?: string;
+  bodyOrientationReferenceFrame?: string;
+  bodyOrientationSampleUniversalTimeSeconds?: number;
+  bodyOrientationRootRelative?: { x: number; y: number; z: number; w: number };
+  spinAxisRootRelative?: Vector3;
+  angularVelocityRootRelativeRadPerSec?: Vector3;
+  rotationPeriodSeconds?: number;
+  rotationAngleRadians?: number;
+  rotates?: boolean;
+  inverseRotation?: boolean;
+  tidallyLocked?: boolean;
 }
 
 export interface VesselRootPathSample {

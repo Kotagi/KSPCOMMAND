@@ -150,7 +150,7 @@ declare global {
 }
 
 /** Bumped when web UI changes; check in devtools if map looks stale. */
-export const KSP_WEB_MAP_UI_VERSION = "107-planet-texture-material-ref";
+export const KSP_WEB_MAP_UI_VERSION = "112-planet-texture-flipy";
 
 window.KspSolarMap = api;
 window.KspSolarMapUiVersion = KSP_WEB_MAP_UI_VERSION;

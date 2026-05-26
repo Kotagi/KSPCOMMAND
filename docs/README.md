@@ -15,7 +15,10 @@ Read in this order when onboarding to the modular solar map:
 11. **Planet orbit spec** — [MAP_V3_PLANET_ORBIT_SPEC.md](MAP_V3_PLANET_ORBIT_SPEC.md).
 12. **Planet body spec** — [MAP_V3_PLANET_BODY_SPEC.md](MAP_V3_PLANET_BODY_SPEC.md).
 13. **Planet body textures** — [MAP_V3_PLANET_BODY_TEXTURE_SPEC.md](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md).
-14. **Phase 3 guide (operator + developer)** — [MAP_V3_PHASE3_GUIDE.md](MAP_V3_PHASE3_GUIDE.md) — planets on map, texture export/load, lab, build, troubleshooting.
+14. **Planet body orientation (tilt/spin)** — [MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md](MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md).
+15. **Phase 3 guide (operator + developer)** — [MAP_V3_PHASE3_GUIDE.md](MAP_V3_PHASE3_GUIDE.md) — bodies, textures, orientation, lab, lessons learned, troubleshooting.
+
+**Phase 3 status:** Complete (3.1 + 3.3 + 3.4). See [MAP_V3_PROGRAM_STATE.md](MAP_V3_PROGRAM_STATE.md). Next: Phase 4 moon orbits.
 
 **V2 reference (regression):** `MAP_V2_MODULES.md`, `MAP_V2_ACCEPTANCE.md` (if present).
 

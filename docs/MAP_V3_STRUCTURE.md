@@ -1,7 +1,7 @@
 # Map V3 — Structure specification (Phase 0 baseline)
 
 **Document ID:** MAP-V3-STRUCT-001  
-**Status:** Phase 2 — `starMarker` + `planetOrbit` shipped; V3 is the **canonical** map for new work  
+**Status:** Phase 3 complete — `starMarker` + `planetOrbit` + `planetBody` (LOD, textures, orientation); V3 is the **canonical** map for new work  
 **Scope:** Repository layout, module boundaries, and rollout gates for the modular 3D solar map (`solarRenderMode: 3d-v3`, default).  
 **Reference:** Stock KSP in-game map (acceptance), V3 decouple ([`MAP_V3_DECOUPLE_PLAN.md`](MAP_V3_DECOUPLE_PLAN.md)), Map V2 regression (`docs/MAP_V2_MODULES.md`), orbit trails ([`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md)), orbit colors ([`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)).
 
@@ -49,7 +49,8 @@ web/src/
 │   ├── planner/buildSegments.ts     # Dispatches MapElementKind → element builders
 │   └── elements/
 │       ├── starMarker/              # buildStarMarkerSegments
-│       └── planetOrbit/             # filterHeliocentricPlanetOrbit, densify, buildPlanetOrbitSegments
+│       ├── planetOrbit/             # filterHeliocentricPlanetOrbit, densify, buildPlanetOrbitSegments
+│       └── planetBody/              # buildPlanetBodySegments, LOD, texture + orientation fields
 │
 ├── map-v2/                          # Legacy 3d-v2; MapContext + SceneFrame re-export from map-v3
 │
@@ -59,6 +60,7 @@ web/src/
 │   └── layers/
 │       ├── StarMarkerLayer.tsx
 │       ├── PlanetOrbitLayer.tsx
+│       ├── PlanetBodyLayer.tsx
 │       └── OrbitTrailV3.tsx
 │
 ├── components/
@@ -82,7 +84,11 @@ docs/
 ├── MAP_V3_MODULES.md                # Module I/O contracts (living)
 ├── MAP_V3_RENDERING_GUIDE.md        # How each object type is drawn (living)
 ├── MAP_V3_DECOUPLE_PLAN.md          # V3 standalone from v2 planner (complete)
-└── MAP_V3_ACCEPTANCE.md             # Per-phase pass criteria
+├── MAP_V3_ACCEPTANCE.md             # Per-phase pass criteria
+├── MAP_V3_PHASE3_GUIDE.md           # Phase 3 operator + developer hub (lessons §13)
+├── MAP_V3_PLANET_BODY_SPEC.md       # Planet body element
+├── MAP_V3_PLANET_BODY_TEXTURE_SPEC.md
+└── MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md
 ```
 
 **Out of scope for V3 tree (shared):** `web/src/coords/`, `web/src/telemetry/`, `web/src/camera/`, `web/src/scene/CameraRig.tsx`, `web/src/scene/MoonVisibilityContext.tsx` — consumed by V3, not duplicated.

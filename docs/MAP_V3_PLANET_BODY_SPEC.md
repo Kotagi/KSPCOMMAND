@@ -3,10 +3,10 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | MAP-V3-PLANET-BODY-001 |
-| **Revision** | 1.1 (2026-05-22) |
-| **Phase** | 3.1 (`planetBody`) + 3.3 textures (mesh LOD only) |
-| **Scope** | Heliocentric **planet** position markers: mesh/icon LOD; textures per texture spec |
-| **UI build** | `107-planet-texture-material-ref` (`?v=107`) |
+| **Revision** | 1.2 (2026-05-23) |
+| **Phase** | 3.1 (`planetBody`) + 3.3 textures + 3.4 orientation (mesh LOD) |
+| **Scope** | Heliocentric **planet** position markers: mesh/icon LOD; textures + attitude per sibling specs |
+| **UI build** | `112-planet-texture-flipy` (`?v=112`) |
 | **Depends on** | Phase 1 `starMarker`, Phase 2 `planetOrbit` (alignment reference) |
 
 ## References
@@ -21,6 +21,7 @@
 | [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md) | Color resolution (orbits + bodies) |
 | [`MAP_V3_RENDERING_GUIDE.md`](MAP_V3_RENDERING_GUIDE.md) | Living § Planet body summary |
 | [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md) | Phase 3.3 mesh LOD textures (plugin export) |
+| [`MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md`](MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md) | Phase 3.4 mesh LOD tilt and spin (schema v10) |
 | [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) | Operator + developer how-to |
 | V2 `PlanetBodyLayer` / `BodyMeshV2` | **Reference only** — not imported by V3 |
 
@@ -236,7 +237,7 @@ Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 | P3-07 | LOD zoom in | Zooming in: dots become to-scale meshes; physical size dominates floor |
 | P3-08 | Host-open scale | With host planet open, planets use physical `bodyMeshRadius` (no 0.05 floor) |
 | P3-09 | Phase 2 regression | Orbits, motion tail, inclination unchanged |
-| P3-10 | HUD / UI | `MapHudV3` phase 3.3 label; console `107-planet-texture-material-ref` |
+| P3-10 | HUD / UI | `MapHudV3` phase 3.4 label; console `112-planet-texture-flipy` |
 | P3-11 | Recenter | Full solar bounds (not star-only) |
 | P3-12 | No console errors | Load, orbit, recenter |
 
@@ -257,7 +258,7 @@ Operator checklist: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) § Phase 3.1.
 ### Manual
 
 1. `scripts/build.ps1` + `scripts/install.ps1` if DLL changed; else web-only rebuild.
-2. Open `http://127.0.0.1:8750/?v=107` (hard refresh). See [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md).
+2. Open `http://127.0.0.1:8750/?v=112` (hard refresh). See [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md).
 3. **3D Map V3** — full system: planets on colored rings.
 4. Zoom sweep: icon ↔ mesh transition vs KSP tracking map.
 5. `scripts/verify-telemetry.ps1`, `scripts/verify-body-positions.ps1` — PASS.
@@ -268,4 +269,5 @@ Operator checklist: [`MAP_V3_ACCEPTANCE.md`](MAP_V3_ACCEPTANCE.md) § Phase 3.1.
 | Rev | Date | Change |
 |-----|------|--------|
 | 1.0 | 2026-05-22 | Initial Phase 3.1 — as-built mesh/icon LOD, flat color, V3 decouple |
-| 1.1 | 2026-05-22 | Phase 3.3 textures shipped; UI v107; link Phase 3 guide |
+| 1.1 | 2026-05-22 | Phase 3.3 textures shipped; link Phase 3 guide |
+| 1.2 | 2026-05-23 | Phase 3.4 orientation; UI v112; cross-links to orientation spec |

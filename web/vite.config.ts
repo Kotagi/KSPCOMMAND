@@ -15,7 +15,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         "ksp-solar-map": resolve(__dirname, "src/mount.tsx"),
-        "planet-texture-lab": resolve(__dirname, "src/dev/planet-texture-lab-entry.tsx"),
+        "planet-texture-lab": resolve(__dirname, "dev/planet-texture-lab.html"),
       },
       output: {
         entryFileNames: "assets/[name].js",
@@ -26,6 +26,19 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8750",
+        changeOrigin: true,
+      },
+      "/assets/bodies": {
+        target: "http://127.0.0.1:8750",
+        changeOrigin: true,
+      },
+    },
+  },
+  preview: {
+    port: 5175,
     proxy: {
       "/api": {
         target: "http://127.0.0.1:8750",

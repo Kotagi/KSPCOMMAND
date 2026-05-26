@@ -64,7 +64,7 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 | P3-07 | Zoom in: dots become to-scale meshes; physical radius visible when close |
 | P3-08 | Host planet open: physical scale (no `0.05` solar floor on planets) |
 | P3-09 | Phase 2 orbits, motion tail, and inclination unchanged |
-| P3-10 | Phase 3 HUD active; console includes `107-planet-texture-material-ref` (phase 3.3 label on HUD) |
+| P3-10 | Phase 3 HUD active (`v3 phase 3.4 — planet tilt and spin`); console includes `112-planet-texture-flipy` |
 | P3-11 | Recenter uses full solar bounds (not star-only) |
 | P3-12 | No console errors on load, orbit, or Recenter |
 | P3-13 | `buildPlanetBodySegments` Vitest: planets only, positions from `bodyByName` |
@@ -87,9 +87,28 @@ Compare **in-game KSP map** vs web **View → 3D Map V3** when elements are enab
 | P3T-07 | P3-01–P3-12 regression unchanged |
 | P3T-08 | No console errors; `failed`/`unsupported` bodies use color fallback |
 | P3T-09 | `npm test` + `npm run build` pass |
-| P3T-10 | `MapHudV3` shows **v3 phase 3.3 — planet textures**; console `107-planet-texture-material-ref` |
+| P3T-10 | Mesh textures load (`P3T-01`); console `112-planet-texture-flipy` (HUD shows phase 3.4 label) |
 
 **Automated:** P3T-04 partial via `scripts/verify-telemetry.ps1`; `planetBodyTextures.test.ts`. P3T-01–P3T-03, P3T-05–P3T-08 require manual flight check.
+
+## Phase 3.4 — Planet tilt and spin
+
+**Spec:** [`MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md`](MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md) · **Guide:** [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) §8
+
+| ID | Pass criteria |
+|----|----------------|
+| P3R-01 | Kerbin mesh: KSC gulf at correct longitude vs KSP tracking map (same UT). **Known gap:** fixed ~10–30° meridian offset possible (flat JPEG on `SphereGeometry`); waive for Phase 3 closeout or pass “obliquity + spin rate OK” |
+| P3R-02 | Moho / Eve / Jool obliquity plausible vs stock map |
+| P3R-03 | Icon LOD: dots unrotated; no orientation on icon branch |
+| P3R-04 | 10× time warp: surface features rotate smoothly between telemetry polls |
+| P3R-05 | Dev **Show spin/tilt axis** aligns with pole / spin on tilted bodies (mesh LOD) |
+| P3R-06 | P3-01–P3-12 and P3T-01–P3T-10 regression unchanged |
+| P3R-07 | `npm test` + `npm run build` pass |
+| P3R-08 | `scripts/verify-telemetry.ps1` orientation table; quaternion norm ≈ 1; spin axis when `rotates` |
+| P3R-09 | Lab `?orientation=telemetry&body=Kerbin` uses DLL quaternion (schema v10) |
+| P3R-10 | HUD **v3 phase 3.4 — planet tilt and spin**; console `112-planet-texture-flipy` |
+
+**Automated:** P3R-07–P3R-08 partial (`planetBodyOrientationFields.test.ts`, `kspBodyOrientation.test.ts`, verify script). P3R-01–P3R-06, P3R-09 require manual flight check.
 
 ## Future phases
 
@@ -99,4 +118,4 @@ Per-element criteria added when the corresponding flag is enabled (mirror `docs/
 
 - `web/src/coords/*.test.ts` — shared math
 - `MapComposer.test.ts` — phase 0–3 composition
-- `buildPlanetBodySegments.test.ts`, `planetBodyLod.test.ts`, `planetBodyTextureFields.test.ts`, `planetBodyTextures.test.ts` — planet body element
+- `buildPlanetBodySegments.test.ts`, `planetBodyLod.test.ts`, `planetBodyTextureFields.test.ts`, `planetBodyTextures.test.ts`, `planetBodyOrientationFields.test.ts`, `kspBodyOrientation.test.ts` — planet body element

@@ -1762,6 +1762,7 @@ namespace KspWebMap
                         AtmosphereDepthMeters = body.atmosphereDepth
                     };
                     ApplyBodyTextureFields(snapshot, body, rootBody);
+                    ApplyBodyOrientationFields(snapshot, body, rootBody, universalTime);
                     snapshots.Add(snapshot);
                 }
 
@@ -1794,6 +1795,25 @@ namespace KspWebMap
                 }
 
                 snapshot.BodyTextureStatus = BodyTextureExportState.StatusPending;
+            }
+
+            private static void ApplyBodyOrientationFields(
+                CelestialBodySnapshot snapshot,
+                CelestialBody body,
+                CelestialBody rootBody,
+                double universalTime)
+            {
+                if (snapshot == null || body == null)
+                {
+                    return;
+                }
+
+                if (!HeliocentricPlanetFilter.IsHeliocentricPlanet(body, rootBody))
+                {
+                    return;
+                }
+
+                BodyOrientationResolver.ApplyToSnapshot(snapshot, body, universalTime);
             }
 
             private static CelestialBody FindRootBody()

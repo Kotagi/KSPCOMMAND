@@ -8,9 +8,35 @@ namespace KspWebMap
     /// </summary>
     public static class OrbitFrameMapping
     {
+        /// <summary>
+        /// Unity world → root-relative axes used by getRelativePositionAtUT (Sun-child display).
+        /// Matches MathInertialToKspLocal: (x,y,z)_world → (x,z,y)_root.
+        /// </summary>
+        private static readonly QuaternionD WorldToRootRelativeRotation = CreateRotationAboutX(Math.PI / 2d);
+
         public static Vector3d MathInertialToKspLocal(Vector3d inertial)
         {
             return new Vector3d(inertial.x, inertial.z, inertial.y);
+        }
+
+        public static Vector3d WorldVectorToRootRelativeFrame(Vector3d world)
+        {
+            return WorldToRootRelativeRotation * world;
+        }
+
+        public static QuaternionD WorldRotationToRootRelativeFrame(QuaternionD world)
+        {
+            return WorldToRootRelativeRotation * world;
+        }
+
+        private static QuaternionD CreateRotationAboutX(double angleRadians)
+        {
+            double half = angleRadians * 0.5d;
+            return new QuaternionD(
+                Math.Sin(half),
+                0d,
+                0d,
+                Math.Cos(half));
         }
 
         /// <summary>Unit orbital angular momentum in KSP root-local axes from Kepler elements.</summary>

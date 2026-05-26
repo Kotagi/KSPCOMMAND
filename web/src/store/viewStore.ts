@@ -79,6 +79,8 @@ interface ViewState {
   customizeMapOrbitPickLines: PlanetOrbitPickLine[];
   /** Dev HUD: force Map V3 planet bodies icon vs mesh LOD (auto = zoom-based). */
   devPlanetBodyLodOverride: PlanetBodyLodDevOverride;
+  devPlanetBodySpinAxisVisible: boolean;
+  setDevPlanetBodySpinAxisVisible: (visible: boolean) => void;
   setDevPlanetBodyLodOverride: (override: PlanetBodyLodDevOverride) => void;
   setDevCustomizeMapEnabled: (enabled: boolean) => void;
   setCustomizeMapSelectedPlanet: (planet: string | null) => void;
@@ -180,6 +182,9 @@ export const useViewStore = create<ViewState>((set, get) => ({
   devPlanetBodyLodOverride: "auto",
   setDevPlanetBodyLodOverride: (devPlanetBodyLodOverride) =>
     set({ devPlanetBodyLodOverride }),
+  devPlanetBodySpinAxisVisible: false,
+  setDevPlanetBodySpinAxisVisible: (devPlanetBodySpinAxisVisible) =>
+    set({ devPlanetBodySpinAxisVisible }),
   setDevCustomizeMapEnabled: (enabled) => {
     const next = {
       devCustomizeMapEnabled: enabled,

@@ -22,5 +22,15 @@ namespace KspWebMap
         public string BodyTextureUrl;
         public string BodyTextureRevision;
         public string BodyTextureStatus;
+        public string BodyOrientationReferenceFrame;
+        public double BodyOrientationSampleUniversalTimeSeconds;
+        public bool Rotates;
+        public bool InverseRotation;
+        public bool TidallyLocked;
+        public double RotationPeriodSeconds;
+        public double RotationAngleRadians;
+        public QuaternionSnapshot BodyOrientationRootRelative;
+        public Vector3Snapshot SpinAxisRootRelative;
+        public Vector3Snapshot AngularVelocityRootRelativeRadPerSec;
     }
 }

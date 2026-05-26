@@ -37,4 +37,4 @@ export const MAP_V3_LAYERS_PHASE3: MapV3LayerFlags = {
   planetBody: true,
 };
 
-export const MAP_V3_PHASE_LABEL = "v3 phase 3.3 — planet textures";
+export const MAP_V3_PHASE_LABEL = "v3 phase 3.4 — planet tilt and spin";

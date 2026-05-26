@@ -86,6 +86,19 @@ Moons (`parent != Sun`) keep: live at `T_now`, parent-chain propagation + calibr
 
 ---
 
+## Planet orientation (Phase 3.4)
+
+`body.rotation` and `body.angularVelocity` are captured in **Unity world** space, but heliocentric **positions** use `getRelativePositionAtUT` (root-relative / parent-orbit axes). Those differ by a fixed **+90° about +X** mapping (`OrbitFrameMapping.WorldRotationToRootRelativeFrame`).
+
+Without that transform, spin axes look **in-plane** (poles toward the Sun) while orbits stay in the ecliptic.
+
+| File | Responsibility |
+|------|----------------|
+| `OrbitFrameMapping.cs` | `WorldVectorToRootRelativeFrame`, `WorldRotationToRootRelativeFrame` |
+| `BodyOrientationResolver.cs` | Applies world → root-relative before telemetry JSON |
+
+---
+
 ## Code authority (single place to change)
 
 | File | Responsibility |
@@ -152,10 +165,27 @@ Align with [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) AC-004, AC-001/002:
 
 ---
 
+## Body orientation (Phase 3.4)
+
+Planet **mesh** attitude uses the same root-relative axis convention as trail positions:
+
+| Quantity | Mapping |
+|----------|---------|
+| `body.rotation` | `OrbitFrameMapping.WorldRotationToRootRelativeFrame` before telemetry |
+| `body.angularVelocity` | `OrbitFrameMapping.WorldVectorToRootRelativeFrame` |
+
+Web: [`kspBodyOrientation.ts`](../web/src/coords/kspBodyOrientation.ts) + [`MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md`](MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md).
+
+**Do not** compare raw Unity `body.rotation` to root-relative positions without this mapping.
+
+---
+
 ## Related docs
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — Shared solar-system frame (updated)
 - [`MAP_V3_PLANET_ORBIT_SPEC.md`](MAP_V3_PLANET_ORBIT_SPEC.md) — Planet pipeline
+- [`MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md`](MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md) — Planet mesh tilt/spin
+- [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) §13 — Phase 3 lessons learned
 - [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) — Acceptance + QA checklist
 - [`orbit-offset-mode.md`](orbit-offset-mode.md) — Moon flip calibration (not Sun children)
 - [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §13 — Short pointer + symptom table
@@ -167,3 +197,4 @@ Align with [`BODY_ORBIT_VNV.md`](BODY_ORBIT_VNV.md) AC-004, AC-001/002:
 | Date | Change |
 |------|--------|
 | 2026-05-22 | Unified Sun-child `getRelativePositionAtUT`; `OrbitNormalKspLocal`; HUD `plane` metric; UI `94-heliocentric-relative-unified`; `resolverVersion` `"4"` |
+| 2026-05-23 | Documented orientation capture uses same world→root-relative mapping as positions |

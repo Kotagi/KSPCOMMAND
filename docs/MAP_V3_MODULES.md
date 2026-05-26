@@ -32,12 +32,13 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). **V3 core is canonical
 | `buildPlanetBodySegments.ts` | `MapContext` | `TrajectorySegment[]` kind `planetBody` | `planner/buildSegments`, layer |
 | `planetBodyLod.ts` | `meshR`, `cameraDistance` | `mesh` \| `icon` draw mode | `PlanetBodyMesh` |
 | `planetBodyTextureFields.ts` | telemetry body fields | `bodyTextureUrl`, status helpers | `PlanetBodyLayer`, tests |
+| `planetBodyOrientationFields.ts` | schema v10 orientation | UT extrapolation, read helpers | `PlanetBodyMesh`, tests |
 
-**Specs:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md), textures [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md)
+**Specs:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md), [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md), [`MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md`](MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md)
 
 **Operator guide:** [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md)
 
-**Presentation:** `scene/v3/layers/PlanetBodyLayer.tsx` → `PlanetBodyMesh.tsx` → `TexturedPlanetBody` / `FlatPlanetBody` / `PlanetBodyDot`
+**Presentation:** `PlanetBodyLayer` → `PlanetBodyMesh` → `PlanetBodyOrientedGroup` → `PlanetBodyMeshPoleFrame` → `TexturedPlanetBody` / `FlatPlanetBody` | `PlanetBodyDot`
 
 ## Element — `starMarker` (`web/src/map-v3/elements/starMarker/`)
 
@@ -55,7 +56,10 @@ Parallel modular 3D solar map (`solarRenderMode: 3d-v3`). **V3 core is canonical
 | `layers/StarMarkerLayer.tsx` | Emissive textured sphere per segment |
 | `layers/PlanetOrbitLayer.tsx` | Planet orbit polylines via `OrbitTrailV3` |
 | `layers/PlanetBodyLayer.tsx` | Planet mesh/icon LOD per segment |
-| `layers/PlanetBodyMesh.tsx` | LOD router (dot / textured / flat mesh) |
+| `layers/PlanetBodyMesh.tsx` | LOD router + oriented stack |
+| `layers/PlanetBodyOrientedGroup.tsx` | Attitude quaternion at game UT |
+| `layers/PlanetBodyMeshPoleFrame.tsx` | Sphere pole ↔ KSP north |
+| `layers/PlanetBodySpinAxisLine.tsx` | Dev spin/tilt axis overlay |
 | `layers/TexturedPlanetBody.tsx` | Mesh LOD + exported JPEG |
 | `layers/FlatPlanetBody.tsx` | Mesh LOD color fallback |
 | `layers/PlanetBodyDot.tsx` | Icon LOD round dot |
@@ -81,7 +85,8 @@ Guide: [`PLANET_ORBIT_COLOR_GUIDE.md`](PLANET_ORBIT_COLOR_GUIDE.md)
 
 | Module | Role |
 |--------|------|
-| `assets/planetBodyTextures.ts` | `THREE.TextureLoader` + revision cache; `flipY = false` |
+| `assets/planetBodyTextures.ts` | `THREE.TextureLoader` + revision cache; **`flipY = true`** for KSP exports |
+| `coords/kspBodyOrientation.ts` | KSP ↔ Three basis; world→root; mesh pole offset |
 | `GameData/.../Web/assets/bodies/*.jpg` | Runtime JPEG exports (gitignored) |
 | `src/KspWebMap/Textures/ScaledBodyTextureExporter.cs` | KSP ScaledSpace → JPEG |
 | `src/KspWebMap/Services/BodyTextureExportService.cs` | Flight-load export queue |
@@ -103,7 +108,7 @@ Guide: [`web/dev/README.md`](../web/dev/README.md) · Phase 3 hub: [`MAP_V3_PHAS
 |------|-------|------------|--------|
 | `starMarker` | 1 | `StarMarkerLayer.tsx` | **Implemented** |
 | `planetOrbit` | 2 | `PlanetOrbitLayer.tsx` | **Implemented** |
-| `planetBody` | 3.1 + 3.3 textures | `PlanetBodyLayer.tsx` | **Implemented** |
+| `planetBody` | 3.1 + 3.3 textures + 3.4 orientation | `PlanetBodyLayer.tsx` | **Implemented** |
 | `moonOrbit` | 4 | `MoonOrbitLayer.tsx` | Planned |
 | `moonBody` | 5 | `MoonBodyLayer.tsx` | Planned |
 | `vesselMarker` | 6 | `VesselMarkerLayer.tsx` | Planned |

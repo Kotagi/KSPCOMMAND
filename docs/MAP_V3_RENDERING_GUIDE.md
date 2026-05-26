@@ -2,7 +2,7 @@
 
 How each **object type** is drawn on the modular map. Update a section when that element’s layer ships.
 
-**Status:** Phase 3.3 — `starMarker` + `planetOrbit` + `planetBody` (mesh textures via plugin export); other elements not rendered.
+**Status:** Phase 3 complete — `starMarker` + `planetOrbit` + `planetBody` (textures + oriented mesh LOD); other elements not rendered.
 
 ---
 
@@ -28,7 +28,7 @@ Shared rules (from V2):
 |------|-------|-------|--------|-------------|
 | `starMarker` | `StarMarkerLayer` | 1 | **Implemented** | § Star marker |
 | `planetOrbit` | `PlanetOrbitLayer` | 2 | **Implemented** | § Planet orbit |
-| `planetBody` | `PlanetBodyLayer` | 3.3 | **Implemented** | [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md) + textures |
+| `planetBody` | `PlanetBodyLayer` | 3.1–3.4 | **Implemented** | Body + texture + orientation specs |
 | `moonOrbit` | `MoonOrbitLayer` | 4 | Not started | § Moon orbit |
 | `moonBody` | `MoonBodyLayer` | 5 | Not started | § Moon body |
 | `vesselMarker` | `VesselMarkerLayer` | 6 | Not started | § Vessel marker |
@@ -98,18 +98,21 @@ Shared rules (from V2):
 | Segment builder | `buildPlanetBodySegments` → one point per planet, `kind: planetBody` |
 | LOD | V3 `planetBodyLod.ts` — always on; mesh when `meshR/camDist > 0.12`, else icon radius `0.06` |
 | Scale | `bodyMeshRadius` + `hostPlanetOpen` (solar floor `0.05` when host closed) |
-| Primitive | Mesh: `TexturedPlanetBody` when `bodyTextureStatus === "ready"`; else flat `meshBasicMaterial`. Icon: `PlanetBodyDot` (round mask, orbit color) |
-| Texture | Plugin export → `GET /assets/bodies/{Name}.jpg?rev=` from telemetry `bodyTextureUrl` |
+| Primitive | Mesh: oriented group → pole frame → `TexturedPlanetBody` or `FlatPlanetBody`. Icon: `PlanetBodyDot` |
+| Texture | Plugin export → `GET /assets/bodies/{Name}.jpg?rev=`; loader `flipY = true` |
+| Orientation | `bodyOrientationRootRelative` @ UT; icon LOD not rotated |
 | Color fallback | `useKspBodyMapColor` when texture pending/failed/unsupported |
 | Frame | `toScenePoint(seg.points[0], sceneFrame)` |
 | Visibility | `visibleBodyNames` ∩ `planetNames` (same as `PlanetOrbitLayer`) |
 | Flags | `MAP_V3_LAYERS_PHASE3.planetBody` |
 | Render order | mesh `1`, icon `2` |
-| UI build | `107-planet-texture-material-ref` |
+| UI build | `112-planet-texture-flipy` |
 
-**Spec:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md), textures: [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md)
+**Specs:** [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md), [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md), [`MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md`](MAP_V3_PLANET_BODY_ORIENTATION_SPEC.md)
 
-**Files:** `map-v3/elements/planetBody/*`, `scene/v3/layers/PlanetBodyLayer.tsx`, `PlanetBodyMesh.tsx`, `TexturedPlanetBody.tsx`, `web/src/assets/planetBodyTextures.ts`
+**Guide:** [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md)
+
+**Files:** `map-v3/elements/planetBody/*`, `scene/v3/layers/PlanetBody*.tsx`, `coords/kspBodyOrientation.ts`, `assets/planetBodyTextures.ts`
 
 ---
 
@@ -180,4 +183,6 @@ Shared rules (from V2):
 | 2026-05-21 | Phase 2 | **128** DLL orbit samples + **512** web densify; UI `92-v3-planet-orbit-native`; tuning [`ORBIT_TRAIL_DRAWING_GUIDE.md`](ORBIT_TRAIL_DRAWING_GUIDE.md) §12. |
 | 2026-05-22 | Phase 2 | Heliocentric frame fix — unified `getRelativePositionAtUT` for Sun-children; UI `94-heliocentric-relative-unified`; [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md). |
 | 2026-05-22 | Phase 3.1 | Planet bodies: v3 `buildPlanetBodySegments` + mesh/icon LOD; UI `95-v3-planet-bodies`. |
-| 2026-05-22 | Phase 3.3 | Plugin JPEG export + `TexturedPlanetBody`; UI `107-planet-texture-material-ref`; guide [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md). |
+| 2026-05-22 | Phase 3.3 | Plugin JPEG export + `TexturedPlanetBody`; guide [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md). |
+| 2026-05-23 | Phase 3.4 | Oriented mesh + pole frame; schema v10; dev spin axis. |
+| 2026-05-23 | Phase 3 closeout | `flipY = true`; UI `112-planet-texture-flipy`; texture meridian debt documented. |

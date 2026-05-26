@@ -3,10 +3,10 @@
 | Field | Value |
 |-------|-------|
 | **Document ID** | MAP-V3-PLANET-TEXTURE-001 |
-| **Revision** | 1.1 (2026-05-22) |
+| **Revision** | 1.2 (2026-05-23) |
 | **Phase** | 3.3 (`planetBody` mesh LOD) |
 | **Scope** | Heliocentric **planet** ScaledSpace albedo → HTTP JPEG → WebGL mesh LOD |
-| **UI build** | `107-planet-texture-material-ref` (`?v=107`) |
+| **UI build** | `112-planet-texture-flipy` (`?v=112`) |
 | **Depends on** | [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md) (LOD, position, icon dots) |
 
 ## References
@@ -129,9 +129,11 @@ Per planet body:
 
 | File | Role |
 |------|------|
-| `web/src/assets/planetBodyTextures.ts` | `loadBodyTexture`, revision cache |
-| `web/src/scene/v3/layers/TexturedPlanetBody.tsx` | Async `meshBasicMaterial` + map |
-| `web/src/scene/v3/layers/PlanetBodyMesh.tsx` | Mesh branch → textured; icon → dot |
+| `web/src/assets/planetBodyTextures.ts` | `loadBodyTexture`, revision cache; **`flipY = true`** |
+| `web/src/scene/v3/layers/TexturedPlanetBody.tsx` | `MeshBasicMaterial` + `<primitive attach="material" />` |
+| `web/src/scene/v3/layers/PlanetBodyMesh.tsx` | LOD router; mesh under `PlanetBodyOrientedGroup` → `PlanetBodyMeshPoleFrame` |
+
+**Known limitation:** Flat JPEG on generic `SphereGeometry` may not match KSP tracking-map **longitude** exactly (meridian offset). North/south and spin/obliquity are separate concerns — see [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) §13.
 
 ## Performance budgets (§8)
 
@@ -150,7 +152,7 @@ Per planet body:
 
 ## Verification (§10)
 
-Operator: flight load → `http://127.0.0.1:8750/?v=105` → **3D Map V3** → zoom to mesh LOD.
+Operator: flight load → `http://127.0.0.1:8750/?v=112` → **3D Map V3** → zoom to mesh LOD.
 
 | ID | Criterion |
 |----|-----------|
@@ -194,4 +196,5 @@ Use after export or material-loader changes, before full-map manual QA.
 | Rev | Date | Change |
 |-----|------|--------|
 | 1.0 | 2026-05-22 | Initial Option 1 plugin export program |
-| 1.1 | 2026-05-22 | UI v107; [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) hub |
+| 1.1 | 2026-05-22 | [`MAP_V3_PHASE3_GUIDE.md`](MAP_V3_PHASE3_GUIDE.md) hub |
+| 1.2 | 2026-05-23 | UI v112; `flipY = true`; meridian offset note; oriented mesh stack |
