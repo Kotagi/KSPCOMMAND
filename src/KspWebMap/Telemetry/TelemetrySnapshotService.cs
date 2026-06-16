@@ -1780,7 +1780,7 @@ namespace KspWebMap
                     return;
                 }
 
-                if (!HeliocentricPlanetFilter.IsHeliocentricPlanet(body, rootBody))
+                if (!IsScaledBodyMapExport(body, rootBody))
                 {
                     return;
                 }
@@ -1798,6 +1798,12 @@ namespace KspWebMap
                 snapshot.BodyTextureStatus = BodyTextureExportState.StatusPending;
             }
 
+            private static bool IsScaledBodyMapExport(CelestialBody body, CelestialBody rootBody)
+            {
+                return HeliocentricPlanetFilter.IsHeliocentricPlanet(body, rootBody)
+                    || HeliocentricMoonFilter.IsHeliocentricMoon(body, rootBody);
+            }
+
             private static void ApplyBodyOrientationFields(
                 CelestialBodySnapshot snapshot,
                 CelestialBody body,
@@ -1809,7 +1815,7 @@ namespace KspWebMap
                     return;
                 }
 
-                if (!HeliocentricPlanetFilter.IsHeliocentricPlanet(body, rootBody))
+                if (!IsScaledBodyMapExport(body, rootBody))
                 {
                     return;
                 }

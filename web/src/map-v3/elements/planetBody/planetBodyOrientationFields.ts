@@ -5,7 +5,19 @@ import {
   kspRootQuaternionFromAxisAngle,
   multiplyKspRootQuaternions,
   normalizeKspRootQuaternion,
+  rotateKspRootVector,
 } from "../../../coords/kspBodyOrientation";
+import {
+  resolveSiderealSpinRateRadPerSec,
+  resolveTelemetrySpinAxisRootRelative,
+} from "./planetBodySiderealSpin";
+
+export {
+  describeSiderealSpinAlignment,
+  resolveSiderealSpinRateRadPerSec,
+  resolveStockSiderealSpinRateRadPerSec,
+  resolveTelemetrySpinAxisRootRelative,
+} from "./planetBodySiderealSpin";
 
 /** Telemetry orientation block (schema v10 — Phase 3.4). */
 export interface PlanetBodyOrientationSnapshot {
@@ -57,8 +69,128 @@ export function planetBodyRotates(
   return body?.rotates !== false;
 }
 
+function normalizeRootVector(v: Vector3): Vector3 | undefined {
+  const len = Math.hypot(v.x, v.y, v.z);
+  if (len < 1e-12) {
+    return undefined;
+  }
+  return { x: v.x / len, y: v.y / len, z: v.z / len };
+}
+
 /**
- * Snapshot quaternion advanced to game UT: q(UT) = q_delta(ω̂, ‖ω‖·ΔUT) ⊗ q_sample.
+ * Inertial spin axis ω̂ — telemetry angular velocity first (P3R-FR-05), then
+ * published spin axis, then geographic north from the snapshot attitude.
+ */
+export function resolveSiderealSpinAxisRootRelative(
+  body: CelestialBodyWithOrientation | undefined,
+  orientationAtSample?: KspRootQuaternion,
+): Vector3 | undefined {
+  const av = body?.angularVelocityRootRelativeRadPerSec;
+  if (av) {
+    const axis = normalizeRootVector(av);
+    if (axis) {
+      return axis;
+    }
+  }
+
+  const spinAxis = body?.spinAxisRootRelative;
+  if (spinAxis) {
+    const axis = normalizeRootVector(spinAxis);
+    if (axis) {
+      return axis;
+    }
+  }
+
+  const q = orientationAtSample ?? readPlanetBodyOrientation(body);
+  if (q) {
+    return kspNorthPoleRootDirection(q);
+  }
+
+  return undefined;
+}
+
+/**
+ * Signed sidereal angle for ΔUT from stock period sign (and ‖ω‖ when aligned).
+ */
+export function resolveSiderealSpinAngleRadians(
+  body: CelestialBodyWithOrientation | undefined,
+  deltaUtSeconds: number,
+): number {
+  const rate = resolveSiderealSpinRateRadPerSec(body);
+  if (rate == null || !Number.isFinite(deltaUtSeconds)) {
+    return 0;
+  }
+  return rate * deltaUtSeconds;
+}
+
+/**
+ * Spin step about geographic north at the sample attitude (KSP local integration).
+ * q(UT) = q_sample ⊗ q_delta(n̂, rate·ΔUT).
+ */
+export function resolveInertialNorthSpinDeltaQuaternion(
+  body: CelestialBodyWithOrientation | undefined,
+  orientationAtSample: KspRootQuaternion,
+  deltaUtSeconds: number,
+): KspRootQuaternion | undefined {
+  if (!planetBodyRotates(body)) {
+    return undefined;
+  }
+
+  const angle = resolveSiderealSpinAngleRadians(body, deltaUtSeconds);
+  if (Math.abs(angle) < 1e-12) {
+    return undefined;
+  }
+
+  const axis =
+    resolveTelemetrySpinAxisRootRelative(body) ??
+    kspNorthPoleRootDirection(orientationAtSample);
+  const axisLen = Math.hypot(axis.x, axis.y, axis.z);
+  if (axisLen < 1e-12) {
+    return undefined;
+  }
+
+  return kspRootQuaternionFromAxisAngle(axis, angle);
+}
+
+/** @deprecated Use {@link resolveInertialNorthSpinDeltaQuaternion}. */
+export function resolveBodyFixedSpinDeltaQuaternion(
+  body: CelestialBodyWithOrientation | undefined,
+  orientationAtSample: KspRootQuaternion,
+  deltaUtSeconds: number,
+): KspRootQuaternion | undefined {
+  return resolveInertialNorthSpinDeltaQuaternion(
+    body,
+    orientationAtSample,
+    deltaUtSeconds,
+  );
+}
+
+/** @deprecated Use {@link resolveBodyFixedSpinDeltaQuaternion} — inertial ω̂ step kept for tests. */
+export function resolveInertialSpinDeltaQuaternion(
+  body: CelestialBodyWithOrientation | undefined,
+  orientationAtSample: KspRootQuaternion,
+  deltaUtSeconds: number,
+): KspRootQuaternion | undefined {
+  const axis = resolveSiderealSpinAxisRootRelative(body, orientationAtSample);
+  if (!axis) {
+    return undefined;
+  }
+
+  const angle = resolveSiderealSpinAngleRadians(body, deltaUtSeconds);
+  if (Math.abs(angle) < 1e-12) {
+    return undefined;
+  }
+
+  return kspRootQuaternionFromAxisAngle(axis, angle);
+}
+
+/** Max |ΔUT| (s) before applying rotationAngle extrapolation (scrub / time scrubber). */
+const EXTRAPOLATE_SPIN_MAX_DELTA_UT_SECONDS = 0.05;
+
+/**
+ * Attitude at game UT. Live flight: sample UT = game UT → use DLL snapshot only (same as
+ * texture lab `extrapolateSpin: false`). Scrub only: small extrapolation about north using
+ * stock rotationPeriod sign.
  */
 export function resolvePlanetBodyOrientationAtUt(
   body: CelestialBodyWithOrientation | undefined,
@@ -72,10 +204,8 @@ export function resolvePlanetBodyOrientationAtUt(
     return base;
   }
 
-  const av = body?.angularVelocityRootRelativeRadPerSec;
   const sampleUt = body?.bodyOrientationSampleUniversalTimeSeconds;
   if (
-    !av ||
     sampleUt == null ||
     !Number.isFinite(gameUniversalTimeSeconds) ||
     !Number.isFinite(sampleUt)
@@ -83,20 +213,32 @@ export function resolvePlanetBodyOrientationAtUt(
     return base;
   }
 
-  const spinSpeed = Math.hypot(av.x, av.y, av.z);
-  if (spinSpeed <= 0) {
-    return base;
-  }
-
   const dt = gameUniversalTimeSeconds - sampleUt;
-  if (Math.abs(dt) < 1e-12) {
+  if (Math.abs(dt) <= EXTRAPOLATE_SPIN_MAX_DELTA_UT_SECONDS) {
     return base;
   }
 
-  const sign = body?.inverseRotation === true ? -1 : 1;
-  const northAxis = kspNorthPoleRootDirection(base);
-  const deltaQ = kspRootQuaternionFromAxisAngle(northAxis, sign * spinSpeed * dt);
-  return multiplyKspRootQuaternions(deltaQ, base);
+  const deltaQ = resolveInertialNorthSpinDeltaQuaternion(body, base, dt);
+  if (!deltaQ) {
+    return base;
+  }
+
+  return multiplyKspRootQuaternions(base, deltaQ);
+}
+
+/**
+ * Rotate a body-fixed point to root inertial at resolved game UT (spin sign tests).
+ */
+export function rotateBodyFixedPointAtUt(
+  body: CelestialBodyWithOrientation | undefined,
+  bodyFixedPoint: Vector3,
+  gameUniversalTimeSeconds: number,
+): Vector3 | undefined {
+  const q = resolvePlanetBodyOrientationAtUt(body, gameUniversalTimeSeconds);
+  if (!q) {
+    return undefined;
+  }
+  return rotateKspRootVector(q, bodyFixedPoint);
 }
 
 /** Geographic spin axis from attitude (R · north), preferred over raw ω for display. */

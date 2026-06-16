@@ -5,6 +5,9 @@ import type { TelemetrySnapshot } from "./telemetry/schema-v6";
 import type { SolarSystemModel } from "./model/buildSolarSystemModel";
 import type { SelectionDetail } from "./selection/types";
 import { syncDashboardSolarView } from "./shell/syncDashboardView";
+import { logKerbinSpinFromTelemetry } from "./map-v3/elements/planetBody/planetBodyOrientationDiagnostics";
+import { runSpinChiralityDiagnostic } from "./map-v3/elements/planetBody/planetBodySpinChiralityDiagnostic";
+import type { CelestialBodyWithOrientation } from "./map-v3/elements/planetBody/planetBodyOrientationFields";
 
 export interface KspSolarMapApi {
   mount: (container: HTMLElement) => void;
@@ -25,6 +28,10 @@ export interface KspSolarMapApi {
   setSolarFullscreen: (enabled: boolean) => void;
   toggleSolarFullscreen: () => void;
   syncDashboardView: () => void;
+  /** Force console spin diagnostic for Kerbin (live telemetry). */
+  logKerbinSpin: () => void;
+  /** Compare KSP rotationAngle vs mesh spin chirality (see web/dev/SPIN_CHIRALITY_VERIFY.md). */
+  runSpinChiralityDiagnostic: () => Promise<unknown>;
 }
 
 let root: Root | null = null;
@@ -140,6 +147,17 @@ const api: KspSolarMapApi = {
   syncDashboardView() {
     syncDashboardSolarView(useViewStore.getState().solarRenderMode);
   },
+  logKerbinSpin() {
+    const state = useViewStore.getState();
+    const ut = state.telemetry?.gameUniversalTimeSeconds ?? 0;
+    logKerbinSpinFromTelemetry(
+      state.telemetry?.bodies as CelestialBodyWithOrientation[] | undefined,
+      ut,
+    );
+  },
+  runSpinChiralityDiagnostic() {
+    return runSpinChiralityDiagnostic({ useBuffer: true, captureDelayMs: 3000 });
+  },
 };
 
 declare global {
@@ -150,7 +168,7 @@ declare global {
 }
 
 /** Bumped when web UI changes; check in devtools if map looks stale. */
-export const KSP_WEB_MAP_UI_VERSION = "123-moon-orbit-icon-on-trail";
+export const KSP_WEB_MAP_UI_VERSION = "142-revert-texture-mirror";
 
 window.KspSolarMap = api;
 window.KspSolarMapUiVersion = KSP_WEB_MAP_UI_VERSION;

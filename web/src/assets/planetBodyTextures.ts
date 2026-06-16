@@ -20,11 +20,31 @@ export function buildBodyTextureCacheKey(url: string, revision?: string): string
   return `${url}::${revision ?? ""}`;
 }
 
-function configureBodyTexture(texture: THREE.Texture): void {
-  // flipY true: Three SphereGeometry v=1 at +Y must match KSP albedo north in JPEG.
+/**
+ * Longitude mirror on UVs — disabled when DLL exports flip-X (layout v2-flipx-uv).
+ * U-mirror only flips apparent texture motion; do not use for mesh spin fixes.
+ */
+export const BODY_TEXTURE_MIRROR_U = false;
+
+/** KSP ScaledSpace JPEG → Three.js `SphereGeometry` UV layout. */
+export function applyBodyTextureDisplaySettings(texture: THREE.Texture): void {
+  // flipY: v=1 at +Y must match KSP albedo north in the export.
   texture.flipY = true;
+  if (BODY_TEXTURE_MIRROR_U) {
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.repeat.x = -1;
+    texture.offset.x = 1;
+  } else {
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.repeat.x = 1;
+    texture.offset.x = 0;
+  }
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
+}
+
+function configureBodyTexture(texture: THREE.Texture): void {
+  applyBodyTextureDisplaySettings(texture);
 }
 
 export function isBodyTextureReady(texture: THREE.Texture | null | undefined): boolean {

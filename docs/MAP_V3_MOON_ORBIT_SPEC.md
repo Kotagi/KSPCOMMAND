@@ -5,8 +5,8 @@
 | **Document ID** | MAP-V3-MOON-ORBIT-001 |
 | **Revision** | 1.3 (2026-05-26) |
 | **Phase** | 4 — `moonOrbit` element only |
-| **Scope** | Moon orbit polylines around parent planets — no moon bodies, no vessel |
-| **UI build** | `123-moon-orbit-icon-on-trail` (`?v=123`) |
+| **Scope** | Moon orbit polylines; moon **bodies** (mesh + texture) in [`MoonBodyLayer`](../web/src/scene/v3/layers/MoonBodyLayer.tsx) — see [`MAP_V3_PLANET_BODY_TEXTURE_SPEC.md`](MAP_V3_PLANET_BODY_TEXTURE_SPEC.md) § Phase 4.1 |
+| **UI build** | `124-moon-body-texture-mesh` (`?v=124`) |
 | **DLL frame** | `frameDiagnostics.resolverVersion` **`"6"`** (trail + moon icon both propagated) |
 | **Sister spec** | [`MAP_V3_PLANET_ORBIT_SPEC.md`](MAP_V3_PLANET_ORBIT_SPEC.md) rev 1.2 |
 | **Frame guide** | [`HELIOCENTRIC_ORBIT_FRAME.md`](HELIOCENTRIC_ORBIT_FRAME.md) § Moon trail rings |

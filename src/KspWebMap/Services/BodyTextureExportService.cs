@@ -110,23 +110,36 @@ namespace KspWebMap
                     yield return null;
                 }
 
+                List<CelestialBody> moons = HeliocentricMoonFilter.CollectHeliocentricMoons(rootBody);
+
+                for (int i = 0; i < moons.Count; i++)
+                {
+                    CelestialBody body = moons[i];
+                    _registry.EnsurePending(body.bodyName);
+                    ExportBody(body);
+                    yield return null;
+                }
+
                 totalStopwatch.Stop();
 
                 if (totalStopwatch.Elapsed.TotalSeconds > ExportBudgetWarningSeconds)
                 {
                     UnityEngine.Debug.LogWarning(string.Format(
-                        "{0} body texture export finished in {1:F2}s (budget {2:F0}s).",
+                        "{0} body texture export finished in {1:F2}s (budget {2:F0}s, {3} planets, {4} moons).",
                         LogPrefix,
                         totalStopwatch.Elapsed.TotalSeconds,
-                        ExportBudgetWarningSeconds));
+                        ExportBudgetWarningSeconds,
+                        planets.Count,
+                        moons.Count));
                 }
                 else
                 {
                     UnityEngine.Debug.Log(string.Format(
-                        "{0} body texture export finished in {1:F2}s for {2} planets.",
+                        "{0} body texture export finished in {1:F2}s for {2} planets and {3} moons.",
                         LogPrefix,
                         totalStopwatch.Elapsed.TotalSeconds,
-                        planets.Count));
+                        planets.Count,
+                        moons.Count));
                 }
             }
 
@@ -155,12 +168,7 @@ namespace KspWebMap
 
                 if (scaledBody != null)
                 {
-                    MeshRenderer renderer = scaledBody.GetComponentInChildren<MeshRenderer>(true);
-
-                    if (renderer != null)
-                    {
-                        material = renderer.sharedMaterial;
-                    }
+                    ScaledBodyMaterialResolver.TryResolve(scaledBody, out material);
                 }
 
                 string fingerprint = BodyTextureFingerprint.Compute(material);

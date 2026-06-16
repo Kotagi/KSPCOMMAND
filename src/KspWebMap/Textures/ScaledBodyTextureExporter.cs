@@ -57,24 +57,24 @@ namespace KspWebMap
                 return result;
             }
 
-            MeshRenderer renderer = scaledBody.GetComponentInChildren<MeshRenderer>(true);
-
-            if (renderer == null || renderer.sharedMaterial == null)
+            Material material;
+            if (!ScaledBodyMaterialResolver.TryResolve(scaledBody, out material))
             {
                 result.Status = BodyTextureExportState.StatusUnsupported;
                 result.ErrorMessage = "No scaledBody MeshRenderer/material.";
                 return result;
             }
 
-            Material material = renderer.sharedMaterial;
             result.MaterialFingerprint = BodyTextureFingerprint.Compute(material);
 
             Texture2D readable = null;
             Texture2D resized = null;
+            Texture2D exportReady = null;
 
             try
             {
-                readable = CaptureAlbedoTexture(material);
+                bool fromCubemapEquirect;
+                readable = CaptureAlbedoTexture(material, out fromCubemapEquirect);
 
                 if (readable == null)
                 {
@@ -84,7 +84,33 @@ namespace KspWebMap
                 }
 
                 resized = DownscaleTexture(readable, MaxTextureEdgePixels);
-                byte[] jpegBytes = ImageConversion.EncodeToJPG(resized, JpegQuality);
+                if (resized != readable)
+                {
+                    UnityEngine.Object.Destroy(readable);
+                    readable = null;
+                }
+                else
+                {
+                    resized = readable;
+                    readable = null;
+                }
+
+                // Flat _MainTex exports need flip-X for SphereGeometry longitude; cubemap equirect does not.
+                if (fromCubemapEquirect)
+                {
+                    exportReady = resized;
+                }
+                else
+                {
+                    exportReady = FlipTextureHorizontal(resized);
+                    if (exportReady != resized && resized != null)
+                    {
+                        UnityEngine.Object.Destroy(resized);
+                        resized = null;
+                    }
+                }
+
+                byte[] jpegBytes = ImageConversion.EncodeToJPG(exportReady, JpegQuality);
 
                 if (jpegBytes == null || jpegBytes.Length == 0)
                 {
@@ -101,7 +127,9 @@ namespace KspWebMap
                 string metaPath = Path.Combine(outputDirectory, metaFileName);
 
                 File.WriteAllBytes(jpegPath, jpegBytes);
-                File.WriteAllText(metaPath, result.MaterialFingerprint ?? string.Empty);
+                File.WriteAllText(
+                    metaPath,
+                    BodyTextureExportLayout.BuildMetaFileContent(result.MaterialFingerprint));
 
                 result.Success = true;
                 result.Status = BodyTextureExportState.StatusReady;
@@ -126,14 +154,17 @@ namespace KspWebMap
             }
             finally
             {
-                if (readable != null)
+                if (exportReady != null)
                 {
-                    UnityEngine.Object.Destroy(readable);
+                    UnityEngine.Object.Destroy(exportReady);
                 }
-
-                if (resized != null && resized != readable)
+                else if (resized != null)
                 {
                     UnityEngine.Object.Destroy(resized);
+                }
+                else if (readable != null)
+                {
+                    UnityEngine.Object.Destroy(readable);
                 }
 
                 stopwatch.Stop();
@@ -171,9 +202,15 @@ namespace KspWebMap
 
             string storedFingerprint;
 
+            string layoutId;
+
             try
             {
-                storedFingerprint = File.ReadAllText(metaPath).Trim();
+                string metaText = File.ReadAllText(metaPath);
+                if (!BodyTextureExportLayout.TryParseMetaFileContent(metaText, out storedFingerprint, out layoutId))
+                {
+                    return false;
+                }
             }
             catch
             {
@@ -181,6 +218,11 @@ namespace KspWebMap
             }
 
             if (!string.Equals(storedFingerprint, expectedFingerprint, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (!BodyTextureExportLayout.IsLayoutCurrent(layoutId))
             {
                 return false;
             }
@@ -202,8 +244,20 @@ namespace KspWebMap
             }
         }
 
-        private static Texture2D CaptureAlbedoTexture(Material material)
+        private static Texture2D CaptureAlbedoTexture(Material material, out bool fromCubemapEquirect)
         {
+            fromCubemapEquirect = false;
+
+            if (ScaledMesh2CubemapExporter.HasCompleteCubemapFaces(material))
+            {
+                Texture2D equirect = ScaledMesh2CubemapExporter.TryCaptureEquirectangular(material);
+                if (equirect != null)
+                {
+                    fromCubemapEquirect = true;
+                    return equirect;
+                }
+            }
+
             Texture mainTexture = ResolveMainAlbedo(material);
             Texture detailTexture = ResolveDetailTexture(material);
 
@@ -281,10 +335,14 @@ namespace KspWebMap
 
             if (material.HasProperty("_ColorMap"))
             {
-                return material.GetTexture("_ColorMap");
+                Texture colorMap = material.GetTexture("_ColorMap");
+                if (colorMap != null)
+                {
+                    return colorMap;
+                }
             }
 
-            return null;
+            return material.mainTexture;
         }
 
         private static Texture ResolveDetailTexture(Material material)
@@ -377,6 +435,36 @@ namespace KspWebMap
             {
                 RenderTexture.ReleaseTemporary(temporary);
             }
+        }
+
+        /// <summary>
+        /// Longitude handedness for generic SphereGeometry UVs (decoupled from mesh spin).
+        /// </summary>
+        private static Texture2D FlipTextureHorizontal(Texture2D source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            int width = source.width;
+            int height = source.height;
+            Texture2D flipped = new Texture2D(width, height, source.format, false);
+            Color[] pixels = source.GetPixels();
+            Color[] output = new Color[pixels.Length];
+
+            for (int y = 0; y < height; y++)
+            {
+                int row = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    output[row + x] = pixels[row + (width - 1 - x)];
+                }
+            }
+
+            flipped.SetPixels(output);
+            flipped.Apply();
+            return flipped;
         }
 
         private static string ComputeRevision(byte[] fileBytes)

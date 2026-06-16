@@ -19,6 +19,11 @@ import { PlanetBodySpinAxisLine } from "./PlanetBodySpinAxisLine";
 import { TexturedPlanetBody } from "./TexturedPlanetBody";
 import { usePlanetBodyDrawMode } from "./usePlanetBodyDrawMode";
 import { useViewStore } from "../../../store/viewStore";
+import {
+  buildPlanetBodySpinDiagnosticReport,
+  logPlanetBodySpinDiagnosticReport,
+} from "../../../map-v3/elements/planetBody/planetBodyOrientationDiagnostics";
+import { recordKerbinChiralitySample } from "../../../map-v3/elements/planetBody/planetBodySpinChiralityDiagnostic";
 
 const MESH_ORIGIN: [number, number, number] = [0, 0, 0];
 
@@ -107,6 +112,7 @@ export function PlanetBodyMesh({
   bodyTextureUrl,
   bodyTextureRevision,
   bodyTextureStatus,
+  registerMeshLod = true,
 }: {
   bodyName: string;
   radiusMeters: number;
@@ -114,11 +120,19 @@ export function PlanetBodyMesh({
   bodyTextureUrl?: string;
   bodyTextureRevision?: string;
   bodyTextureStatus?: string;
+  /** Planets register mesh/icon mode for moon orbit gating; moons must not. */
+  registerMeshLod?: boolean;
 }) {
   const { mapContext, sceneFrame, hostPlanetOpen } = useMapV3();
   const devPlanetBodyLodOverride = useViewStore((s) => s.devPlanetBodyLodOverride);
   const devPlanetBodySpinAxisVisible = useViewStore(
     (s) => s.devPlanetBodySpinAxisVisible,
+  );
+  const devPlanetBodySpinDiagnostics = useViewStore(
+    (s) => s.devPlanetBodySpinDiagnostics,
+  );
+  const devPlanetBodySpinChiralityCollect = useViewStore(
+    (s) => s.devPlanetBodySpinChiralityCollect,
   );
   const gameUniversalTimeSeconds = useViewStore(
     (s) => s.telemetry?.gameUniversalTimeSeconds ?? 0,
@@ -149,14 +163,44 @@ export function PlanetBodyMesh({
 
   const meshLodRegistry = usePlanetBodyMeshLodRegistry();
   useEffect(() => {
-    if (!meshLodRegistry) {
+    if (!registerMeshLod || !meshLodRegistry) {
       return;
     }
     meshLodRegistry.registerPlanetDrawMode(bodyName, drawMode);
     return () => {
       meshLodRegistry.unregisterPlanet(bodyName);
     };
-  }, [meshLodRegistry, bodyName, drawMode]);
+  }, [registerMeshLod, meshLodRegistry, bodyName, drawMode]);
+
+  useEffect(() => {
+    if (bodyName !== "Kerbin" || drawMode !== "mesh" || !body) {
+      return;
+    }
+    if (devPlanetBodySpinChiralityCollect) {
+      recordKerbinChiralitySample(body, gameUniversalTimeSeconds);
+    }
+    if (!devPlanetBodySpinDiagnostics) {
+      return;
+    }
+    const report = buildPlanetBodySpinDiagnosticReport(
+      bodyName,
+      body,
+      gameUniversalTimeSeconds,
+    );
+    if (report) {
+      logPlanetBodySpinDiagnosticReport(report);
+    }
+  }, [
+    devPlanetBodySpinDiagnostics,
+    devPlanetBodySpinChiralityCollect,
+    bodyName,
+    drawMode,
+    body,
+    gameUniversalTimeSeconds,
+    body?.bodyOrientationSampleUniversalTimeSeconds,
+    body?.rotationAngleRadians,
+    body?.angularVelocityRootRelativeRadPerSec?.z,
+  ]);
 
   if (drawMode === "icon") {
     return <PlanetBodyDot position={scenePosition} color={color} />;

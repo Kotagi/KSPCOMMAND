@@ -30,6 +30,7 @@ namespace KspWebMap
             _services = new ServiceRegistry(LogPrefix);
             _services.Add(new DevWindowService(gameObject));
             _services.Add(new BodyTextureExportService(gameObject, serverConfig, textureRegistry));
+            // Diagnostic probe disabled — it blits every body/property repeatedly and stalls RSS.
             _services.Add(new TelemetrySnapshotService(gameObject, telemetryStore, textureRegistry));
             _services.Add(new LocalHttpServerService(serverConfig, telemetryStore));
             _services.StartAll();

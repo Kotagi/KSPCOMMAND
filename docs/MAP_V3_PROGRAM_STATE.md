@@ -113,8 +113,8 @@ PlanetBodyLayer → PlanetBodyMesh
 | Item | Notes |
 |------|-------|
 | **Texture longitude offset** | Flat JPEG on generic `SphereGeometry` can be ~10–30° off KSP tracking map longitude (P3R-01 partial). Fix later: `phiStart` or per-body meridian constant — see Phase 3 guide §13 |
-| **UT spin extrapolation** | `resolvePlanetBodyOrientationAtUt` spins about north from snapshot quaternion; spec prefers ω̂ — fine for stock Kerbin, revisit for oblique bodies |
-| `rotationAngleRadians` | Exported in telemetry; not yet used on web for validation HUD |
+| ~~**UT spin / texture spin**~~ | Longitude **flip-X at DLL export** (UI `128`). Spin: stock `rotationPeriod` sign + inertial north extrapolation (UI `131`); `KSP_TO_MESH_SIDEREAL_SPIN_SIGN` for Three basis |
+| `rotationAngleRadians` | Exported; spin rate sign derived from `rotationPeriod` / `inverseRotation` (see `planetBodySiderealSpin.ts`) |
 | In-game map debug lines | Not implemented (web dev axis only) |
 | `MapV3LayerStack.tsx` | Manual layer list; dynamic registry deferred |
 | Customize Map orbit highlight | Dev-only widen selected ring — refine or remove |
@@ -143,7 +143,7 @@ PlanetBodyLayer → PlanetBodyMesh
 |-------|--------|
 | Tests | `npm test` — 106+ (planet body, orientation, textures, composer) |
 | Web build | `npm run build` green |
-| UI version | `123-moon-orbit-icon-on-trail` (`web/src/mount.tsx`; hard-refresh `?v=123`) |
+| UI version | `128-body-texture-export-flipx` (`web/src/mount.tsx`; hard-refresh `?v=128`) |
 | HUD label | `v3 phase 4 — moon orbits` (`MAP_V3_PHASE_LABEL` in `layerFlags.ts`) |
 | Telemetry schema | **v10** (`bodyOrientationRootRelative`, texture fields on schema v9+) |
 | DLL frame revision | `frameDiagnostics.resolverVersion` `"6"` (Sun-child + moon trail + moon icon propagation — not “Map V4”) |

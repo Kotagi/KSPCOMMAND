@@ -104,12 +104,42 @@ foreach ($body in $telemetry.bodies) {
     if ($null -ne $q) {
         $norm = [Math]::Sqrt([double]$q.x * $q.x + [double]$q.y * $q.y + [double]$q.z * $q.z + [double]$q.w * $q.w)
         $spin = $body.spinAxisRootRelative
+        $period = [double]$body.rotationPeriodSeconds
+        $stockRate = if ($period -gt 0) { 2 * [Math]::PI / $period } else { [double]::NaN }
+        if ($body.inverseRotation -eq $true) { $stockRate = -$stockRate }
+        $av = $body.angularVelocityRootRelativeRadPerSec
+        $omegaDot = [double]::NaN
+        if ($null -ne $av -and $null -ne $spin) {
+            $avLen = [Math]::Sqrt([double]$av.x * $av.x + [double]$av.y * $av.y + [double]$av.z * $av.z)
+            if ($avLen -gt 1e-12) {
+                $axisLen = [Math]::Sqrt([double]$spin.x * $spin.x + [double]$spin.y * $spin.y + [double]$spin.z * $spin.z)
+                if ($axisLen -gt 1e-12) {
+                    $omegaDot = ([double]$av.x * $spin.x + [double]$av.y * $spin.y + [double]$av.z * $spin.z) / ($avLen * $axisLen)
+                }
+            }
+        }
+        $omegaOk = if ([double]::IsNaN($omegaDot) -or [double]::IsNaN($stockRate)) {
+            ""
+        } elseif (($stockRate -ge 0) -eq ($omegaDot -ge 0)) {
+            "ok"
+        } else {
+            "MISMATCH"
+        }
+
         $orientationRows += [pscustomobject]@{
             Body = $body.name
             Rotates = $body.rotates
             QuatNorm = $norm
             SpinAxis = if ($null -ne $spin) { "($($spin.x),$($spin.y),$($spin.z))" } else { "" }
             SampleUt = $body.bodyOrientationSampleUniversalTimeSeconds
+            RotAngle = $body.rotationAngleRadians
+            Period = $body.rotationPeriodSeconds
+            StockRate = $stockRate
+            OmegaDot = $omegaDot
+            SpinSign = $omegaOk
+        }
+        if ($omegaOk -eq "MISMATCH") {
+            Write-Warning "$($body.name): angularVelocity opposes stock rotationPeriod sign (web uses period sign)"
         }
         if ($norm -lt 0.99 -or $norm -gt 1.01) {
             $failures += "$($body.name): bodyOrientationRootRelative norm=$norm (expected ~1)"

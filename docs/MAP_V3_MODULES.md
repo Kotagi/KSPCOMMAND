@@ -110,7 +110,7 @@ Guide: [`web/dev/README.md`](../web/dev/README.md) · Phase 3 hub: [`MAP_V3_PHAS
 | `planetOrbit` | 2 | `PlanetOrbitLayer.tsx` | **Implemented** |
 | `planetBody` | 3.1 + 3.3 textures + 3.4 orientation | `PlanetBodyLayer.tsx` | **Implemented** |
 | `moonOrbit` | 4 | `MoonOrbitLayer.tsx` | **Implemented** |
-| `moonBody` | 5 | `MoonBodyLayer.tsx` | Planned |
+| `moonBody` | 5 | `MoonBodyLayer.tsx` | **Shipped** — reuses `PlanetBodyMesh`; gated on host planet mesh LOD + moon visibility |
 | `vesselMarker` | 6 | `VesselMarkerLayer.tsx` | Planned |
 | `bodyLod` | 7 | (body layers) | Planned |
 | `vesselOrbit` | 8 | `VesselOrbitLayer.tsx` | Planned |

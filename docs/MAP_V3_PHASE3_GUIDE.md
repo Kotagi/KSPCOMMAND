@@ -445,6 +445,7 @@ These came from Phase 3 implementation and V&V. **Do not repeat these mistakes**
 | Lesson | Detail |
 |--------|--------|
 | **Texture does not scroll** | Only the parent group rotates; JPEG is static. Longitude alignment is quaternion + UV seam, not `texture.offset`. |
+| **Do not tie spin sign to UV mirror** | DLL export **flip-X** (`BodyTextureExportLayout` `v2-flipx-uv`); web `BODY_TEXTURE_MIRROR_U=false`. Mesh spin = telemetry ω̂ only (`127`+). Re-export textures after layout bump. |
 | **Pole frame is separate from attitude** | `PlanetBodyMeshPoleFrame` aligns mesh +Y with KSP north in body basis; `PlanetBodyOrientedGroup` applies spin/tilt. |
 | **No double spin** | Production map must not combine UT extrapolation with per-frame `useFrame` spin on the same mesh. Lab uses `frameSpin` only in isolation. |
 | **Quaternion multiply order** | Inertial spin step uses **pre-multiply** in lab; production uses snapshot + UT delta only. |

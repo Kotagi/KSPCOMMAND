@@ -24,7 +24,9 @@
 
 **Objective:** When Map V3 draws a planet in **mesh LOD**, the sphere shall display the same ScaledSpace albedo the player sees in the KSP tracking map, without shipping Squad texture binaries in the public git repository.
 
-**Non-goals:** Sun texture (Phase 1 `starMarker`), moons, SOI, labels, `meshStandardMaterial` lighting model, redistributing stock assets.
+**Non-goals:** Sun texture (Phase 1 `starMarker`), SOI, labels, `meshStandardMaterial` lighting model, redistributing stock assets.
+
+**Phase 4.1 (moons):** Stock moons of heliocentric planets use the same ScaledSpace export path and web `PlanetBodyMesh` / `TexturedPlanetBody` stack when the host planet is in mesh LOD (`MoonBodyLayer`). See [`MAP_V3_MOON_ORBIT_SPEC.md`](MAP_V3_MOON_ORBIT_SPEC.md).
 
 ## Inclusion rules
 
@@ -32,7 +34,7 @@
 |------------|--------|--------------------------|------------------|
 | Heliocentric planet (`orbit.referenceBody === root`, not root) | Yes | Yes | Yes when `ready` |
 | Root / Sun | No | Omitted | No |
-| Moon | No | Omitted | No |
+| Stock moon (parent heliocentric planet) | Yes | Yes | Yes when host planet mesh LOD + `ready` |
 | Other | No | Omitted | No |
 
 Same planet set as [`MAP_V3_PLANET_BODY_SPEC.md`](MAP_V3_PLANET_BODY_SPEC.md) (`hierarchy.planetNames`).
@@ -129,7 +131,7 @@ Per planet body:
 
 | File | Role |
 |------|------|
-| `web/src/assets/planetBodyTextures.ts` | `loadBodyTexture`, revision cache; **`flipY = true`** |
+| `web/src/assets/planetBodyTextures.ts` | `loadBodyTexture`, revision cache; **`flipY = true`**; **`BODY_TEXTURE_MIRROR_U = false`** (longitude flip-X in DLL export) |
 | `web/src/scene/v3/layers/TexturedPlanetBody.tsx` | `MeshBasicMaterial` + `<primitive attach="material" />` |
 | `web/src/scene/v3/layers/PlanetBodyMesh.tsx` | LOD router; mesh under `PlanetBodyOrientedGroup` → `PlanetBodyMeshPoleFrame` |
 

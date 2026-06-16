@@ -34,12 +34,13 @@ describe("composeMapV3Layers", () => {
     ]);
   });
 
-  it("returns star + orbits + moon orbits + planet bodies for phase 4 flags", () => {
+  it("returns star + orbits + moon orbits + planet and moon bodies for phase 4 flags", () => {
     expect(composeMapV3Layers(MAP_V3_LAYERS_PHASE4)).toEqual([
       "StarMarkerLayer",
       "PlanetOrbitLayer",
       "MoonOrbitLayer",
       "PlanetBodyLayer",
+      "MoonBodyLayer",
     ]);
   });
 });

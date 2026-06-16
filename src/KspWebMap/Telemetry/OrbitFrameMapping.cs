@@ -24,6 +24,10 @@ namespace KspWebMap
             return WorldToRootRelativeRotation * world;
         }
 
+        /// <summary>
+        /// World body.rotation composed with the same +90° X frame used for root-relative vectors.
+        /// Matches the web mesh pipeline (not a passive similarity transform).
+        /// </summary>
         public static QuaternionD WorldRotationToRootRelativeFrame(QuaternionD world)
         {
             return WorldToRootRelativeRotation * world;

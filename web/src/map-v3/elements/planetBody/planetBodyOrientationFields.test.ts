@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   isPlanetBodyOrientationReady,
   readPlanetBodyOrientation,
-  resolvePlanetBodyOrientationAtUt,
+  resolveSiderealSpinAxisRootRelative,
+  resolveSiderealSpinRateRadPerSec,
+  rotateBodyFixedPointAtUt,
 } from "./planetBodyOrientationFields";
 
 describe("planetBodyOrientationFields", () => {
@@ -24,34 +26,90 @@ describe("planetBodyOrientationFields", () => {
     expect(q?.w).toBeCloseTo(1, 6);
   });
 
-  it("reverses UT spin sign when inverseRotation is true", () => {
+  it("prefers angular velocity for spin axis", () => {
+    const body = {
+      name: "Kerbin",
+      bodyOrientationRootRelative: { x: 0, y: 0, z: 0, w: 1 },
+      angularVelocityRootRelativeRadPerSec: { x: 0, y: 0, z: 2 },
+      spinAxisRootRelative: { x: 1, y: 0, z: 0 },
+    };
+    const axis = resolveSiderealSpinAxisRootRelative(body);
+    expect(axis?.z).toBeCloseTo(1, 6);
+  });
+
+  it("uses stock rotationPeriod / inverseRotation for rate", () => {
+    const period = 100;
+    const magnitude = (2 * Math.PI) / period;
     const body = {
       name: "Eeloo",
       rotates: true,
       inverseRotation: true,
-      bodyOrientationSampleUniversalTimeSeconds: 0,
-      bodyOrientationRootRelative: { x: 0, y: 0, z: 0, w: 1 },
+      rotationPeriodSeconds: period,
+      angularVelocityRootRelativeRadPerSec: { x: 0, y: 0, z: -1 },
+      spinAxisRootRelative: { x: 0, y: 0, z: 1 },
+    };
+    expect(resolveSiderealSpinRateRadPerSec(body)).toBeCloseTo(-magnitude, 8);
+    const aligned = {
+      ...body,
+      inverseRotation: false,
       angularVelocityRootRelativeRadPerSec: { x: 0, y: 0, z: 1 },
     };
-    const forward = resolvePlanetBodyOrientationAtUt(body, Math.PI / 4);
-    const bodyForward = { ...body, inverseRotation: false };
-    const alsoForward = resolvePlanetBodyOrientationAtUt(bodyForward, Math.PI / 4);
-    expect(forward?.z).toBeCloseTo(-(alsoForward?.z ?? 0), 5);
+    expect(resolveSiderealSpinRateRadPerSec(aligned)).toBeCloseTo(magnitude, 8);
   });
 
-  it("extrapolates spin by UT delta about north pole", () => {
+  it("extrapolates inertial spin about north by UT delta", () => {
+    const period = 4 * Math.PI;
     const body = {
       name: "Kerbin",
       rotates: true,
+      rotationPeriodSeconds: period,
+      inverseRotation: false,
       bodyOrientationSampleUniversalTimeSeconds: 100,
       bodyOrientationRootRelative: { x: 0, y: 0, z: 0, w: 1 },
-      angularVelocityRootRelativeRadPerSec: { x: 0, y: 0, z: 1 },
-      spinAxisRootRelative: { x: 0, y: 0, z: 1 },
+      angularVelocityRootRelativeRadPerSec: { x: 0, y: 0.5, z: 0 },
+      spinAxisRootRelative: { x: 0, y: 1, z: 0 },
     };
-    const atSample = resolvePlanetBodyOrientationAtUt(body, 100);
-    const later = resolvePlanetBodyOrientationAtUt(body, 100 + Math.PI / 2);
-    expect(atSample?.w).toBeCloseTo(1, 5);
-    expect(later?.y).toBeCloseTo(Math.sin(Math.PI / 4), 4);
-    expect(later?.w).toBeCloseTo(Math.cos(Math.PI / 4), 4);
+    const p0 = rotateBodyFixedPointAtUt(body, { x: 1, y: 0, z: 0 }, 100);
+    const p1 = rotateBodyFixedPointAtUt(body, { x: 1, y: 0, z: 0 }, 100 + Math.PI);
+    expect(p0?.x).toBeCloseTo(1, 5);
+    expect(p1?.x).toBeCloseTo(0, 4);
+    expect(p1?.z).toBeCloseTo(-1, 4);
+  });
+
+  it("moves a body-fixed equator point prograde about north", () => {
+    const period = 4 * Math.PI;
+    const body = {
+      name: "Kerbin",
+      rotates: true,
+      inverseRotation: false,
+      rotationPeriodSeconds: period,
+      bodyOrientationSampleUniversalTimeSeconds: 0,
+      bodyOrientationRootRelative: { x: 0, y: 0, z: 0, w: 1 },
+      angularVelocityRootRelativeRadPerSec: { x: 0, y: 0.5, z: 0 },
+      spinAxisRootRelative: { x: 0, y: 1, z: 0 },
+    };
+    const p0 = rotateBodyFixedPointAtUt(body, { x: 1, y: 0, z: 0 }, 0);
+    const p1 = rotateBodyFixedPointAtUt(body, { x: 1, y: 0, z: 0 }, Math.PI);
+    expect(p0?.x).toBeCloseTo(1, 5);
+    expect(p0?.y).toBeCloseTo(0, 5);
+    expect(p1?.x).toBeCloseTo(0, 4);
+    expect(p1?.z).toBeCloseTo(-1, 4);
+  });
+
+  it("reverses equator motion when inverseRotation is true", () => {
+    const period = 4 * Math.PI;
+    const body = {
+      name: "Eeloo",
+      rotates: true,
+      inverseRotation: true,
+      rotationPeriodSeconds: period,
+      bodyOrientationSampleUniversalTimeSeconds: 0,
+      bodyOrientationRootRelative: { x: 0, y: 0, z: 0, w: 1 },
+      angularVelocityRootRelativeRadPerSec: { x: 0, y: -0.5, z: 0 },
+      spinAxisRootRelative: { x: 0, y: 1, z: 0 },
+    };
+    const p1 = rotateBodyFixedPointAtUt(body, { x: 1, y: 0, z: 0 }, Math.PI);
+    expect(p1?.x).toBeCloseTo(0, 4);
+    expect(p1?.z).toBeCloseTo(1, 4);
   });
 });

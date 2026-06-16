@@ -118,6 +118,22 @@
   color: #ffd166;
 }
 
+.ksp-solar-customize-map-dev-button {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0c1824;
+  background: #ffd166;
+  border: 1px solid #e6bc5c;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ksp-solar-customize-map-dev-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .ksp-solar-customize-map-dev-controls,
 .ksp-solar-duna-color-dev-controls {
   display: flex;

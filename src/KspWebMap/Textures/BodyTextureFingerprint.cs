@@ -9,7 +9,13 @@ namespace KspWebMap
         {
             "_MainTex",
             "_ColorMap",
-            "_DetailCloudPatternTexture"
+            "_DetailCloudPatternTexture",
+            "_MainTex_Xn",
+            "_MainTex_Xp",
+            "_MainTex_Yn",
+            "_MainTex_Yp",
+            "_MainTex_Zn",
+            "_MainTex_Zp",
         };
 
         public static string Compute(Material material)

@@ -37,10 +37,11 @@ export const MAP_V3_LAYERS_PHASE3: MapV3LayerFlags = {
   planetBody: true,
 };
 
-/** Phase 4: phase 3 + moon orbit paths (mesh-gated visibility). */
+/** Phase 4: phase 3 + moon orbits + moon bodies (mesh-gated, same texture path as planets). */
 export const MAP_V3_LAYERS_PHASE4: MapV3LayerFlags = {
   ...MAP_V3_LAYERS_PHASE3,
   moonOrbit: true,
+  moonBody: true,
 };
 
-export const MAP_V3_PHASE_LABEL = "v3 phase 4 — moon orbits";
+export const MAP_V3_PHASE_LABEL = "v3 phase 4 — moon orbits and bodies";
