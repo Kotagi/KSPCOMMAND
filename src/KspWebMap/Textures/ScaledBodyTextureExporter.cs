@@ -65,7 +65,10 @@ namespace KspWebMap
                 return result;
             }
 
-            result.MaterialFingerprint = BodyTextureFingerprint.Compute(material);
+            result.MaterialFingerprint = BodyTextureFingerprint.ComputeStable(
+                scaledBody,
+                material,
+                body.bodyName);
 
             Texture2D readable = null;
             Texture2D resized = null;
@@ -74,18 +77,11 @@ namespace KspWebMap
             try
             {
                 bool fromCubemapEquirect;
-                Material fingerprintMaterial;
                 readable = CaptureAlbedoTexture(
                     scaledBody,
                     body.bodyName,
                     material,
-                    out fromCubemapEquirect,
-                    out fingerprintMaterial);
-
-                if (fingerprintMaterial != null)
-                {
-                    result.MaterialFingerprint = BodyTextureFingerprint.Compute(fingerprintMaterial);
-                }
+                    out fromCubemapEquirect);
 
                 if (readable == null)
                 {
@@ -228,7 +224,7 @@ namespace KspWebMap
                 return false;
             }
 
-            if (!string.Equals(storedFingerprint, expectedFingerprint, StringComparison.Ordinal))
+            if (!BodyTextureFingerprint.FingerprintsMatch(expectedFingerprint, storedFingerprint))
             {
                 return false;
             }
@@ -259,11 +255,9 @@ namespace KspWebMap
             GameObject scaledBody,
             string bodyName,
             Material material,
-            out bool fromCubemapEquirect,
-            out Material fingerprintMaterial)
+            out bool fromCubemapEquirect)
         {
             fromCubemapEquirect = false;
-            fingerprintMaterial = null;
 
             Texture2D captured = CaptureAlbedoFromMaterial(material, out fromCubemapEquirect);
             if (captured != null)
@@ -289,12 +283,6 @@ namespace KspWebMap
             }
 
             fromCubemapEquirect = onDemandFromCubemap;
-
-            if (loadedMaterial != null)
-            {
-                fingerprintMaterial = loadedMaterial;
-            }
-
             return captured;
         }
 

@@ -171,7 +171,10 @@ namespace KspWebMap
                     ScaledBodyMaterialResolver.TryResolve(scaledBody, out material);
                 }
 
-                string fingerprint = BodyTextureFingerprint.Compute(material);
+                string fingerprint = BodyTextureFingerprint.ComputeStable(
+                    scaledBody,
+                    material,
+                    bodyName);
                 state.MaterialFingerprint = fingerprint;
 
                 ScaledBodyTextureExportResult cached;

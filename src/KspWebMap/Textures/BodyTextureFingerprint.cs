@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using UnityEngine;
 
@@ -18,16 +19,52 @@ namespace KspWebMap
             "_MainTex_Zp",
         };
 
-        public static string Compute(Material material)
+        /// <summary>
+        /// Session-stable source identity for disk cache (paths and texture names, not Unity instance IDs).
+        /// </summary>
+        public static string ComputeStable(GameObject scaledBody, Material material, string bodyName)
+        {
+            string onDemandFingerprint;
+            if (KopernicusOnDemandTextureLoader.TryGetStableSourceFingerprint(scaledBody, out onDemandFingerprint))
+            {
+                return onDemandFingerprint;
+            }
+
+            return ComputeMaterialStable(material, bodyName);
+        }
+
+        public static bool FingerprintsMatch(string expected, string stored)
+        {
+            if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(stored))
+            {
+                return false;
+            }
+
+            if (string.Equals(expected, stored, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private static string ComputeMaterialStable(Material material, string bodyName)
         {
             if (material == null)
             {
                 return string.Empty;
             }
 
-            StringBuilder builder = new StringBuilder(128);
             Shader shader = material.shader;
-            builder.Append(shader != null ? shader.name : "null");
+            string shaderName = shader != null ? shader.name : "null";
+
+            if (IsScaledMesh2Shader(shaderName))
+            {
+                return "scaledmesh2|shader=" + shaderName + "|body=" + (bodyName ?? string.Empty);
+            }
+
+            StringBuilder builder = new StringBuilder(128);
+            builder.Append("mat|shader=").Append(shaderName);
 
             for (int i = 0; i < TexturePropertyNames.Length; i++)
             {
@@ -43,10 +80,27 @@ namespace KspWebMap
                 builder.Append('|');
                 builder.Append(propertyName);
                 builder.Append('=');
-                builder.Append(texture != null ? texture.GetInstanceID().ToString() : "0");
+                builder.Append(texture != null ? StableTextureToken(texture) : "0");
             }
 
             return builder.ToString();
+        }
+
+        private static bool IsScaledMesh2Shader(string shaderName)
+        {
+            return !string.IsNullOrEmpty(shaderName)
+                && shaderName.IndexOf("ScaledMesh2", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static string StableTextureToken(Texture texture)
+        {
+            string name = texture.name;
+            if (!string.IsNullOrEmpty(name))
+            {
+                return name;
+            }
+
+            return "anon:" + texture.width + "x" + texture.height;
         }
     }
 }
