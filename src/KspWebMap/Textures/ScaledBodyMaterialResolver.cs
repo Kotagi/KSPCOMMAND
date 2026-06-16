@@ -40,6 +40,13 @@ namespace KspWebMap
                 }
             }
 
+            Material onDemandMaterial;
+            if (KopernicusOnDemandTextureLoader.TryResolveOnDemandMaterial(scaledBody, out onDemandMaterial))
+            {
+                material = onDemandMaterial;
+                return true;
+            }
+
             for (int i = 0; i < renderers.Length; i++)
             {
                 MeshRenderer renderer = renderers[i];

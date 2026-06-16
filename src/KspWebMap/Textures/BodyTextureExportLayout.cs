@@ -6,7 +6,7 @@ namespace KspWebMap
     /// </summary>
     public static class BodyTextureExportLayout
     {
-        public const string CurrentLayoutId = "v5-scaledmesh2-equirect";
+        public const string CurrentLayoutId = "v7-kopernicus-ondemand-moons";
 
         public static string BuildMetaFileContent(string materialFingerprint)
         {

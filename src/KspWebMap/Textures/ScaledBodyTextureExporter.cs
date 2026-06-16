@@ -74,7 +74,18 @@ namespace KspWebMap
             try
             {
                 bool fromCubemapEquirect;
-                readable = CaptureAlbedoTexture(material, out fromCubemapEquirect);
+                Material fingerprintMaterial;
+                readable = CaptureAlbedoTexture(
+                    scaledBody,
+                    body.bodyName,
+                    material,
+                    out fromCubemapEquirect,
+                    out fingerprintMaterial);
+
+                if (fingerprintMaterial != null)
+                {
+                    result.MaterialFingerprint = BodyTextureFingerprint.Compute(fingerprintMaterial);
+                }
 
                 if (readable == null)
                 {
@@ -244,9 +255,57 @@ namespace KspWebMap
             }
         }
 
-        private static Texture2D CaptureAlbedoTexture(Material material, out bool fromCubemapEquirect)
+        private static Texture2D CaptureAlbedoTexture(
+            GameObject scaledBody,
+            string bodyName,
+            Material material,
+            out bool fromCubemapEquirect,
+            out Material fingerprintMaterial)
         {
             fromCubemapEquirect = false;
+            fingerprintMaterial = null;
+
+            Texture2D captured = CaptureAlbedoFromMaterial(material, out fromCubemapEquirect);
+            if (captured != null)
+            {
+                return captured;
+            }
+
+            if (scaledBody == null || !KopernicusOnDemandTextureLoader.HasOnDemandComponent(scaledBody))
+            {
+                return null;
+            }
+
+            Material loadedMaterial;
+            bool onDemandFromCubemap = false;
+            if (!KopernicusOnDemandTextureLoader.TryCaptureAlbedo(
+                    scaledBody,
+                    bodyName,
+                    mat => CaptureAlbedoFromMaterial(mat, out onDemandFromCubemap),
+                    out captured,
+                    out loadedMaterial))
+            {
+                return null;
+            }
+
+            fromCubemapEquirect = onDemandFromCubemap;
+
+            if (loadedMaterial != null)
+            {
+                fingerprintMaterial = loadedMaterial;
+            }
+
+            return captured;
+        }
+
+        private static Texture2D CaptureAlbedoFromMaterial(Material material, out bool fromCubemapEquirect)
+        {
+            fromCubemapEquirect = false;
+
+            if (material == null)
+            {
+                return null;
+            }
 
             if (ScaledMesh2CubemapExporter.HasCompleteCubemapFaces(material))
             {

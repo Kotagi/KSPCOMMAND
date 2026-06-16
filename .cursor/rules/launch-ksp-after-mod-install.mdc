@@ -1,0 +1,35 @@
+---
+description: After KspWebMap build+install when KSP is closed, launch the game automatically
+alwaysApply: true
+---
+
+# Launch KSP after mod install
+
+When the user indicates **KSP is closed** (or asks for a mod update/reinstall) and you **build and install** KspWebMap to the RSS install, **launch Kerbal Space Program yourself** — do not tell the user to start it manually.
+
+## Default KSP root
+
+```
+C:\Users\brand\OneDrive\Desktop\Kerbal\Kerbal Space Program Sol RSS 1.12.4
+```
+
+## After install completes
+
+Run in background (non-blocking):
+
+```powershell
+Start-Process "C:\Users\brand\OneDrive\Desktop\Kerbal\Kerbal Space Program Sol RSS 1.12.4\KSP_x64.exe"
+```
+
+## Workflow
+
+1. User closes KSP (or says it is closed)
+2. `scripts\build.ps1 -KspRoot "<path>"` then `scripts\install.ps1 -KspRoot "<path>"`
+3. **Start KSP** via `Start-Process` above
+4. Remind user to load their save/flight so texture export runs
+
+## Skip launch only if
+
+- User explicitly says not to start KSP
+- Install failed
+- User is using a different `-KspRoot` (launch that install's `KSP_x64.exe` instead)
